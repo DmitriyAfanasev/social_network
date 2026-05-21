@@ -1,0 +1,204 @@
+[project]
+name = "social-network"
+version = "0.1.0"
+description = "A team educational project to create a social network."
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+license = "MIT"
+authors = [
+    { name = "Дмитрий Афанасьев", email = "wackymc@yandex.ru" },
+    { name = "Никита Иванович", email = "nik.popkov.98@list.ru" },
+]
+dependencies = [
+    "fastapi[standard]>=0.115.12",
+    "uvicorn>=0.34.0",
+    "pydantic[email]>=2.11.4",
+    "pydantic-settings>=2.8.1",
+    "alembic>=1.15.1",
+    "asyncpg>=0.30.0",
+    "sqlalchemy[asyncio]>=2.0.40",
+    "bcrypt>=5.0.0",
+    "python-multipart>=0.0.20",
+    "pyjwt>=2.10.1",
+    "jinja2>=3.1.6",
+    "redis>=5.2.1",
+    "faststream[rabbit]>=0.6.0",
+    "clickhouse-connect[async]>=0.9.0",
+    "aio-pika>=9.5.5",
+    "python-dotenv>=1.1.0",
+    "aiofiles>=24.1.0",
+    "matplotlib>=3.10.3",
+    "dishka>=1.10.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.15.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest>=8.4.0",
+    "pytest-dotenv>=0.5.2",
+    "asgi-lifespan>=2.1.0",
+    "faker>=37.4.0",
+    "factory-boy>=3.3.3",
+    "pytest-factoryboy>=2.7.0",
+    "pre-commit>=4.2.0",
+    "flake8>=7.3.0",
+    "fakeredis>=2.30.1",
+    "flake8-pytest-style>=2.1.0",
+    "pytest-mock>=3.14.1",
+    "isort>=6.0.1",
+    "ruff>=0.15.13",
+]
+
+[tool.uv]
+package = false
+
+[tool.mypy]
+strict = true
+pretty = true
+#exclude = '''(?x)(
+#
+#)'''
+
+[[tool.mypy.overrides]]
+module = [
+    "faststream",
+    "faststream.*",
+    "clickhouse_connect",
+    "clickhouse_connect.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "backend/alembic",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 120
+indent-width = 4
+
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E4", "E7", "E9", # pycodestyle errors
+    "F", # pyflakes
+    "I", # isort
+    "UP", # pyupgrade — авто-апгрейд синтаксиса до py313 (Optional→X|None и т.д.)
+    "B", # flake8-bugbear — реальные баги и плохие практики
+    "C4", # flake8-comprehensions — упрощение list/dict/set comprehensions
+    "SIM", # flake8-simplify — упрощение if/else, with, return
+    "TCH", # flake8-type-checking — TYPE_CHECKING импорты
+    "RUF", # ruff-specific rules
+    "ANN", # flake8-annotations — требует аннотации (согласуется с mypy)
+    "PT", # flake8-pytest-style — правильный стиль pytest
+    "TID", # flake8-tidy-imports — запрет относительных импортов и т.д.
+]
+
+ignore = [
+    "ANN401", # разрешить Any там где реально нужен
+    "ANN204", # Разрешить не указывать аннотацию для спец. методов
+    "B008", # FastAPI: Depends() в аргументах функции — это нормально
+    "RUF001", # в проекте много пользовательских русских строк, ruff считает часть кириллицы ambiguous
+    "RUF002", # то же для docstring
+    "RUF003", # то же для комментариев
+    "TC001", # перенос application imports под TYPE_CHECKING добавляет шум в SQLAlchemy/Pydantic моделях
+    "TC002", # то же для third-party imports
+    "TC003", # то же для stdlib imports
+    "TC006", # не требуем строковые аргументы в cast()
+    "UP040", # PEP 695 type alias пока не обязателен для проекта
+    "UP042", # не заставляем менять str + Enum на StrEnum во всём легаси разом
+    "UP037", # SQLAlchemy forward refs оставляем строковыми, чтобы не трогать ORM-связи механически
+    "UP046", # PEP 695 generic classes пока не обязательны
+    "UP047", # PEP 695 generic functions пока не обязательны
+    "SIM102", # nested if часто читается лучше механического and
+    "SIM103", # явный if/return иногда понятнее, чем return condition
+    "SIM108", # не заставляем заменять понятные if/else на ternary
+]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.isort]
+# Перечисли все свои приложения здесь
+known-first-party = [
+    "backend",
+]
+# Для наглядности можно включить разделение на секции пустой строкой
+lines-after-imports = 2
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"
+
+[tool.ruff.lint.per-file-ignores]
+"fa-backend/tests/**/*.py" = [
+    "ANN", # типизацию тестов контролирует mypy, ruff не должен требовать аннотации для каждой фикстуры
+    "PT001", # @pytest.fixture() vs @pytest.fixture — косметика
+    "PT003", # явный scope=function в тестах не вреден
+    "PT006", # строковый список параметров в parametrize принят в pytest-доках и привычен
+    "PT018", # составные assert в тестах часто читаются нормально
+    "PT028", # default argument у тестовой функции используем как локальный дефолт сценария
+    "B905", # strict= для zip в тестах часто избыточен
+    "RUF015", # [0] после comprehension в тестах читается достаточно явно
+    "SIM117", # nested with в моках тестов часто проще читать, чем длинные multi-context with
+    "SIM300", # порядок actual/expected в assert не стандартизируем линтером
+    "UP017", # не переписываем массово timezone.utc -> UTC в старых тестах
+    "UP035", # не заставляем менять typing imports в тестах
+    "UP043", # не заставляем упрощать AsyncGenerator[T, None] в тестах
+]

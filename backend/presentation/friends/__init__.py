@@ -1,0 +1,1 @@
+"""Friends presentation module."""

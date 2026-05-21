@@ -1,0 +1,7 @@
+COMMENT_CREATED_EVENT = "comment.created"
+PASSWORD_RESET_REQUESTED_EVENT = "email.password_reset_requested"
+POST_CREATED_EVENT = "post.created"
+POST_LIKE_TOGGLED_EVENT = "post.like_toggled"
+PROFILE_PHOTO_DELETED_EVENT = "profile_photo.deleted"
+REGISTRATION_CONFIRMATION_REQUESTED_EVENT = "email.registration_confirmation_requested"
+USER_REGISTERED_EVENT = "user.registered"

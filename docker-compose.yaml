@@ -1,0 +1,73 @@
+services:
+  pg:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: database
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  pg_test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: test_database
+      POSTGRES_USER: test_admin
+      POSTGRES_PASSWORD: test_password
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./backend/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server --appendonly yes
+
+  rabbitmq:
+    image: rabbitmq:3-management  #
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # UI доступен по localhost:15672  порт для подключения веб интерфейса
+    environment:
+      RABBITMQ_DEFAULT_USER: guest  # значение по умолчанию
+      RABBITMQ_DEFAULT_PASS: guest  # значение по умолчанию
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: password
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  mailpit:
+    container_name: backend_mail
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+
+volumes:
+  postgres_data:
+  pgdata_test:
+  redis_data:
+  clickhouse_data:

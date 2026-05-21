@@ -1,0 +1,1 @@
+"""User aggregate domain package."""

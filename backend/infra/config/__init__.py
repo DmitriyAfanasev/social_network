@@ -1,0 +1,38 @@
+from backend.infra.config.settings import (
+    BASE_DIR,
+    CONVENTION,
+    DEFAULT_PATH_TO_AVATAR,
+    TEMPLATES,
+    TEMPLATES_DIR,
+    ClickHouseConfig,
+    DatabaseConfig,
+    EventBusConfig,
+    FileStorageConfig,
+    FrontendConfig,
+    JwtConfig,
+    LoggingConfig,
+    RedisConfig,
+    Settings,
+    SMTPSettings,
+    settings,
+)
+
+
+__all__ = (
+    "BASE_DIR",
+    "CONVENTION",
+    "DEFAULT_PATH_TO_AVATAR",
+    "TEMPLATES",
+    "TEMPLATES_DIR",
+    "ClickHouseConfig",
+    "DatabaseConfig",
+    "EventBusConfig",
+    "FileStorageConfig",
+    "FrontendConfig",
+    "JwtConfig",
+    "LoggingConfig",
+    "RedisConfig",
+    "SMTPSettings",
+    "Settings",
+    "settings",
+)

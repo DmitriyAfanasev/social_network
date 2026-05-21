@@ -1,0 +1,50 @@
+from datetime import date
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+
+if TYPE_CHECKING:
+    from .user import User
+
+
+class Profile(Base):
+    """Профиль пользователя с личной информацией."""
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"),
+        unique=True,
+        nullable=False,
+    )
+    user: Mapped["User"] = relationship("User", back_populates="profile")
+
+    first_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    middle_name: Mapped[str | None] = mapped_column(String(50))
+
+    birth_date: Mapped[date | None] = mapped_column(Date)
+    gender: Mapped[str | None]
+
+    phone_number: Mapped[str | None] = mapped_column(String(20))
+    country: Mapped[str | None] = mapped_column(String(50))
+    city: Mapped[str | None] = mapped_column(String(50))
+    street: Mapped[str | None] = mapped_column(String(100))
+
+    bio: Mapped[str | None] = mapped_column(Text())
+    avatar: Mapped[str] = mapped_column(
+        Text(),
+        default="/client_files/avatars/дефолтный_аватар.jpg",
+        server_default="/client_files/avatars/дефолтный_аватар.jpg",
+    )
+
+    @property
+    def full_name(self) -> str:
+        """Возвращает полное имя пользователя."""
+        return (
+            f"{self.first_name} {self.last_name}"
+            if (self.first_name and self.last_name)
+            else self.user.username
+        )
