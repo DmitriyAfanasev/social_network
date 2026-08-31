@@ -18,6 +18,23 @@ class MessageResult:
 
 
 @dataclass(frozen=True)
+class ConversationResult:
+    conversation: object
+
+
+@dataclass(frozen=True)
+class MessageItemResult:
+    message: object
+
+
+@dataclass(frozen=True)
+class MessagePageResult:
+    messages: Sequence[object]
+    next_cursor: str | None
+    has_more: bool
+
+
+@dataclass(frozen=True)
 class AccessTokenResult:
     access_token: str
 

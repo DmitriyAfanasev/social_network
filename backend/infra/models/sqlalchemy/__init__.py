@@ -1,5 +1,6 @@
 from .base import Base
 from .comment import Comment
+from .conversation import Conversation, ConversationParticipant, Message
 from .friendship import Friendship
 from .like import LikePost
 from .outbox_event import OutboxEvent
@@ -15,8 +16,11 @@ from .user import User
 __all__ = (
     "Base",
     "Comment",
+    "Conversation",
+    "ConversationParticipant",
     "Friendship",
     "LikePost",
+    "Message",
     "OutboxEvent",
     "Post",
     "Profile",

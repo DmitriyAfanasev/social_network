@@ -15,6 +15,7 @@ from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.like_repository import LikeRepository
+from backend.application.ports.message_repository import MessageRepository
 from backend.application.ports.notification_sender import NotificationSender
 from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.password_hasher import PasswordHasher
@@ -45,6 +46,7 @@ from backend.application.use_cases.friends import (
     RemoveFriendUseCase,
 )
 from backend.application.use_cases.likes import TogglePostLikeUseCase
+from backend.application.use_cases.messages import MessagingUseCase
 from backend.application.use_cases.posts import (
     CreatePostUseCase,
     DeletePostUseCase,
@@ -80,6 +82,7 @@ from backend.infra.repositories.clickhouse_analytics_repository import ClickHous
 from backend.infra.repositories.comment_repository import CommentRepository as InfraCommentRepository
 from backend.infra.repositories.friend_repository import FriendRepository as InfraFriendRepository
 from backend.infra.repositories.like_repository import LikeRepository as InfraLikeRepository
+from backend.infra.repositories.message_repository import MessageRepository as InfraMessageRepository
 from backend.infra.repositories.outbox_repository import OutboxRepository as InfraOutboxRepository
 from backend.infra.repositories.pending_token_store import RedisPendingTokenStore
 from backend.infra.repositories.post_repository import PostRepository as InfraPostRepository
@@ -156,12 +159,29 @@ class InfrastructureProvider(Provider):
         async with session_factory() as session:
             yield session
 
+    @provide(scope=Scope.SESSION)
+    async def websocket_session(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> AsyncIterator[AsyncSession]:
+        """Provide one database session for the lifetime of a WebSocket."""
+        async with session_factory() as session:
+            yield session
+
     @provide(scope=Scope.REQUEST, provides=TransactionManager)
     def transaction_manager(self, session: AsyncSession) -> SQLAlchemyTransactionManager:
         return SQLAlchemyTransactionManager(session=session)
 
+    @provide(scope=Scope.SESSION, provides=TransactionManager)
+    def websocket_transaction_manager(self, session: AsyncSession) -> SQLAlchemyTransactionManager:
+        return SQLAlchemyTransactionManager(session=session)
+
     @provide(scope=Scope.REQUEST, provides=UserRepositoryPort)
     def user_repository_port(self, session: AsyncSession) -> InfraUserRepository:
+        return InfraUserRepository(session=session)
+
+    @provide(scope=Scope.SESSION, provides=UserRepositoryPort)
+    def websocket_user_repository(self, session: AsyncSession) -> InfraUserRepository:
         return InfraUserRepository(session=session)
 
     @provide(scope=Scope.REQUEST, provides=PostRepositoryPort)
@@ -179,6 +199,14 @@ class InfrastructureProvider(Provider):
     @provide(scope=Scope.REQUEST, provides=LikeRepository)
     def like_repository(self, session: AsyncSession) -> InfraLikeRepository:
         return InfraLikeRepository(session=session)
+
+    @provide(scope=Scope.REQUEST, provides=MessageRepository)
+    def message_repository(self, session: AsyncSession) -> InfraMessageRepository:
+        return InfraMessageRepository(session=session)
+
+    @provide(scope=Scope.SESSION, provides=MessageRepository)
+    def websocket_message_repository(self, session: AsyncSession) -> InfraMessageRepository:
+        return InfraMessageRepository(session=session)
 
     @provide(scope=Scope.REQUEST, provides=FriendRepository)
     def friend_repository(self, session: AsyncSession) -> InfraFriendRepository:
@@ -237,6 +265,21 @@ class InfrastructureProvider(Provider):
 
 
 class ApplicationProvider(Provider):
+    @provide(scope=Scope.REQUEST)
+    def messaging_use_case(
+        self,
+        message_repository: MessageRepository,
+        transaction_manager: TransactionManager,
+    ) -> MessagingUseCase:
+        return MessagingUseCase(message_repository, transaction_manager)
+
+    @provide(scope=Scope.SESSION)
+    def websocket_messaging_use_case(
+        self,
+        message_repository: MessageRepository,
+        transaction_manager: TransactionManager,
+    ) -> MessagingUseCase:
+        return MessagingUseCase(message_repository, transaction_manager)
     @provide(scope=Scope.REQUEST)
     def login_use_case(
         self,
