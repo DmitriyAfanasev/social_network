@@ -18,7 +18,7 @@ from backend.presentation.messages.http.serializers import (
     conversation_to_payload,
     message_to_payload,
 )
-from backend.presentation.messages.ws.connection_manager import message_connections
+from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
 
 
 router = APIRouter(prefix="/messages", tags=["Messages"], route_class=DishkaRoute)
@@ -30,6 +30,11 @@ async def create_direct_conversation(
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
 ) -> ConversationPayload:
+    """Создаёт или возвращает существующий direct-диалог с пользователем.
+
+    Если диалог между текущим пользователем и указанным пользователем уже
+    существует, возвращается его текущая запись. Иначе создаётся новый диалог.
+    """
     user_id = require_user_id(current_user)
     result = await use_case.get_or_create_direct(user_id, body.user_id)
     return conversation_to_payload(result.conversation, user_id)
@@ -40,6 +45,7 @@ async def list_conversations(
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
 ) -> list[ConversationPayload]:
+    """Возвращает список direct-диалогов текущего авторизованного пользователя."""
     user_id = require_user_id(current_user)
     results = await use_case.list_conversations(user_id)
     return [conversation_to_payload(item.conversation, user_id) for item in results]
@@ -53,6 +59,11 @@ async def list_messages(
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> MessagePagePayload:
+    """Возвращает страницу сообщений диалога в обратном хронологическом порядке.
+
+    Параметр ``cursor`` используется для загрузки следующей страницы, а
+    ``limit`` ограничивает количество сообщений от 1 до 100.
+    """
     result = await use_case.list_messages(conversation_id, require_user_id(current_user), cursor, limit)
     return {
         "items": [message_to_payload(item) for item in result.messages],
@@ -67,10 +78,12 @@ async def send_message(
     body: SendMessageRequest,
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
+    manager: FromDishka[MessageConnectionManagerPort],
 ) -> MessagePayload:
+    """Сохраняет сообщение и публикует событие для всех участников диалога."""
     result = await use_case.send_message(conversation_id, require_user_id(current_user), body.text)
     payload = message_to_payload(result.message)
-    await message_connections.broadcast(conversation_id, {"type": "message.new", "message": payload})
+    await manager.broadcast(conversation_id, {"type": "message.new", "message": payload})
     return payload
 
 
@@ -81,4 +94,5 @@ async def mark_read(
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
 ) -> None:
+    """Отмечает указанное сообщение диалога прочитанным текущим пользователем."""
     await use_case.mark_read(conversation_id, require_user_id(current_user), body.message_id)

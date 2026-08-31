@@ -84,6 +84,7 @@ class RedisConfig(BaseModel):
     host: str
     port: int
     db: int
+    messages_channel: str = "messages:events"
 
 
 class EventBusConfig(BaseModel):

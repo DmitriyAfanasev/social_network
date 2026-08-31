@@ -15,6 +15,7 @@ from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.like_repository import LikeRepository
+from backend.application.ports.message_event_broker import MessageEventBroker
 from backend.application.ports.message_repository import MessageRepository
 from backend.application.ports.notification_sender import NotificationSender
 from backend.application.ports.outbox_repository import OutboxRepository
@@ -77,6 +78,7 @@ from backend.infra.config import (
     Settings,
     settings,
 )
+from backend.infra.messaging.redis_message_event_broker import RedisMessageEventBroker
 from backend.infra.notifications.outbox_notification_sender import OutboxNotificationSender
 from backend.infra.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
 from backend.infra.repositories.comment_repository import CommentRepository as InfraCommentRepository
@@ -92,6 +94,8 @@ from backend.infra.security.jwt_token_service import JwtAuthTokenService
 from backend.infra.security.password_hasher import BcryptPasswordHasher
 from backend.infra.storage.factory import create_file_upload_service
 from backend.infra.transactions.sqlalchemy import SQLAlchemyTransactionManager
+from backend.presentation.messages.ws.connection_manager import MessageConnectionManager
+from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
 
 
 class InfrastructureProvider(Provider):
@@ -244,6 +248,22 @@ class InfrastructureProvider(Provider):
     @provide(scope=Scope.APP, provides=AuthTokenService)
     def auth_token_service(self, jwt_config: JwtConfig) -> JwtAuthTokenService:
         return JwtAuthTokenService(jwt_config=jwt_config)
+
+    @provide(scope=Scope.APP)
+    def message_event_broker(
+        self,
+        redis_config: RedisConfig,
+    ) -> MessageEventBroker:
+        return RedisMessageEventBroker(redis_config)
+
+    @provide(scope=Scope.APP, provides=MessageConnectionManagerPort)
+    async def message_connection_manager(
+        self,
+        event_broker: MessageEventBroker,
+    ) -> AsyncIterator[MessageConnectionManagerPort]:
+        manager = MessageConnectionManager(event_broker)
+        yield manager
+        await manager.close()
 
     @provide(scope=Scope.REQUEST, provides=NotificationSender)
     def notification_sender(

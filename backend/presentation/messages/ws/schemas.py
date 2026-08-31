@@ -1,27 +1,27 @@
-from typing import Literal, TypedDict
+from typing import TypedDict
 
 from backend.presentation.messages.http.serializers import MessagePayload
 
 
 class WsMessageNew(TypedDict):
-    type: Literal["message.new"]
+    type: str
     message: MessagePayload
 
 
 class WsConversationSubscribed(TypedDict):
-    type: Literal["conversation.subscribed"]
+    type: str
     conversation_id: int
 
 
 class WsMessageRead(TypedDict):
-    type: Literal["message.read"]
+    type: str
     conversation_id: int
     message_id: int
     user_id: int
 
 
 class WsError(TypedDict):
-    type: Literal["error"]
+    type: str
     message: str
 
 

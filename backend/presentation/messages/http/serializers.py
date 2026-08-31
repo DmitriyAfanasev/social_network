@@ -26,6 +26,7 @@ class MessagePagePayload(TypedDict):
 
 
 def conversation_to_payload(conversation: object, user_id: int) -> ConversationPayload:
+    """Convert a conversation model to the public HTTP response payload."""
     model = cast(Conversation, conversation)
     participant_ids = [item.user_id for item in model.participants]
     return {
@@ -37,6 +38,7 @@ def conversation_to_payload(conversation: object, user_id: int) -> ConversationP
 
 
 def message_to_payload(message: object) -> MessagePayload:
+    """Convert a message model to a JSON-safe HTTP/WebSocket payload."""
     model = cast(Message, message)
     return {
         "id": model.id,
