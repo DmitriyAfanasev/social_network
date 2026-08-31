@@ -200,7 +200,7 @@ class RegisterUserUseCase:
         except ApplicationError:
             raise
         except Exception as e:
-            logger.error("Registration failed: %s", e, exc_info=True)
+            logger.exception("Registration failed: %s", e, exc_info=True)
             raise ExternalServiceError("Произошла ошибка при регистрации") from e
 
 

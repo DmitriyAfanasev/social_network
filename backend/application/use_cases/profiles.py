@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 from fastapi import UploadFile
@@ -31,6 +32,9 @@ from backend.application.results import (
 )
 from backend.domain.user.entity import User
 from backend.infra.config import DEFAULT_PATH_TO_AVATAR
+
+
+logger = logging.getLogger(__name__)
 
 
 class GetProfileUseCase:
@@ -137,7 +141,10 @@ class UploadAvatarUseCase:
         except ValueError as e:
             raise ValidationAppError(str(e)) from e
         except Exception as e:
-            raise ValidationAppError(f"Ошибка при загрузке аватара: {e!s}") from e
+            # Технические детали (включая SQL и параметры запроса) остаются
+            # в traceback логов и не должны попадать в ответ API.
+            logger.exception("Ошибка при загрузке аватара")
+            raise ValidationAppError("Не удалось загрузить аватар") from e
 
 
 class RemoveAvatarUseCase:

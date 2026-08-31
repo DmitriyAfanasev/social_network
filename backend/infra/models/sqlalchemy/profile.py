@@ -21,8 +21,8 @@ class Profile(Base):
     )
     user: Mapped["User"] = relationship("User", back_populates="profile")
 
-    first_name: Mapped[str] = mapped_column(String(50), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    first_name: Mapped[str | None] = mapped_column(String(50))
+    last_name: Mapped[str | None] = mapped_column(String(50))
     middle_name: Mapped[str | None] = mapped_column(String(50))
 
     birth_date: Mapped[date | None] = mapped_column(Date)
