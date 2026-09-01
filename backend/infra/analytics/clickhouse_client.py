@@ -88,7 +88,7 @@ class ClickHouseAnalyticsClient:
                 entity_id Nullable(UInt64),
                 payload_json String
             )
-            ENGINE = MergeTree
+            ENGINE = ReplacingMergeTree
             PARTITION BY toYYYYMM(occurred_at)
             ORDER BY (event_type, occurred_at, entity_type, event_id)
             """
@@ -133,7 +133,7 @@ class ClickHouseAnalyticsClient:
                 countIf(event_type = 'post.like_toggled' AND JSONExtractString(payload_json, 'action') = 'added'),
                 countIf(event_type = 'post.like_toggled' AND JSONExtractString(payload_json, 'action') = 'removed'),
                 countIf(event_type = 'profile_photo.deleted')
-            FROM {self.table_name}
+            FROM {self.table_name} FINAL
             """
         )
         row = result.result_rows[0] if result.result_rows else (0, 0, 0, 0, 0, 0, 0, 0)

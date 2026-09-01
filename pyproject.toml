@@ -24,6 +24,7 @@ dependencies = [
     "redis>=5.2.1",
     "faststream[kafka]>=0.6.0",
     "clickhouse-connect[async]>=0.9.0",
+    "prometheus-client>=0.22.1",
     "python-dotenv>=1.1.0",
     "aiofiles>=24.1.0",
     "boto3>=1.40.0",

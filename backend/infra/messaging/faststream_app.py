@@ -18,7 +18,11 @@ from backend.infra.notifications.email_service import create_email_service
 from backend.infra.storage.factory import create_file_upload_service
 
 
-broker = KafkaBroker(settings.event_bus.bootstrap_servers)
+broker = KafkaBroker(
+    settings.event_bus.bootstrap_servers,
+    acks=settings.event_bus.producer_acks,
+    enable_idempotence=settings.event_bus.producer_enable_idempotence,
+)
 """Kafka broker для FastStream.
 
 FastAPI-приложение не использует этот объект напрямую. Он живёт только в

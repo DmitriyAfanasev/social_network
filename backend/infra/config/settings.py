@@ -85,6 +85,12 @@ class EventBusConfig(BaseModel):
     bootstrap_servers: str = "localhost:9092"
     consumer_group: str = "general-project-events"
     analytics_consumer_group: str = "general-project-analytics"
+    producer_acks: Literal[0, 1, "all"] = "all"
+    producer_enable_idempotence: bool = True
+    analytics_dlq_topic: str = "analytics.dlq"
+    analytics_max_attempts: int = 3
+    analytics_retry_base_seconds: float = 1.0
+    analytics_metrics_port: int = 9101
     outbox_poll_interval_seconds: float = 1.0
     outbox_batch_size: int = 50
 
