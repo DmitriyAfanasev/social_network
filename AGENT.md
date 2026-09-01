@@ -33,3 +33,20 @@ These instructions apply to the whole repository.
 - Avoid generic `*Service` for infrastructure concerns. Use explicit names such as `*Repository`, `*Gateway`, `*Client`, `*Provider`, or `*Storage`.
 - If a class owns transaction boundaries, permissions, and orchestration of multiple ports, it belongs to the application layer and should be a `*UseCase`/`*Interactor`.
 - Keep names action-oriented for scenarios (`CreateTripUseCase`, `ApprovePaymentUseCase`) and noun-oriented for infrastructure adapters (`TripRepository`, `PaymentGateway`).
+
+## Architecture and Design Quality
+
+- Соблюдай SOLID: один класс и один use case должны иметь одну причину для изменения; зависимости направляй через порты/протоколы; application/domain слои не должны зависеть от FastAPI, Kafka, Redis, ClickHouse или SQLAlchemy.
+- Соблюдай DRY: не дублируй бизнес-правила, форматы событий, сериализацию и обработку ошибок; выноси повторяемую логику в именованные policy, factory, adapter или helper.
+- Соблюдай KISS: выбирай самое простое решение, достаточное для требований; не добавляй абстракции, конфигурацию и паттерны без конкретной пользы.
+- Используй паттерны GoF осознанно и документируй нетривиальное применение: Strategy для взаимозаменяемых алгоритмов, Factory/Abstract Factory для создания инфраструктурных адаптеров, Adapter для внешних систем, Observer/Pub-Sub для событий, Command для actor-visible use cases, Facade для сложных подсистем и Template Method только при действительно общем алгоритме.
+- Не используй паттерны ради названий: композиция предпочтительнее наследования, глобальное состояние и Singleton запрещены без обоснования, service locator и скрытые зависимости запрещены.
+- Для событий применяй outbox: бизнес-транзакция и запись события должны быть атомарны; publisher и consumers должны быть идемпотентными и безопасными для повторной доставки.
+- Разделяй процессы по ответственности: HTTP API, realtime delivery, outbox publisher и analytics consumers не должны быть связаны общей mutable-состоянием.
+
+## Testing Pyramid
+
+- Сохраняй пирамиду тестирования: много быстрых unit-тестов чистой бизнес-логики, меньше integration-тестов адаптеров/БД/Redis/Kafka, минимум end-to-end тестов критических пользовательских сценариев.
+- Каждый новый use case и policy покрывай unit-тестами с фейковыми портами; внешние системы проверяй контрактными/integration-тестами, а не моками их внутренностей.
+- Для Kafka/ClickHouse/Redis проверяй схемы сообщений, retry/idempotency и wiring отдельными integration/contract-тестами; тесты не должны требовать продакшен-сервисы без явной pytest-маркировки.
+- Не удаляй и не ослабляй существующие тесты ради прохождения новой реализации; при изменении контракта обновляй тест и добавляй regression case.

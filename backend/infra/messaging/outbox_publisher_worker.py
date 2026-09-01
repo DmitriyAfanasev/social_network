@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import suppress
 
-from faststream.rabbit import RabbitBroker
+from faststream.kafka import KafkaBroker
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 from backend.application.use_cases.outbox import PublishOutboxEventsUseCase
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxPublisherWorker:
-    """Фоновый publisher, который переносит события из PostgreSQL outbox в RabbitMQ.
+    """Фоновый publisher, который переносит события из PostgreSQL outbox в Kafka.
 
     FastAPI-приложение пишет события только в БД. Этот worker живёт внутри
     FastStream-процесса, периодически читает pending-события и публикует их в
@@ -26,7 +26,7 @@ class OutboxPublisherWorker:
 
     def __init__(
         self,
-        broker: RabbitBroker,
+        broker: KafkaBroker,
         *,
         database_config: DatabaseConfig = settings.db,
         event_bus_config: EventBusConfig = settings.event_bus,

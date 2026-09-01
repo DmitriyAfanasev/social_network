@@ -4,14 +4,7 @@ from pathlib import Path
 from typing import Literal, TypeVar, cast
 
 from fastapi.templating import Jinja2Templates
-from pydantic import (
-    AmqpDsn,
-    BaseModel,
-    EmailStr,
-    Field,
-    PostgresDsn,
-    SecretStr,
-)
+from pydantic import BaseModel, EmailStr, Field, PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,7 +19,8 @@ LOG_DEFAULT_FORMAT = (
 
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-DEFAULT_PATH_TO_AVATAR = "/client_files/avatars/дефолтный_аватар.jpg"
+DEFAULT_AVATAR_OBJECT_KEY = "system/default-avatar.svg"
+DEFAULT_AVATAR_URL = "/media/default-avatar"
 
 type SMTPUser = EmailStr
 type Algorithm = Literal[
@@ -38,7 +32,7 @@ type Algorithm = Literal[
     "RS512",
     "ES256",
 ]
-type FileStorageProvider = Literal["local", "s3"]
+type FileStorageProvider = Literal["s3"]
 type LogLevel = Literal[
     "debug",
     "info",
@@ -88,7 +82,9 @@ class RedisConfig(BaseModel):
 
 
 class EventBusConfig(BaseModel):
-    broker_url: AmqpDsn = AmqpDsn("amqp://guest:guest@localhost:5672//")
+    bootstrap_servers: str = "localhost:9092"
+    consumer_group: str = "general-project-events"
+    analytics_consumer_group: str = "general-project-analytics"
     outbox_poll_interval_seconds: float = 1.0
     outbox_batch_size: int = 50
 
@@ -107,17 +103,15 @@ class FrontendConfig(BaseModel):
 
 
 class FileStorageConfig(BaseModel):
-    provider: FileStorageProvider = "local"
+    provider: FileStorageProvider = "s3"
     max_file_size_mb: int = 5
-    local_base_dir: str = "client_files"
-    local_url_prefix: str = "/client_files"
-    s3_bucket_name: str = ""
-    s3_region_name: str | None = None
-    s3_endpoint_url: str | None = None
-    s3_access_key_id: SecretStr | None = None
-    s3_secret_access_key: SecretStr | None = None
+    s3_bucket_name: str = "general-project"
+    s3_region_name: str = "us-east-1"
+    s3_endpoint_url: str = "http://localhost:9000"
+    s3_access_key_id: SecretStr = SecretStr("minioadmin")
+    s3_secret_access_key: SecretStr = SecretStr("minioadmin")
     s3_public_base_url: str | None = None
-    s3_key_prefix: str = ""
+    s3_key_prefix: str = "media"
 
     @property
     def max_file_size_bytes(self) -> int:

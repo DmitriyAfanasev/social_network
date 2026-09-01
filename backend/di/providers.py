@@ -15,6 +15,7 @@ from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.like_repository import LikeRepository
+from backend.application.ports.media_storage import MediaStorage
 from backend.application.ports.message_event_broker import MessageEventBroker
 from backend.application.ports.message_repository import MessageRepository
 from backend.application.ports.notification_sender import NotificationSender
@@ -38,7 +39,9 @@ from backend.application.use_cases.auth import (
 )
 from backend.application.use_cases.comments import (
     CreateCommentUseCase,
+    DeleteCommentUseCase,
     GetCommentsUseCase,
+    UpdateCommentUseCase,
 )
 from backend.application.use_cases.friends import (
     AddFriendUseCase,
@@ -93,6 +96,7 @@ from backend.infra.repositories.user_repository import UserRepository as InfraUs
 from backend.infra.security.jwt_token_service import JwtAuthTokenService
 from backend.infra.security.password_hasher import BcryptPasswordHasher
 from backend.infra.storage.factory import create_file_upload_service
+from backend.infra.storage.s3_media_storage import S3MediaStorage
 from backend.infra.transactions.sqlalchemy import SQLAlchemyTransactionManager
 from backend.presentation.messages.ws.connection_manager import MessageConnectionManager
 from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
@@ -220,6 +224,10 @@ class InfrastructureProvider(Provider):
     def outbox_repository(self, session: AsyncSession) -> InfraOutboxRepository:
         return InfraOutboxRepository(session=session)
 
+    @provide(scope=Scope.SESSION, provides=OutboxRepository)
+    def websocket_outbox_repository(self, session: AsyncSession) -> InfraOutboxRepository:
+        return InfraOutboxRepository(session=session)
+
     @provide(scope=Scope.REQUEST)
     async def clickhouse_client(
         self,
@@ -283,23 +291,43 @@ class InfrastructureProvider(Provider):
     ) -> FileUploadService:
         return create_file_upload_service(file_storage_config)
 
+    @provide(scope=Scope.REQUEST, provides=MediaStorage)
+    def media_storage(
+        self,
+        session: AsyncSession,
+        file_storage_config: FileStorageConfig,
+    ) -> MediaStorage:
+        return S3MediaStorage(
+            session,
+            bucket_name=file_storage_config.s3_bucket_name,
+            region_name=file_storage_config.s3_region_name,
+            endpoint_url=file_storage_config.s3_endpoint_url,
+            access_key_id=file_storage_config.s3_access_key_id,
+            secret_access_key=file_storage_config.s3_secret_access_key,
+            key_prefix=file_storage_config.s3_key_prefix,
+            max_size_bytes=file_storage_config.max_file_size_bytes,
+        )
+
 
 class ApplicationProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def messaging_use_case(
         self,
         message_repository: MessageRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        media_storage: MediaStorage,
     ) -> MessagingUseCase:
-        return MessagingUseCase(message_repository, transaction_manager)
+        return MessagingUseCase(message_repository, outbox_repository, transaction_manager, media_storage)
 
     @provide(scope=Scope.SESSION)
     def websocket_messaging_use_case(
         self,
         message_repository: MessageRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> MessagingUseCase:
-        return MessagingUseCase(message_repository, transaction_manager)
+        return MessagingUseCase(message_repository, outbox_repository, transaction_manager)
     @provide(scope=Scope.REQUEST)
     def login_use_case(
         self,
@@ -459,12 +487,12 @@ class ApplicationProvider(Provider):
         self,
         profile_repository: ProfileRepository,
         transaction_manager: TransactionManager,
-        file_upload_service: FileUploadService,
+        media_storage: MediaStorage,
     ) -> UploadAvatarUseCase:
         return UploadAvatarUseCase(
             profile_repository,
             transaction_manager,
-            file_upload_service,
+            media_storage,
         )
 
     @provide(scope=Scope.REQUEST)
@@ -545,6 +573,22 @@ class ApplicationProvider(Provider):
         return GetCommentsUseCase(comment_repository)
 
     @provide(scope=Scope.REQUEST)
+    def update_comment_use_case(
+        self,
+        comment_repository: CommentRepository,
+        transaction_manager: TransactionManager,
+    ) -> UpdateCommentUseCase:
+        return UpdateCommentUseCase(comment_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def delete_comment_use_case(
+        self,
+        comment_repository: CommentRepository,
+        transaction_manager: TransactionManager,
+    ) -> DeleteCommentUseCase:
+        return DeleteCommentUseCase(comment_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
     def toggle_post_like_use_case(
         self,
         like_repository: LikeRepository,
@@ -568,22 +612,25 @@ class ApplicationProvider(Provider):
     def add_friend_use_case(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> AddFriendUseCase:
-        return AddFriendUseCase(friend_repository, transaction_manager)
+        return AddFriendUseCase(friend_repository, outbox_repository, transaction_manager)
 
     @provide(scope=Scope.REQUEST)
     def remove_friend_use_case(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> RemoveFriendUseCase:
-        return RemoveFriendUseCase(friend_repository, transaction_manager)
+        return RemoveFriendUseCase(friend_repository, outbox_repository, transaction_manager)
 
     @provide(scope=Scope.REQUEST)
     def cancel_subscription_use_case(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> CancelSubscriptionUseCase:
-        return CancelSubscriptionUseCase(friend_repository, transaction_manager)
+        return CancelSubscriptionUseCase(friend_repository, outbox_repository, transaction_manager)

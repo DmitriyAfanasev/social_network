@@ -1,7 +1,16 @@
 from typing import cast
 
+from backend.application.analytics_events import build_analytics_event_payload
+from backend.application.event_types import (
+    FRIEND_ACCEPTED_EVENT,
+    FRIEND_REMOVED_EVENT,
+    FRIEND_REQUEST_CANCELLED_EVENT,
+    FRIEND_REQUESTED_EVENT,
+)
+from backend.application.events import IntegrationEvent
 from backend.application.exceptions import NotFoundError, ValidationAppError
 from backend.application.ports.friend_repository import FriendRepository
+from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.transaction_manager import TransactionManager
 from backend.application.results import FriendActionResult, FriendsResult
 from backend.domain.user.entity import User
@@ -28,9 +37,11 @@ class AddFriendUseCase:
     def __init__(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> None:
         self.friend_repository = friend_repository
+        self.outbox_repository = outbox_repository
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, friend_id: int) -> FriendActionResult:
@@ -44,6 +55,17 @@ class AddFriendUseCase:
             is_friend = await self.friend_repository.is_subscribed(friend_id, current_user_id)
             if is_friend:
                 await self.friend_repository.create_friendship(current_user_id, friend_id)
+            await self.outbox_repository.add(
+                IntegrationEvent(
+                    event_type=FRIEND_ACCEPTED_EVENT if is_friend else FRIEND_REQUESTED_EVENT,
+                    payload=build_analytics_event_payload(
+                        user_id=current_user_id,
+                        entity_type="friendship",
+                        entity_id=friend_id,
+                        data={"target_user_id": friend_id, "action": "accepted" if is_friend else "requested"},
+                    ),
+                )
+            )
 
         return FriendActionResult(
             success=True,
@@ -63,9 +85,11 @@ class RemoveFriendUseCase:
     def __init__(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> None:
         self.friend_repository = friend_repository
+        self.outbox_repository = outbox_repository
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, friend_id: int) -> FriendActionResult:
@@ -77,6 +101,17 @@ class RemoveFriendUseCase:
             removed = await self.friend_repository.remove_friend(current_user_id, friend_id)
             if removed:
                 await self.friend_repository.unsubscribe(current_user_id, friend_id)
+                await self.outbox_repository.add(
+                    IntegrationEvent(
+                        event_type=FRIEND_REMOVED_EVENT,
+                        payload=build_analytics_event_payload(
+                            user_id=current_user_id,
+                            entity_type="friendship",
+                            entity_id=friend_id,
+                            data={"target_user_id": friend_id, "action": "removed"},
+                        ),
+                    )
+                )
 
         return FriendActionResult(
             success=removed,
@@ -91,9 +126,11 @@ class CancelSubscriptionUseCase:
     def __init__(
         self,
         friend_repository: FriendRepository,
+        outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
     ) -> None:
         self.friend_repository = friend_repository
+        self.outbox_repository = outbox_repository
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, target_id: int) -> FriendActionResult:
@@ -103,6 +140,18 @@ class CancelSubscriptionUseCase:
 
         async with self.transaction_manager:
             removed = await self.friend_repository.unsubscribe(current_user_id, target_id)
+            if removed:
+                await self.outbox_repository.add(
+                    IntegrationEvent(
+                        event_type=FRIEND_REQUEST_CANCELLED_EVENT,
+                        payload=build_analytics_event_payload(
+                            user_id=current_user_id,
+                            entity_type="friendship",
+                            entity_id=target_id,
+                            data={"target_user_id": target_id, "action": "cancelled"},
+                        ),
+                    )
+                )
 
         return FriendActionResult(
             success=removed,
