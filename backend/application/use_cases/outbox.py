@@ -35,7 +35,7 @@ class PublishOutboxEventsUseCase:
                     event_type=event.event_type,
                     payload=event.payload,
                 )
-            except Exception as exc:
+            except (OSError, RuntimeError, ValueError) as exc:
                 retry_delay = self._retry_delay(event.attempts + 1)
                 async with self.transaction_manager:
                     await self.outbox_repository.mark_failed(

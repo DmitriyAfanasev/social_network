@@ -5,6 +5,8 @@ from datetime import datetime
 from backend.application.dto import AuthTokensDTO
 from backend.application.read_models import (
     CommentReadModel,
+    ConversationReadModel,
+    MessageReadModel,
     PostReadModel,
     ProfileAvatarReadModel,
     UserReadModel,
@@ -19,17 +21,17 @@ class MessageResult:
 
 @dataclass(frozen=True)
 class ConversationResult:
-    conversation: object
+    conversation: ConversationReadModel
 
 
 @dataclass(frozen=True)
 class MessageItemResult:
-    message: object
+    message: MessageReadModel
 
 
 @dataclass(frozen=True)
 class MessagePageResult:
-    messages: Sequence[object]
+    messages: Sequence[MessageReadModel]
     next_cursor: str | None
     has_more: bool
 
@@ -95,6 +97,8 @@ class ProfileResult:
     is_friend: bool
     is_subscribed: bool
     is_subscribed_to_current: bool
+    can_send_friend_request: bool
+    can_send_message: bool
     current_user: User
     posts: Sequence[PostReadModel]
 
@@ -158,6 +162,18 @@ class FriendsResult:
     friends: Sequence[UserReadModel]
     subscribers: Sequence[UserReadModel]
     subscriptions: Sequence[UserReadModel]
+
+
+@dataclass(frozen=True)
+class FriendRecommendation:
+    user: UserReadModel
+    common_friends: int
+
+
+@dataclass(frozen=True)
+class FriendRecommendationsResult:
+    current_user: User
+    recommendations: Sequence[FriendRecommendation]
 
 
 @dataclass(frozen=True)

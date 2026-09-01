@@ -3,7 +3,7 @@ import os
 import uvicorn
 
 from backend.presentation.router import router as http_router
-from create_app import create_app
+from backend.create_app import create_app
 
 
 main_app = create_app()

@@ -3,17 +3,15 @@ from fastapi import APIRouter
 
 from backend.application.results import AnalyticsSummaryResult
 from backend.application.use_cases.analytics import GetAnalyticsSummaryUseCase
-from backend.domain.user.entity import User
 from backend.presentation.analytics.http.schemas import AnalyticsSummaryResponse
 
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"], route_class=DishkaRoute)
 
 
-@router.get("/summary", response_model=AnalyticsSummaryResponse)
+@router.get("/summary")
 async def get_analytics_summary(
     use_case: FromDishka[GetAnalyticsSummaryUseCase],
-    current_user: FromDishka[User],
 ) -> AnalyticsSummaryResponse:
     result = await use_case.execute()
     return analytics_summary_to_response(result)

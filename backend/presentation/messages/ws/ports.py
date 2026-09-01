@@ -2,22 +2,32 @@ import asyncio
 from collections.abc import Mapping
 from typing import Any, Protocol
 
-from fastapi import WebSocket
-
 from backend.presentation.messages.ws.schemas import WsEvent
 
 
 NotificationEvent = Mapping[str, Any]
+type WebSocketPayload = dict[str, Any]
+
+
+class WebSocketSender(Protocol):
+    """Minimal WebSocket contract required by message handlers."""
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        ...
+
+    async def send_json(self, data: Any) -> None:
+        ...
 
 
 class MessageConnectionManagerPort(Protocol):
     """Абстракция локальных WebSocket-подключений сообщений."""
 
-    async def subscribe(self, conversation_id: int, websocket: WebSocket) -> None:
+    async def subscribe(self, conversation_id: int, websocket: WebSocketSender) -> None:
         """Подписывает WebSocket на диалог."""
         ...
 
-    def unsubscribe(self, conversation_id: int, websocket: WebSocket) -> None:
+    def unsubscribe(self, conversation_id: int, websocket: WebSocketSender) -> None:
         """Отписывает WebSocket от диалога."""
         ...
 
@@ -41,6 +51,6 @@ class MessageConnectionManagerPort(Protocol):
         """Публикует событие в SSE-потоки получателей."""
         ...
 
-    def cleanup(self, websocket: WebSocket, conversations: set[int]) -> None:
+    def cleanup(self, websocket: WebSocketSender, conversations: set[int]) -> None:
         """Удаляет WebSocket из всех его подписок."""
         ...

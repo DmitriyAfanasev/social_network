@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from backend.application.ports.admin_repository import AdminRepository
 from backend.application.ports.analytics_repository import AnalyticsRepository
+from backend.application.ports.audit_repository import AuditRepository
+from backend.application.ports.authorization import AuthorizationService
+from backend.application.ports.block_repository import BlockRepository
 from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
@@ -27,9 +31,11 @@ from backend.application.ports.token_service import AuthTokenService
 from backend.application.ports.token_store import PendingTokenStore
 from backend.application.ports.transaction_manager import TransactionManager
 from backend.application.ports.user_repository import UserRepository as UserRepositoryPort
+from backend.application.use_cases.admin import AdminRbacUseCase
 from backend.application.use_cases.analytics import GetAnalyticsSummaryUseCase
 from backend.application.use_cases.auth import (
     ConfirmRegistrationUseCase,
+    GetCurrentUserUseCase,
     LoginUseCase,
     RefreshTokenUseCase,
     RegisterUserUseCase,
@@ -37,6 +43,8 @@ from backend.application.use_cases.auth import (
     RequestRegistrationConfirmationUseCase,
     ResetPasswordUseCase,
 )
+from backend.application.use_cases.blocks import BlockUserUseCase, UnblockUserUseCase
+from backend.application.use_cases.comment_likes import ToggleCommentLikeUseCase
 from backend.application.use_cases.comments import (
     CreateCommentUseCase,
     DeleteCommentUseCase,
@@ -46,6 +54,7 @@ from backend.application.use_cases.comments import (
 from backend.application.use_cases.friends import (
     AddFriendUseCase,
     CancelSubscriptionUseCase,
+    GetFriendRecommendationsUseCase,
     GetFriendsUseCase,
     RemoveFriendUseCase,
 )
@@ -70,6 +79,7 @@ from backend.application.use_cases.profiles import (
     UploadAvatarUseCase,
     UploadProfilePhotoUseCase,
 )
+from backend.application.use_cases.users import TouchUserActivityUseCase
 from backend.infra.analytics.clickhouse_client import ClickHouseAnalyticsClient
 from backend.infra.config import (
     ClickHouseConfig,
@@ -83,6 +93,9 @@ from backend.infra.config import (
 )
 from backend.infra.messaging.redis_message_event_broker import RedisMessageEventBroker
 from backend.infra.notifications.outbox_notification_sender import OutboxNotificationSender
+from backend.infra.repositories.admin_repository import AdminRepository as InfraAdminRepository
+from backend.infra.repositories.audit_repository import AuditRepository as InfraAuditRepository
+from backend.infra.repositories.block_repository import BlockRepository as InfraBlockRepository
 from backend.infra.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
 from backend.infra.repositories.comment_repository import CommentRepository as InfraCommentRepository
 from backend.infra.repositories.friend_repository import FriendRepository as InfraFriendRepository
@@ -93,6 +106,7 @@ from backend.infra.repositories.pending_token_store import RedisPendingTokenStor
 from backend.infra.repositories.post_repository import PostRepository as InfraPostRepository
 from backend.infra.repositories.profile_repository import ProfileRepository as InfraProfileRepository
 from backend.infra.repositories.user_repository import UserRepository as InfraUserRepository
+from backend.infra.security.authorization import AuthorizationService as InfraAuthorizationService
 from backend.infra.security.jwt_token_service import JwtAuthTokenService
 from backend.infra.security.password_hasher import BcryptPasswordHasher
 from backend.infra.storage.factory import create_file_upload_service
@@ -200,6 +214,30 @@ class InfrastructureProvider(Provider):
     def profile_repository(self, session: AsyncSession) -> InfraProfileRepository:
         return InfraProfileRepository(session=session)
 
+    @provide(scope=Scope.SESSION, provides=ProfileRepository)
+    def websocket_profile_repository(self, session: AsyncSession) -> InfraProfileRepository:
+        return InfraProfileRepository(session=session)
+
+    @provide(scope=Scope.REQUEST, provides=BlockRepository)
+    def block_repository(self, session: AsyncSession) -> InfraBlockRepository:
+        return InfraBlockRepository(session=session)
+
+    @provide(scope=Scope.SESSION, provides=BlockRepository)
+    def websocket_block_repository(self, session: AsyncSession) -> InfraBlockRepository:
+        return InfraBlockRepository(session=session)
+
+    @provide(scope=Scope.REQUEST, provides=AuthorizationService)
+    def authorization_service(self, session: AsyncSession) -> InfraAuthorizationService:
+        return InfraAuthorizationService(session=session)
+
+    @provide(scope=Scope.REQUEST, provides=AdminRepository)
+    def admin_repository(self, session: AsyncSession) -> InfraAdminRepository:
+        return InfraAdminRepository(session=session)
+
+    @provide(scope=Scope.REQUEST, provides=AuditRepository)
+    def audit_repository(self, session: AsyncSession) -> InfraAuditRepository:
+        return InfraAuditRepository(session=session)
+
     @provide(scope=Scope.REQUEST, provides=CommentRepository)
     def comment_repository(self, session: AsyncSession) -> InfraCommentRepository:
         return InfraCommentRepository(session=session)
@@ -218,6 +256,10 @@ class InfrastructureProvider(Provider):
 
     @provide(scope=Scope.REQUEST, provides=FriendRepository)
     def friend_repository(self, session: AsyncSession) -> InfraFriendRepository:
+        return InfraFriendRepository(session=session)
+
+    @provide(scope=Scope.SESSION, provides=FriendRepository)
+    def websocket_friend_repository(self, session: AsyncSession) -> InfraFriendRepository:
         return InfraFriendRepository(session=session)
 
     @provide(scope=Scope.REQUEST, provides=OutboxRepository)
@@ -284,12 +326,12 @@ class InfrastructureProvider(Provider):
             transaction_manager=transaction_manager,
         )
 
-    @provide(scope=Scope.APP, provides=FileUploadService)
+    @provide(scope=Scope.REQUEST, provides=FileUploadService)
     def file_upload_service(
         self,
-        file_storage_config: FileStorageConfig,
+        media_storage: MediaStorage,
     ) -> FileUploadService:
-        return create_file_upload_service(file_storage_config)
+        return create_file_upload_service(media_storage)
 
     @provide(scope=Scope.REQUEST, provides=MediaStorage)
     def media_storage(
@@ -317,8 +359,19 @@ class ApplicationProvider(Provider):
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
         media_storage: MediaStorage,
+        profile_repository: ProfileRepository,
+        friend_repository: FriendRepository,
+        block_repository: BlockRepository,
     ) -> MessagingUseCase:
-        return MessagingUseCase(message_repository, outbox_repository, transaction_manager, media_storage)
+        return MessagingUseCase(
+            message_repository,
+            outbox_repository,
+            transaction_manager,
+            media_storage,
+            profile_repository,
+            friend_repository,
+            block_repository,
+        )
 
     @provide(scope=Scope.SESSION)
     def websocket_messaging_use_case(
@@ -326,8 +379,18 @@ class ApplicationProvider(Provider):
         message_repository: MessageRepository,
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        profile_repository: ProfileRepository,
+        friend_repository: FriendRepository,
+        block_repository: BlockRepository,
     ) -> MessagingUseCase:
-        return MessagingUseCase(message_repository, outbox_repository, transaction_manager)
+        return MessagingUseCase(
+            message_repository,
+            outbox_repository,
+            transaction_manager,
+            profile_repository=profile_repository,
+            friend_repository=friend_repository,
+            block_repository=block_repository,
+        )
     @provide(scope=Scope.REQUEST)
     def login_use_case(
         self,
@@ -336,6 +399,21 @@ class ApplicationProvider(Provider):
         token_service: AuthTokenService,
     ) -> LoginUseCase:
         return LoginUseCase(user_repository, password_hasher, token_service)
+
+    @provide(scope=Scope.REQUEST)
+    def current_user_use_case(
+        self,
+        user_repository: UserRepositoryPort,
+        token_service: AuthTokenService,
+    ) -> GetCurrentUserUseCase:
+        return GetCurrentUserUseCase(user_repository, token_service)
+
+    @provide(scope=Scope.REQUEST)
+    def touch_user_activity_use_case(
+        self,
+        user_repository: UserRepositoryPort,
+    ) -> TouchUserActivityUseCase:
+        return TouchUserActivityUseCase(user_repository)
 
     @provide(scope=Scope.REQUEST)
     def refresh_token_use_case(
@@ -471,8 +549,9 @@ class ApplicationProvider(Provider):
         profile_repository: ProfileRepository,
         post_repository: PostRepositoryPort,
         friend_repository: FriendRepository,
+        block_repository: BlockRepository,
     ) -> GetProfileUseCase:
-        return GetProfileUseCase(profile_repository, post_repository, friend_repository)
+        return GetProfileUseCase(profile_repository, post_repository, friend_repository, block_repository)
 
     @provide(scope=Scope.REQUEST)
     def update_profile_use_case(
@@ -565,8 +644,9 @@ class ApplicationProvider(Provider):
         comment_repository: CommentRepository,
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        block_repository: BlockRepository,
     ) -> CreateCommentUseCase:
-        return CreateCommentUseCase(comment_repository, outbox_repository, transaction_manager)
+        return CreateCommentUseCase(comment_repository, outbox_repository, transaction_manager, block_repository)
 
     @provide(scope=Scope.REQUEST)
     def comments_use_case(self, comment_repository: CommentRepository) -> GetCommentsUseCase:
@@ -585,8 +665,19 @@ class ApplicationProvider(Provider):
         self,
         comment_repository: CommentRepository,
         transaction_manager: TransactionManager,
+        authorization: AuthorizationService,
+        audit_repository: AuditRepository,
     ) -> DeleteCommentUseCase:
-        return DeleteCommentUseCase(comment_repository, transaction_manager)
+        return DeleteCommentUseCase(comment_repository, transaction_manager, authorization, audit_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def admin_rbac_use_case(
+        self,
+        admin_repository: AdminRepository,
+        authorization: AuthorizationService,
+        transaction_manager: TransactionManager,
+    ) -> AdminRbacUseCase:
+        return AdminRbacUseCase(admin_repository, authorization, transaction_manager)
 
     @provide(scope=Scope.REQUEST)
     def toggle_post_like_use_case(
@@ -596,6 +687,15 @@ class ApplicationProvider(Provider):
         transaction_manager: TransactionManager,
     ) -> TogglePostLikeUseCase:
         return TogglePostLikeUseCase(like_repository, outbox_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def toggle_comment_like_use_case(
+        self,
+        like_repository: LikeRepository,
+        outbox_repository: OutboxRepository,
+        transaction_manager: TransactionManager,
+    ) -> ToggleCommentLikeUseCase:
+        return ToggleCommentLikeUseCase(like_repository, outbox_repository, transaction_manager)
 
     @provide(scope=Scope.REQUEST)
     def analytics_summary_use_case(
@@ -609,13 +709,43 @@ class ApplicationProvider(Provider):
         return GetFriendsUseCase(friend_repository)
 
     @provide(scope=Scope.REQUEST)
+    def friend_recommendations_use_case(
+        self, friend_repository: FriendRepository, block_repository: BlockRepository
+    ) -> GetFriendRecommendationsUseCase:
+        return GetFriendRecommendationsUseCase(friend_repository, block_repository)
+
+    @provide(scope=Scope.REQUEST)
     def add_friend_use_case(
         self,
         friend_repository: FriendRepository,
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        profile_repository: ProfileRepository,
+        block_repository: BlockRepository,
     ) -> AddFriendUseCase:
-        return AddFriendUseCase(friend_repository, outbox_repository, transaction_manager)
+        return AddFriendUseCase(
+            friend_repository,
+            outbox_repository,
+            transaction_manager,
+            block_repository,
+            profile_repository,
+        )
+
+    @provide(scope=Scope.REQUEST)
+    def block_user_use_case(
+        self,
+        block_repository: BlockRepository,
+        friend_repository: FriendRepository,
+        transaction_manager: TransactionManager,
+        audit_repository: AuditRepository,
+    ) -> BlockUserUseCase:
+        return BlockUserUseCase(block_repository, friend_repository, transaction_manager, audit_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def unblock_user_use_case(
+        self, block_repository: BlockRepository, transaction_manager: TransactionManager
+    ) -> UnblockUserUseCase:
+        return UnblockUserUseCase(block_repository, transaction_manager)
 
     @provide(scope=Scope.REQUEST)
     def remove_friend_use_case(

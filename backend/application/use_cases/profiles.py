@@ -11,6 +11,7 @@ from backend.application.exceptions import (
     PermissionDeniedError,
     ValidationAppError,
 )
+from backend.application.ports.block_repository import BlockRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.media_storage import MediaStorage
@@ -32,6 +33,7 @@ from backend.application.results import (
     UserResult,
 )
 from backend.domain.user.entity import User
+from backend.domain.user.policy import InteractionPolicy, RelationshipFacts
 from backend.infra.config import DEFAULT_AVATAR_URL
 
 
@@ -44,20 +46,24 @@ class GetProfileUseCase:
         profile_repository: ProfileRepository,
         post_repository: PostRepository,
         friend_repository: FriendRepository,
+        block_repository: BlockRepository,
     ) -> None:
         self.profile_repository = profile_repository
         self.post_repository = post_repository
         self.friend_repository = friend_repository
+        self.block_repository = block_repository
 
     async def execute(self, current_user: User, profile_id: int) -> ProfileResult:
         current_user_id = cast(int, current_user.id)
         profile_user = await self.profile_repository.get_by_id(profile_id)
-        is_own_profile = current_user_id == profile_user.id
-        is_friend = (
-            False
-            if is_own_profile
-            else await self.friend_repository.is_friend(current_user_id, profile_id)
-        )
+        relationship_facts = await self._relationship_facts(current_user_id, profile_id)
+        if relationship_facts.is_blocked and current_user_id != profile_id:
+            raise PermissionDeniedError("Пользователь недоступен")
+        is_own_profile = relationship_facts.is_self
+        is_friend = relationship_facts.is_friend
+        profile_visibility = profile_user.profile.profile_visibility if profile_user.profile else "everyone"
+        if not InteractionPolicy.can_view_profile(profile_visibility, relationship_facts):
+            raise PermissionDeniedError("Пользователь ограничил просмотр страницы")
         is_subscribed = (
             False
             if is_own_profile
@@ -68,9 +74,25 @@ class GetProfileUseCase:
             if is_own_profile
             else await self.friend_repository.is_subscribed(profile_id, current_user_id)
         )
-        posts = await self.post_repository.get_all_by_author_id(
-            profile_id,
-            current_user_id,
+        can_send_friend_request = (
+            InteractionPolicy.can_send_friend_request(
+                profile_user.profile.friend_request_policy if profile_user.profile else "everyone",
+                relationship_facts,
+            )
+            or is_friend
+            or is_subscribed
+            or is_subscribed_to_current
+        )
+        can_send_message = (
+            InteractionPolicy.can_send_message(
+                profile_user.profile.message_policy if profile_user.profile else "everyone",
+                relationship_facts,
+            )
+        )
+        posts = (
+            await self.post_repository.get_all_by_author_id(profile_id, current_user_id)
+            if is_own_profile or not profile_user.profile or profile_user.profile.show_posts
+            else []
         )
 
         return ProfileResult(
@@ -79,8 +101,28 @@ class GetProfileUseCase:
             is_friend=is_friend,
             is_subscribed=is_subscribed,
             is_subscribed_to_current=is_subscribed_to_current,
+            can_send_friend_request=can_send_friend_request,
+            can_send_message=can_send_message,
             current_user=current_user,
             posts=posts,
+        )
+
+    async def _relationship_facts(self, actor_id: int, target_id: int) -> RelationshipFacts:
+        is_self = actor_id == target_id
+        is_blocked = False if is_self else await self.block_repository.is_blocked(actor_id, target_id)
+        if is_blocked:
+            return RelationshipFacts(is_self=is_self, is_blocked=True)
+        is_friend = False if is_self else await self.friend_repository.is_friend(actor_id, target_id)
+        are_friends_of_friends = (
+            False
+            if is_self or is_friend
+            else await self.friend_repository.are_friends_of_friends(actor_id, target_id)
+        )
+        return RelationshipFacts(
+            is_self=is_self,
+            is_blocked=is_blocked,
+            is_friend=is_friend,
+            are_friends_of_friends=are_friends_of_friends,
         )
 
 
@@ -143,7 +185,7 @@ class UploadAvatarUseCase:
             )
         except ValueError as e:
             raise ValidationAppError(str(e)) from e
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             # Технические детали (включая SQL и параметры запроса) остаются
             # в traceback логов и не должны попадать в ответ API.
             logger.exception("Ошибка при загрузке аватара")

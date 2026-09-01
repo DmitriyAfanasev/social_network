@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from backend.application.dto import RemovePostImageDTO
 from backend.application.ports.post_repository import PostRepository as PostPort
 from backend.application.read_models import PostReadModel
-from backend.infra.models.sqlalchemy import Comment, LikePost, Post, User
+from backend.infra.models.sqlalchemy import Comment, LikeComment, LikePost, Media, Post, User
 
 
 class PostRepository(PostPort):
@@ -25,6 +25,7 @@ class PostRepository(PostPort):
         self.session.add(post)
         await self.session.flush()
         await self.session.refresh(post)
+        cast(Any, post).image_content_type = await self._get_image_content_type(image)
         return cast(PostReadModel, post)
 
     async def get_by_id(self, post_id: int) -> PostReadModel | None:
@@ -44,6 +45,7 @@ class PostRepository(PostPort):
         post_model.author_id = author_id
         await self.session.flush()
         await self.session.refresh(post_model)
+        cast(Any, post_model).image_content_type = await self._get_image_content_type(image)
         return cast(PostReadModel, post_model)
 
     async def delete(self, post: PostReadModel) -> None:
@@ -85,6 +87,8 @@ class PostRepository(PostPort):
         for post in posts:
             post_view = cast(Any, post)
             post_view.count_comments = await self._count_comments(post.id)
+            post_view.preview_comment = await self._get_preview_comment(post.id)
+            post_view.image_content_type = await self._get_image_content_type(post.image)
             self._enrich_post_with_likes(post, current_user_id)
 
         total_count = await self.session.scalar(
@@ -113,6 +117,8 @@ class PostRepository(PostPort):
         for post in posts:
             post_view = cast(Any, post)
             post_view.count_comments = await self._count_comments(post.id)
+            post_view.preview_comment = await self._get_preview_comment(post.id)
+            post_view.image_content_type = await self._get_image_content_type(post.image)
             self._enrich_post_with_likes(post, current_user_id)
         return cast(Sequence[PostReadModel], posts)
 
@@ -120,6 +126,33 @@ class PostRepository(PostPort):
         return await self.session.scalar(
             select(func.count(Comment.id)).where(Comment.post_id == post_id)
         ) or 0
+
+    async def _get_preview_comment(self, post_id: int) -> Comment | None:
+        statement = (
+            select(Comment)
+            .outerjoin(LikeComment, LikeComment.comment_id == Comment.id)
+            .where(Comment.post_id == post_id)
+            .options(selectinload(Comment.user).selectinload(User.profile))
+            .group_by(Comment.id)
+            .order_by(func.count(LikeComment.id).desc(), Comment.created_at.desc(), Comment.id.desc())
+            .limit(1)
+        )
+        comment = await self.session.scalar(statement)
+        if comment is not None:
+            cast(Any, comment).likes_count = await self.session.scalar(
+                select(func.count(LikeComment.id)).where(LikeComment.comment_id == comment.id)
+            ) or 0
+        return comment
+
+    async def _get_image_content_type(self, image: str | None) -> str | None:
+        if not image or not image.startswith("/media/"):
+            return None
+        media_id = image.removeprefix("/media/").split("/", 1)[0]
+        if not media_id.isdigit():
+            return None
+        return await self.session.scalar(
+            select(Media.content_type).where(Media.id == int(media_id))
+        )
 
     @classmethod
     def _enrich_post_with_likes(

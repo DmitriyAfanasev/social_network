@@ -1,8 +1,9 @@
+import datetime
 from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 
-from sqlalchemy import Boolean, CheckConstraint, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -30,6 +31,7 @@ class User(TimestampsMixin, Base):
     email: Mapped[EmailStr] = mapped_column(String(100), unique=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_seen_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     posts: Mapped[list["Post"]] = relationship(
         "Post",

@@ -121,7 +121,7 @@ class OutboxPublisherWorker:
                 )
                 if published_count:
                     logger.info("Published %s outbox events", published_count)
-        except Exception:
+        except (OSError, RuntimeError):
             logger.exception("Outbox publisher iteration failed")
 
     @staticmethod

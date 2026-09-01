@@ -15,7 +15,7 @@ from backend.infra.messaging.schemas import (
     ProfilePhotoDeletedPayload,
 )
 from backend.infra.notifications.email_service import create_email_service
-from backend.infra.storage.factory import create_file_upload_service
+from backend.infra.storage.s3_file_upload_service import S3FileUploadService
 
 
 broker = KafkaBroker(
@@ -38,7 +38,16 @@ app = FastStream(broker)
 """
 
 outbox_publisher = OutboxPublisherWorker(broker)
-file_upload_service = create_file_upload_service(settings.file_storage)
+file_upload_service = S3FileUploadService(
+    bucket_name=settings.file_storage.s3_bucket_name,
+    max_size_bytes=settings.file_storage.max_file_size_bytes,
+    region_name=settings.file_storage.s3_region_name,
+    endpoint_url=settings.file_storage.s3_endpoint_url,
+    access_key_id=settings.file_storage.s3_access_key_id,
+    secret_access_key=settings.file_storage.s3_secret_access_key,
+    public_base_url=settings.file_storage.s3_public_base_url,
+    key_prefix=settings.file_storage.s3_key_prefix,
+)
 email_service = create_email_service()
 
 

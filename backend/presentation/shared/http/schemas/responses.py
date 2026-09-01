@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -25,6 +28,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_superuser: bool
     created_at: datetime
+    last_seen_at: datetime | None = None
     profile: ProfileResponse | None = None
 
 
@@ -32,6 +36,7 @@ class PostResponse(BaseModel):
     id: int
     content: str | None = None
     image: str | None = None
+    image_content_type: str | None = None
     author_id: int
     author: UserResponse | None = None
     likes_count: int = 0
@@ -41,6 +46,7 @@ class PostResponse(BaseModel):
     liked_users: list[UserResponse] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+    featured_comment: CommentResponse | None = None
 
 
 class CommentResponse(BaseModel):
@@ -52,10 +58,33 @@ class CommentResponse(BaseModel):
     author: UserResponse | None = None
     created_at: datetime
     updated_at: datetime
+    likes_count: int = 0
+    is_liked_by_current: bool = False
 
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class AdminRoleResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    is_system: bool
+
+    model_config = {"from_attributes": True}
+
+
+class AdminAuditLogResponse(BaseModel):
+    id: int
+    actor_id: int | None = None
+    action: str
+    target_type: str
+    target_id: int | None = None
+    details: dict[str, Any]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class AuthResponse(BaseModel):
@@ -99,8 +128,28 @@ class ProfilePageResponse(BaseModel):
     is_friend: bool = False
     is_subscribed: bool = False
     is_subscribed_to_current: bool = False
+    can_send_friend_request: bool = False
+    can_send_message: bool = False
+    relationship_status: str = "not_friend"
     current_user: UserResponse | None
     posts: list[PostResponse]
+    profile_visibility: str | None = None
+    friend_request_policy: str | None = None
+    message_policy: str | None = None
+    show_email: bool | None = None
+    show_phone: bool | None = None
+    show_birth_date: bool | None = None
+    show_friends: bool | None = None
+    show_posts: bool | None = None
+
+
+class ProfilePreviewResponse(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    avatar: str | None = None
+    last_seen_at: datetime | None = None
+    relationship_status: str = "profile_private"
 
 
 class UserEnvelopeResponse(BaseModel):
@@ -160,6 +209,15 @@ class FriendsResponse(BaseModel):
     friends: list[UserResponse]
     subscribers: list[UserResponse]
     subscriptions: list[UserResponse]
+
+
+class FriendRecommendationResponse(BaseModel):
+    user: UserResponse
+    common_friends: int
+
+
+class FriendRecommendationsResponse(BaseModel):
+    recommendations: list[FriendRecommendationResponse]
 
 
 class FriendActionResponse(BaseModel):

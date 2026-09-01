@@ -3,6 +3,8 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, field_validator, model_validator
 
+from backend.domain.user.entity.profile import PROFILE_VISIBILITY_POLICIES
+
 
 class ProfileBaseRequest(BaseModel):
     first_name: str | None = None
@@ -15,6 +17,21 @@ class ProfileBaseRequest(BaseModel):
     city: str | None = None
     street: str | None = None
     bio: str | None = None
+    profile_visibility: str | None = None
+    friend_request_policy: str | None = None
+    message_policy: str | None = None
+    show_email: bool | None = None
+    show_phone: bool | None = None
+    show_birth_date: bool | None = None
+    show_friends: bool | None = None
+    show_posts: bool | None = None
+
+    @field_validator("profile_visibility", "friend_request_policy", "message_policy")
+    @classmethod
+    def validate_privacy_policy(cls, value: str | None) -> str | None:
+        if value is not None and value not in PROFILE_VISIBILITY_POLICIES:
+            raise ValueError(f"Политика должна быть одной из: {', '.join(PROFILE_VISIBILITY_POLICIES)}")
+        return value
 
     @field_validator("birth_date")
     @classmethod

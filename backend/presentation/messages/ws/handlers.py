@@ -1,11 +1,9 @@
 from collections.abc import Mapping
 from typing import Any
 
-from fastapi import WebSocket
-
-from backend.application.ports.token_service import AuthTokenService
-from backend.application.ports.user_repository import UserRepository
+from backend.application.use_cases.auth import GetCurrentUserUseCase
 from backend.application.use_cases.messages import MessagingUseCase
+from backend.application.use_cases.users import TouchUserActivityUseCase
 from backend.presentation.messages.auth import require_user_id
 from backend.presentation.messages.http.serializers import message_to_payload
 from backend.presentation.messages.ws.constants import (
@@ -14,36 +12,31 @@ from backend.presentation.messages.ws.constants import (
     MESSAGE_NEW_EVENT,
     MESSAGE_READ_EVENT,
     MESSAGE_SEND_EVENT,
+    TYPING_EVENT,
     WEBSOCKET_ERROR_EVENT,
     WEBSOCKET_PING_EVENT,
     WEBSOCKET_PONG_EVENT,
 )
-from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
+from backend.presentation.messages.ws.ports import MessageConnectionManagerPort, WebSocketSender
 
 
 async def authenticate_websocket(
-    websocket: WebSocket,
-    token_service: AuthTokenService,
-    user_repository: UserRepository,
+    websocket: WebSocketSender,
+    current_user_use_case: GetCurrentUserUseCase,
 ) -> int | None:
     """Authenticate a WebSocket using the access token from its cookies."""
     token = websocket.cookies.get("access-token")
     if not token:
         return None
 
-    try:
-        user_id = token_service.get_access_user_id(token)
-        user = await user_repository.get_by_id(user_id)
-    except ValueError:
-        return None
-
-    if user is None or not user.is_active:
+    user = await current_user_use_case.execute(token, required=False)
+    if user is None:
         return None
     return require_user_id(user)
 
 
 async def subscribe_to_conversation(
-    websocket: WebSocket,
+    websocket: WebSocketSender,
     conversation_id: int,
     user_id: int,
     use_case: MessagingUseCase,
@@ -51,6 +44,7 @@ async def subscribe_to_conversation(
     subscribed_conversations: set[int],
 ) -> None:
     """Verify conversation membership and subscribe the socket to it."""
+    await use_case.ensure_conversation_access(conversation_id, user_id)
     await use_case.list_messages(conversation_id, user_id, 0, 1)
     await manager.subscribe(conversation_id, websocket)
     subscribed_conversations.add(conversation_id)
@@ -58,11 +52,12 @@ async def subscribe_to_conversation(
 
 
 async def handle_socket_event(
-    websocket: WebSocket,
+    websocket: WebSocketSender,
     event: Mapping[str, Any],
     user_id: int,
     use_case: MessagingUseCase,
     manager: MessageConnectionManagerPort,
+    touch_user_activity: TouchUserActivityUseCase,
     subscribed_conversations: set[int],
 ) -> None:
     """Dispatch one validated-enough WebSocket event to its handler."""
@@ -98,7 +93,23 @@ async def handle_socket_event(
                 "recipient_ids": recipient_ids,
             },
         )
+    elif event_type == TYPING_EVENT:
+        if conversation_id not in subscribed_conversations:
+            return
+        await use_case.ensure_conversation_access(conversation_id, user_id)
+        recipient_ids = await use_case.get_participant_ids(conversation_id)
+        await manager.broadcast(
+            conversation_id,
+            {
+                "type": TYPING_EVENT,
+                "conversation_id": conversation_id,
+                "user_id": user_id,
+                "is_typing": bool(event.get("is_typing", False)),
+                "recipient_ids": recipient_ids,
+            },
+        )
     elif event_type == WEBSOCKET_PING_EVENT:
+        await touch_user_activity.execute(user_id)
         await websocket.send_json({"type": WEBSOCKET_PONG_EVENT})
     else:
         await websocket.send_json({"type": WEBSOCKET_ERROR_EVENT, "message": "Неизвестный тип события"})

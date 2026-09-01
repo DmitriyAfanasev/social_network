@@ -13,6 +13,10 @@ class CommentRepository(ABC):
         pass
 
     @abstractmethod
+    async def get_comment_depth(self, comment_id: int) -> int:
+        pass
+
+    @abstractmethod
     async def create(
         self,
         user_id: int,

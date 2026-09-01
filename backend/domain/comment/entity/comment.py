@@ -35,5 +35,5 @@ class Comment(BaseEntity):
             updated_at=comment.updated_at,
         )
 
-    def can_accept_reply_for_post(self, post_id: int) -> bool:
-        return self.parent_id is None and self.post_id == post_id
+    def can_accept_reply_for_post(self, post_id: int, parent_depth: int) -> bool:
+        return self.post_id == post_id and parent_depth < 2

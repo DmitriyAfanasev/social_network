@@ -2,19 +2,21 @@ import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, query_expression, relationship
 
 from .base import Base
 from .mixins import CreatedAtMixin
 
 
 if TYPE_CHECKING:
+    from .media import Media
     from .user import User
 
 
 class Conversation(CreatedAtMixin, Base):
     __tablename__ = "conversations"
 
+    last_message: Mapped["Message | None"] = query_expression()
     direct_key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     participants: Mapped[list["ConversationParticipant"]] = relationship(
         back_populates="conversation", cascade="all, delete-orphan"
@@ -39,6 +41,11 @@ class ConversationParticipant(CreatedAtMixin, Base):
         ForeignKey("messages.id", ondelete="SET NULL")
     )
     read_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
+    archived_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
+    hidden_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
+    pinned_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
+    muted_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
+    cleared_at: Mapped[datetime.datetime | None] = mapped_column(nullable=True)
 
     conversation: Mapped[Conversation] = relationship(back_populates="participants")
     user: Mapped["User"] = relationship()
@@ -58,6 +65,7 @@ class Message(CreatedAtMixin, Base):
     media_id: Mapped[int | None] = mapped_column(ForeignKey("media.id", ondelete="SET NULL"), nullable=True)
     edited_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    media: Mapped["Media | None"] = relationship(lazy="selectin")
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
     sender: Mapped["User"] = relationship()

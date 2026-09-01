@@ -1,4 +1,6 @@
 
+from datetime import UTC, datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -45,6 +47,12 @@ class UserRepository(UserPort):
         if user_model is None:
             return None
         return self._to_domain(user_model)
+
+    async def touch_last_seen(self, user_id: int) -> None:
+        user = await self.session.get(UserModel, user_id)
+        if user is not None:
+            user.last_seen_at = datetime.now(UTC)
+            await self.session.commit()
 
     async def create(self, user: User) -> User:
         user_model = self._to_orm(user)
@@ -110,6 +118,7 @@ class UserRepository(UserPort):
             hashed_password=user_model.hashed_password,
             is_active=user_model.is_active,
             is_superuser=user_model.is_superuser,
+            last_seen_at=user_model.last_seen_at,
             created_at=user_model.created_at,
             profile=profile,
         )

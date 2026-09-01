@@ -182,6 +182,14 @@ class ProfileRepository(ProfilePort):
                 street=user_model.profile.street,
                 bio=user_model.profile.bio,
                 avatar=user_model.profile.avatar,
+                profile_visibility=user_model.profile.profile_visibility,
+                friend_request_policy=user_model.profile.friend_request_policy,
+                message_policy=user_model.profile.message_policy,
+                show_email=user_model.profile.show_email,
+                show_phone=user_model.profile.show_phone,
+                show_birth_date=user_model.profile.show_birth_date,
+                show_friends=user_model.profile.show_friends,
+                show_posts=user_model.profile.show_posts,
             )
         return User(
             id=user_model.id,
@@ -190,6 +198,7 @@ class ProfileRepository(ProfilePort):
             hashed_password=user_model.hashed_password,
             is_active=user_model.is_active,
             is_superuser=user_model.is_superuser,
+            last_seen_at=user_model.last_seen_at,
             created_at=user_model.created_at,
             profile=profile,
         )

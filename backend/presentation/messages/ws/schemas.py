@@ -43,4 +43,12 @@ class WsError(TypedDict):
     message: str
 
 
-WsEvent = WsMessageNew | WsMessageUpdated | WsMessageDeleted | WsConversationSubscribed | WsMessageRead | WsError
+class WsTyping(TypedDict):
+    type: str
+    conversation_id: int
+    user_id: int
+    is_typing: bool
+    recipient_ids: list[int]
+
+
+WsEvent = WsMessageNew | WsMessageUpdated | WsMessageDeleted | WsConversationSubscribed | WsMessageRead | WsTyping | WsError

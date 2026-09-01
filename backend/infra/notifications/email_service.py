@@ -69,8 +69,8 @@ class EmailService:
             smtp_obj.send_message(message)
             logger.info("Письмо успешно отправлено на %s", to_email)
             return True
-        except Exception as e:
-            logger.error("Ошибка при отправке письма: %s", e)
+        except (OSError, smtplib.SMTPException) as e:
+            logger.exception("Ошибка при отправке письма: %s", e)
             return False
         finally:
             if smtp_obj:
@@ -117,8 +117,8 @@ class EmailService:
             )
             smtp_obj.send_message(message)
             logger.info("Письмо статистики успешно отправлено")
-        except Exception as e:
-            logger.error("Ошибка при отправке письма: %s", e)
+        except (OSError, smtplib.SMTPException) as e:
+            logger.exception("Ошибка при отправке письма: %s", e)
         finally:
             if smtp_obj:
                 smtp_obj.quit()

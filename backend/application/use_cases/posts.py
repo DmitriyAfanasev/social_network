@@ -92,8 +92,8 @@ class CreatePostUseCase:
                     )
                 except ValueError as e:
                     raise ValidationAppError(str(e)) from e
-                except Exception as e:
-                    logger.error("Post attachment upload failed: %s", e)
+                except (OSError, RuntimeError) as e:
+                    logger.exception("Post attachment upload failed: %s", e)
                     raise ExternalServiceError("Ошибка при обработке файла") from e
 
                 new_post = await self.post_repository.update(
@@ -159,8 +159,8 @@ class UpdatePostUseCase:
                 )
             except ValueError as e:
                 raise ValidationAppError(str(e)) from e
-            except Exception as e:
-                logger.error("Post attachment upload failed: %s", e)
+            except (OSError, RuntimeError) as e:
+                logger.exception("Post attachment upload failed: %s", e)
                 raise ExternalServiceError("Ошибка при обработке файла") from e
 
         try:
@@ -171,8 +171,8 @@ class UpdatePostUseCase:
                     image=image_url,
                     author_id=current_user_id,
                 )
-        except Exception as e:
-            logger.error("Post update failed: %s", e)
+        except (OSError, RuntimeError) as e:
+            logger.exception("Post update failed: %s", e)
             raise ExternalServiceError("Не удалось обновить пост") from e
 
         return PostResult(post=updated_post)

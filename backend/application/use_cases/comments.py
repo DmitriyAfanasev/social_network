@@ -5,6 +5,9 @@ from backend.application.commands import CreateCommentCommand, UpdateCommentComm
 from backend.application.event_types import COMMENT_CREATED_EVENT
 from backend.application.events import IntegrationEvent
 from backend.application.exceptions import NotFoundError, PermissionDeniedError, ValidationAppError
+from backend.application.ports.audit_repository import AuditRepository
+from backend.application.ports.authorization import AuthorizationService
+from backend.application.ports.block_repository import BlockRepository
 from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.transaction_manager import TransactionManager
@@ -19,10 +22,12 @@ class CreateCommentUseCase:
         comment_repository: CommentRepository,
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        block_repository: BlockRepository,
     ) -> None:
         self.comment_repository = comment_repository
         self.outbox_repository = outbox_repository
         self.transaction_manager = transaction_manager
+        self.block_repository = block_repository
 
     async def execute(
         self,
@@ -34,15 +39,18 @@ class CreateCommentUseCase:
         post = await self.comment_repository.get_post_by_id(post_id)
         if post is None:
             raise NotFoundError("Post not found")
+        if await self.block_repository.is_blocked(current_user_id, post.author_id):
+            raise PermissionDeniedError("Нельзя комментировать этот пост")
 
         if command.parent_id is not None:
             parent_comment = await self.comment_repository.get_comment_by_id(command.parent_id)
             if parent_comment is None:
                 raise NotFoundError("Parent comment not found")
             parent_domain_comment = Comment.from_read_model(parent_comment)
-            if not parent_domain_comment.can_accept_reply_for_post(post_id):
+            parent_depth = await self.comment_repository.get_comment_depth(command.parent_id)
+            if not parent_domain_comment.can_accept_reply_for_post(post_id, parent_depth):
                 raise ValidationAppError(
-                    "Parent comment must be a direct comment for this post"
+                    "Максимальная глубина дерева комментариев — 3 уровня"
                 )
 
         async with self.transaction_manager:
@@ -131,9 +139,13 @@ class DeleteCommentUseCase:
         self,
         comment_repository: CommentRepository,
         transaction_manager: TransactionManager,
+        authorization: AuthorizationService | None = None,
+        audit_repository: AuditRepository | None = None,
     ) -> None:
         self.comment_repository = comment_repository
         self.transaction_manager = transaction_manager
+        self.authorization = authorization
+        self.audit_repository = audit_repository
 
     async def execute(self, current_user: User, comment_id: int) -> None:
         comment = await self.comment_repository.get_comment_by_id(comment_id)
@@ -141,8 +153,21 @@ class DeleteCommentUseCase:
             raise NotFoundError("Комментарий не найден")
 
         current_user_id = cast(int, current_user.id)
-        if comment.user_id != current_user_id:
+        post = await self.comment_repository.get_post_by_id(comment.post_id)
+        is_post_owner = post is not None and post.author_id == current_user_id
+        is_moderator = self.authorization is not None and await self.authorization.has_permission(
+            current_user_id, "comments.delete_any"
+        )
+        if comment.user_id != current_user_id and not is_post_owner and not is_moderator:
             raise PermissionDeniedError("У вас нет прав на удаление этого комментария")
 
         async with self.transaction_manager:
             await self.comment_repository.delete(comment)
+            if is_moderator and self.audit_repository:
+                await self.audit_repository.record(
+                    current_user_id,
+                    "comment.deleted_by_moderator",
+                    "comment",
+                    comment_id,
+                    {"post_id": comment.post_id, "comment_author_id": comment.user_id},
+                )

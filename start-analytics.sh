@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-faststream run services.analytics.app:app
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+"$SCRIPT_DIR/scripts/create-kafka-topics.sh"
+
+exec faststream run services.analytics.app:app

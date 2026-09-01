@@ -12,6 +12,7 @@ class User(BaseEntity):
     hashed_password: str
     is_active: bool = True
     is_superuser: bool = False
+    last_seen_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     profile: Profile | None = None
 

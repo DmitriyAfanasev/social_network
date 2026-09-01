@@ -2,6 +2,7 @@ import logging
 from typing import Any, cast
 
 import redis.asyncio as redis
+from redis.exceptions import RedisError
 
 from backend.application.ports.token_store import PendingTokenStore
 from backend.infra.config import RedisConfig
@@ -47,16 +48,16 @@ class RedisPendingTokenStore(PendingTokenStore):
         try:
             client = await self._client()
             return cast(str | None, await client.get(token))
-        except Exception as e:
-            logger.error("Pending token store read failed: %s", e, exc_info=True)
+        except (OSError, RedisError, RuntimeError) as e:
+            logger.exception("Pending token store read failed: %s", e, exc_info=True)
             raise RuntimeError("Pending token store read failed") from e
 
     async def delete_token(self, token: str) -> None:
         try:
             client = await self._client()
             await client.delete(token)
-        except Exception as e:
-            logger.error("Pending token store delete failed: %s", e, exc_info=True)
+        except (OSError, RedisError, RuntimeError) as e:
+            logger.exception("Pending token store delete failed: %s", e, exc_info=True)
             raise RuntimeError("Pending token store delete failed") from e
 
     async def _save_token(self, token: str, email: str, expires_sec: int) -> bool:
@@ -64,6 +65,6 @@ class RedisPendingTokenStore(PendingTokenStore):
             client = await self._client()
             await client.setex(token, expires_sec, email)
             return True
-        except Exception as e:
-            logger.error("Pending token store write failed: %s", e, exc_info=True)
+        except (OSError, RedisError, RuntimeError) as e:
+            logger.exception("Pending token store write failed: %s", e, exc_info=True)
             return False

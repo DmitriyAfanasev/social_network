@@ -9,11 +9,19 @@ from backend.application.event_types import (
 )
 from backend.application.events import IntegrationEvent
 from backend.application.exceptions import NotFoundError, ValidationAppError
+from backend.application.ports.block_repository import BlockRepository
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.outbox_repository import OutboxRepository
+from backend.application.ports.profile_repository import ProfileRepository
 from backend.application.ports.transaction_manager import TransactionManager
-from backend.application.results import FriendActionResult, FriendsResult
+from backend.application.results import (
+    FriendActionResult,
+    FriendRecommendation,
+    FriendRecommendationsResult,
+    FriendsResult,
+)
 from backend.domain.user.entity import User
+from backend.domain.user.policy import InteractionPolicy, RelationshipFacts
 
 
 class GetFriendsUseCase:
@@ -33,14 +41,51 @@ class GetFriendsUseCase:
         )
 
 
+class GetFriendRecommendationsUseCase:
+    def __init__(self, friend_repository: FriendRepository, block_repository: BlockRepository) -> None:
+        self.friend_repository = friend_repository
+        self.block_repository = block_repository
+
+    async def execute(self, current_user: User, limit: int = 10) -> FriendRecommendationsResult:
+        if not 1 <= limit <= 50:
+            raise ValidationAppError("Параметр limit должен быть от 1 до 50")
+        user_id = cast(int, current_user.id)
+        direct_friends = await self.friend_repository.list_friends(user_id)
+        direct_ids = {friend.id for friend in direct_friends}
+        candidates: dict[int, int] = {}
+        users_by_id = {}
+        for friend in direct_friends:
+            for candidate in await self.friend_repository.list_friends(friend.id):
+                if candidate.id == user_id or candidate.id in direct_ids:
+                    continue
+                if await self.block_repository.is_blocked(user_id, candidate.id):
+                    continue
+                if await self.friend_repository.is_subscribed(user_id, candidate.id):
+                    continue
+                candidates[candidate.id] = candidates.get(candidate.id, 0) + 1
+                users_by_id[candidate.id] = candidate
+
+        recommendations = [
+            FriendRecommendation(user=users_by_id[candidate_id], common_friends=count)
+            for candidate_id, count in sorted(
+                candidates.items(), key=lambda item: (-item[1], item[0])
+            )[:limit]
+        ]
+        return FriendRecommendationsResult(current_user=current_user, recommendations=recommendations)
+
+
 class AddFriendUseCase:
     def __init__(
         self,
         friend_repository: FriendRepository,
         outbox_repository: OutboxRepository,
         transaction_manager: TransactionManager,
+        block_repository: BlockRepository,
+        profile_repository: ProfileRepository,
     ) -> None:
         self.friend_repository = friend_repository
+        self.profile_repository = profile_repository
+        self.block_repository = block_repository
         self.outbox_repository = outbox_repository
         self.transaction_manager = transaction_manager
 
@@ -49,6 +94,23 @@ class AddFriendUseCase:
         self._validate_pair(current_user_id, friend_id)
         if not await self.friend_repository.user_exists(friend_id):
             raise NotFoundError("User not found")
+        is_blocked = await self.block_repository.is_blocked(current_user_id, friend_id)
+        target = await self.profile_repository.get_by_id(friend_id)
+        is_friend = await self.friend_repository.is_friend(current_user_id, friend_id)
+        are_friends_of_friends = (
+            False
+            if is_friend
+            else await self.friend_repository.are_friends_of_friends(current_user_id, friend_id)
+        )
+        facts = RelationshipFacts(
+            is_self=current_user_id == friend_id,
+            is_blocked=is_blocked,
+            is_friend=is_friend,
+            are_friends_of_friends=are_friends_of_friends,
+        )
+        friend_request_policy = target.profile.friend_request_policy if target.profile else "everyone"
+        if not InteractionPolicy.can_send_friend_request(friend_request_policy, facts):
+            raise ValidationAppError("Пользователь запретил входящие заявки в друзья")
 
         async with self.transaction_manager:
             await self.friend_repository.subscribe(current_user_id, friend_id)

@@ -55,3 +55,7 @@ class UserRepository(ABC):
         hashed_password: str,
     ) -> User | None:
         pass
+
+    async def touch_last_seen(self, user_id: int) -> None:
+        """Update the user's last activity timestamp."""
+        raise NotImplementedError

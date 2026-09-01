@@ -4,20 +4,36 @@ from fastapi import APIRouter
 from backend.application.use_cases.friends import (
     AddFriendUseCase,
     CancelSubscriptionUseCase,
+    GetFriendRecommendationsUseCase,
     GetFriendsUseCase,
     RemoveFriendUseCase,
 )
 from backend.domain.user.entity import User
 from backend.presentation.messages.auth import require_user_id
 from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
-from backend.presentation.shared.http.schemas import FriendActionResponse, FriendsResponse
+from backend.presentation.shared.http.schemas import (
+    FriendActionResponse,
+    FriendRecommendationsResponse,
+    FriendsResponse,
+)
 from backend.presentation.shared.http.serializers import (
     friend_action_result_to_response,
+    friend_recommendations_result_to_response,
     friends_result_to_response,
 )
 
 
 router = APIRouter(prefix="/friends", tags=["Friends"], route_class=DishkaRoute)
+
+
+@router.get("/recommendations", response_model=FriendRecommendationsResponse)
+async def get_friend_recommendations(
+    use_case: FromDishka[GetFriendRecommendationsUseCase],
+    current_user: FromDishka[User],
+    limit: int = 10,
+) -> FriendRecommendationsResponse:
+    result = await use_case.execute(current_user=current_user, limit=limit)
+    return friend_recommendations_result_to_response(result)
 
 
 @router.get("", response_model=FriendsResponse)

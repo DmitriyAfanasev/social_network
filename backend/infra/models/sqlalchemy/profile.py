@@ -1,7 +1,7 @@
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy import Boolean, Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -39,6 +39,14 @@ class Profile(Base):
         default="/media/default-avatar",
         server_default="/media/default-avatar",
     )
+    profile_visibility: Mapped[str] = mapped_column(String(24), nullable=False, default="everyone", server_default="everyone")
+    friend_request_policy: Mapped[str] = mapped_column(String(24), nullable=False, default="everyone", server_default="everyone")
+    message_policy: Mapped[str] = mapped_column(String(24), nullable=False, default="everyone", server_default="everyone")
+    show_email: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    show_phone: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    show_birth_date: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    show_friends: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    show_posts: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
 
     @property
     def full_name(self) -> str:

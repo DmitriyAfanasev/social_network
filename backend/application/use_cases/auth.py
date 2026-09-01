@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Any
 
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.commands import (
@@ -36,7 +37,7 @@ NOT_FOUND_USER_MESSAGE = "Пользователь с таким email не на
 INVALID_TOKEN_MESSAGE = "Невалидный токен"
 
 
-def _exception_message(error: Exception) -> str:
+def _exception_message(error: Any) -> str:
     return str(getattr(error, "detail", error))
 
 
@@ -70,12 +71,45 @@ class LoginUseCase:
                 )
         except AuthenticationError:
             raise
-        except Exception as e:
+        except (KeyError, OSError, RuntimeError, TypeError, ValueError) as e:
             raise AuthenticationError(_exception_message(e)) from e
         return AuthResult(
             user=user,
             tokens=self.token_service.create_tokens(_persisted_user_id(user)),
         )
+
+
+class GetCurrentUserUseCase:
+    """Resolve and validate the user represented by an access token."""
+
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        token_service: AuthTokenService,
+    ) -> None:
+        self.user_repository = user_repository
+        self.token_service = token_service
+
+    async def execute(self, access_token: str | None, *, required: bool = True) -> User | None:
+        if not access_token:
+            if required:
+                raise AuthenticationError("Пользователь не авторизован")
+            return None
+
+        try:
+            user_id = self.token_service.get_access_user_id(access_token)
+            user = await self.user_repository.get_by_id(user_id)
+        except (KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
+            if not required:
+                return None
+            raise AuthenticationError(_exception_message(error)) from error
+
+        if user is None or not user.is_active:
+            if required:
+                raise AuthenticationError("Пользователь не авторизован")
+            return None
+        await self.user_repository.touch_last_seen(user_id)
+        return user
 
 
 class RefreshTokenUseCase:
@@ -89,7 +123,7 @@ class RefreshTokenUseCase:
             return AccessTokenResult(
                 access_token=self.token_service.refresh_access_token(refresh_token)
             )
-        except Exception as e:
+        except (OSError, RuntimeError, TypeError, ValueError) as e:
             raise AuthenticationError(_exception_message(e)) from e
 
 
@@ -127,8 +161,8 @@ class RequestRegistrationConfirmationUseCase:
             return MessageResult("Confirmation email sent")
         except ApplicationError:
             raise
-        except Exception as e:
-            logger.error("Registration confirmation failed: %s", e, exc_info=True)
+        except (OSError, RuntimeError, TypeError, ValueError) as e:
+            logger.exception("Registration confirmation failed: %s", e, exc_info=True)
             raise ExternalServiceError("Произошла ошибка при регистрации") from e
 
 
@@ -199,7 +233,7 @@ class RegisterUserUseCase:
             raise ValidationAppError(str(e.args[0])) from e
         except ApplicationError:
             raise
-        except Exception as e:
+        except (OSError, RuntimeError, TypeError) as e:
             logger.exception("Registration failed: %s", e, exc_info=True)
             raise ExternalServiceError("Произошла ошибка при регистрации") from e
 
@@ -265,8 +299,8 @@ class RequestPasswordResetUseCase:
             return MessageResult("Password reset email sent")
         except ApplicationError:
             raise
-        except Exception as e:
-            logger.error("Password reset request failed: %s", e)
+        except (OSError, RuntimeError, TypeError, ValueError) as e:
+            logger.exception("Password reset request failed: %s", e)
             raise ExternalServiceError("Ошибка при запросе сброса пароля") from e
 
 
@@ -292,8 +326,8 @@ class ResetPasswordUseCase:
         try:
             try:
                 email = await self.token_store.get_email_by_token(command.token)
-            except Exception as e:
-                logger.error("Password reset token lookup failed: %s", e)
+            except (OSError, RuntimeError, TypeError, ValueError) as e:
+                logger.exception("Password reset token lookup failed: %s", e)
                 raise ExternalServiceError("Ошибка при смене пароля") from e
             if email is None:
                 raise ValidationAppError(INVALID_TOKEN_MESSAGE)
@@ -313,8 +347,8 @@ class ResetPasswordUseCase:
             )
         except ApplicationError:
             raise
-        except Exception as e:
+        except (OSError, RuntimeError, TypeError, ValueError) as e:
             if hasattr(e, "detail"):
                 raise ValidationAppError(_exception_message(e)) from e
-            logger.error("Password reset failed: %s", e)
+            logger.exception("Password reset failed: %s", e)
             raise ExternalServiceError("Ошибка при смене пароля") from e

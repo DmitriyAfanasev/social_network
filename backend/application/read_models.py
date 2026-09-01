@@ -18,6 +18,14 @@ class ProfileReadModel(Protocol):
     street: str | None
     bio: str | None
     avatar: str | None
+    profile_visibility: str
+    friend_request_policy: str
+    message_policy: str
+    show_email: bool
+    show_phone: bool
+    show_birth_date: bool
+    show_friends: bool
+    show_posts: bool
 
 
 class ProfileAvatarReadModel(Protocol):
@@ -61,6 +69,8 @@ class PostReadModel(Protocol):
     author: UserReadModel | None
     created_at: datetime
     updated_at: datetime
+    preview_comment: "CommentReadModel | None"
+    image_content_type: str | None
 
 
 class CommentReadModel(Protocol):
@@ -72,6 +82,37 @@ class CommentReadModel(Protocol):
     user: UserReadModel | None
     created_at: datetime
     updated_at: datetime
+    likes_count: int
+
+
+class MediaReadModel(Protocol):
+    content_type: str | None
+
+
+class MessageReadModel(Protocol):
+    id: int
+    conversation_id: int
+    sender_id: int
+    text: str
+    created_at: datetime
+    media_id: int | None
+    media: MediaReadModel | None
+    edited_at: datetime | None
+    deleted_at: datetime | None
+
+
+class ConversationParticipantReadModel(Protocol):
+    user_id: int
+    archived_at: datetime | None
+    pinned_at: datetime | None
+    muted_at: datetime | None
+
+
+class ConversationReadModel(Protocol):
+    id: int
+    created_at: datetime
+    participants: Sequence[ConversationParticipantReadModel]
+    last_message: MessageReadModel | None
 
 
 class OutboxEventReadModel(Protocol):

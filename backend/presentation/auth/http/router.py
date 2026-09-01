@@ -41,7 +41,7 @@ from backend.presentation.shared.http.serializers import (
 router = APIRouter(tags=["Auth"], route_class=DishkaRoute)
 
 
-@router.post("/login", response_model=AuthResponse)
+@router.post("/login")
 async def login(
     body: LoginRequest,
     response: Response,
@@ -63,7 +63,7 @@ async def login(
     return auth_result_to_response(result)
 
 
-@router.post("/refresh", response_model=MessageResponse)
+@router.post("/refresh")
 async def refresh_token(
     response: Response,
     use_case: FromDishka[RefreshTokenUseCase],
@@ -75,14 +75,14 @@ async def refresh_token(
     return MessageResponse(message="Access token refreshed")
 
 
-@router.post("/logout", response_model=MessageResponse)
+@router.post("/logout")
 async def logout(response: Response) -> MessageResponse:
     response.delete_cookie("access-token")
     response.delete_cookie("refresh-token")
     return MessageResponse(message="Logged out")
 
 
-@router.post("/registration-confirmations", response_model=MessageResponse)
+@router.post("/registration-confirmations")
 async def request_registration_confirmation(
     body: RegistrationConfirmationRequest,
     use_case: FromDishka[RequestRegistrationConfirmationUseCase],

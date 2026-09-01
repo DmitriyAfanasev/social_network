@@ -26,6 +26,10 @@ class FriendRepository(ABC):
         pass
 
     @abstractmethod
+    async def are_friends_of_friends(self, user_id: int, target_id: int) -> bool:
+        pass
+
+    @abstractmethod
     async def is_subscribed(self, subscriber_id: int, target_id: int) -> bool:
         pass
 

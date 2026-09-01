@@ -82,6 +82,11 @@ class FriendRepository(FriendPort):
         )
         return bool(await self.session.scalar(statement))
 
+    async def are_friends_of_friends(self, user_id: int, target_id: int) -> bool:
+        current_friends = {user.id for user in await self.list_friends(user_id)}
+        target_friends = {user.id for user in await self.list_friends(target_id)}
+        return bool(current_friends & target_friends)
+
     async def is_subscribed(self, subscriber_id: int, target_id: int) -> bool:
         statement = select(
             exists().where(

@@ -1,1 +1,0 @@
-"""Users HTTP presentation schemas."""

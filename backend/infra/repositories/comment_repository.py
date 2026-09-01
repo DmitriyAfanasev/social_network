@@ -19,6 +19,18 @@ class CommentRepository(CommentPort):
     async def get_comment_by_id(self, comment_id: int) -> CommentReadModel | None:
         return cast(CommentReadModel | None, await self.session.get(Comment, comment_id))
 
+    async def get_comment_depth(self, comment_id: int) -> int:
+        depth = 0
+        parent_id = comment_id
+        while depth < 3:
+            parent_id = await self.session.scalar(
+                select(Comment.parent_id).where(Comment.id == parent_id)
+            )
+            if parent_id is None:
+                return depth
+            depth += 1
+        return depth
+
     async def create(
         self,
         user_id: int,

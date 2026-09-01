@@ -50,11 +50,103 @@ async def create_direct_conversation(
 async def list_conversations(
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
+    archived: bool = False,
 ) -> list[ConversationPayload]:
     """Возвращает список direct-диалогов текущего авторизованного пользователя."""
     user_id = require_user_id(current_user)
-    results = await use_case.list_conversations(user_id)
-    return [conversation_to_payload(item.conversation, user_id) for item in results]
+    results = await use_case.list_conversations(user_id, archived=archived)
+    conversations = []
+    for item in results:
+        payload = conversation_to_payload(item.conversation, user_id)
+        other_user_id = payload["other_user_id"]
+        payload["can_send_message"] = (
+            True
+            if other_user_id is None
+            else await use_case.can_send_message(user_id, other_user_id)
+        )
+        conversations.append(payload)
+    return conversations
+
+
+@router.patch("/conversations/{conversation_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
+async def archive_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.archive_conversation(conversation_id, require_user_id(current_user))
+
+
+@router.patch("/conversations/{conversation_id}/unarchive", status_code=status.HTTP_204_NO_CONTENT)
+async def unarchive_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.unarchive_conversation(conversation_id, require_user_id(current_user))
+
+
+@router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.hide_conversation(conversation_id, require_user_id(current_user))
+
+
+@router.post("/conversations/{conversation_id}/unread", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_conversation_unread(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.mark_unread(conversation_id, require_user_id(current_user))
+
+
+@router.patch("/conversations/{conversation_id}/pin", status_code=status.HTTP_204_NO_CONTENT)
+async def pin_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.pin_conversation(conversation_id, require_user_id(current_user), True)
+
+
+@router.patch("/conversations/{conversation_id}/unpin", status_code=status.HTTP_204_NO_CONTENT)
+async def unpin_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.pin_conversation(conversation_id, require_user_id(current_user), False)
+
+
+@router.patch("/conversations/{conversation_id}/mute", status_code=status.HTTP_204_NO_CONTENT)
+async def mute_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.mute_conversation(conversation_id, require_user_id(current_user), True)
+
+
+@router.patch("/conversations/{conversation_id}/unmute", status_code=status.HTTP_204_NO_CONTENT)
+async def unmute_conversation(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.mute_conversation(conversation_id, require_user_id(current_user), False)
+
+
+@router.delete("/conversations/{conversation_id}/history", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_conversation_history(
+    conversation_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.clear_history(conversation_id, require_user_id(current_user))
 
 
 @router.get("/conversations/{conversation_id}/messages")

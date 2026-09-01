@@ -9,6 +9,7 @@ from backend.application.results import (
     CommentsPageResult,
     FeedResult,
     FriendActionResult,
+    FriendRecommendationsResult,
     FriendsResult,
     MessageResult,
     PhotoAlbumResult,
@@ -30,6 +31,8 @@ from backend.presentation.shared.http.schemas import (
     CommentsPageResponse,
     FeedResponse,
     FriendActionResponse,
+    FriendRecommendationResponse,
+    FriendRecommendationsResponse,
     FriendsResponse,
     MessageResponse,
     PhotoAlbumEnvelopeResponse,
@@ -39,6 +42,7 @@ from backend.presentation.shared.http.schemas import (
     ProfilePhotoAlbumResponse,
     ProfilePhotoResponse,
     ProfilePhotosResponse,
+    ProfilePreviewResponse,
     ProfileResponse,
     RemovePostImageResponse,
     ToggleLikeResponse,
@@ -47,7 +51,7 @@ from backend.presentation.shared.http.schemas import (
 )
 
 
-def profile_to_response(profile: Any | None) -> ProfileResponse | None:
+def profile_to_response(profile: Any | None, *, own_profile: bool = False) -> ProfileResponse | None:
     if profile is None:
         return None
 
@@ -56,9 +60,9 @@ def profile_to_response(profile: Any | None) -> ProfileResponse | None:
         last_name=profile.last_name,
         middle_name=profile.middle_name,
         full_name=profile.full_name,
-        birth_date=profile.birth_date,
+        birth_date=profile.birth_date if own_profile or profile.show_birth_date else None,
         gender=profile.gender,
-        phone_number=profile.phone_number,
+        phone_number=profile.phone_number if own_profile or profile.show_phone else None,
         country=profile.country,
         city=profile.city,
         street=profile.street,
@@ -71,6 +75,7 @@ def user_to_response(
     user: Any | None,
     *,
     include_email: bool = False,
+    own_profile: bool = False,
 ) -> UserResponse | None:
     if user is None:
         return None
@@ -82,8 +87,16 @@ def user_to_response(
         is_active=user.is_active,
         is_superuser=user.is_superuser,
         created_at=user.created_at,
-        profile=profile_to_response(user.profile),
+        last_seen_at=user.last_seen_at,
+        profile=profile_to_response(user.profile, own_profile=own_profile),
     )
+
+
+def required_user_to_response(user: Any) -> UserResponse:
+    response = user_to_response(user)
+    if response is None:
+        raise ValueError("Рекомендация содержит пользователя без данных")
+    return response
 
 
 def post_to_response(post: Any) -> PostResponse:
@@ -91,6 +104,7 @@ def post_to_response(post: Any) -> PostResponse:
         id=post.id,
         content=post.content,
         image=post.image,
+        image_content_type=getattr(post, "image_content_type", None),
         author_id=post.author_id,
         author=(
             user_to_response(post.author)
@@ -108,6 +122,11 @@ def post_to_response(post: Any) -> PostResponse:
         ],
         created_at=post.created_at,
         updated_at=post.updated_at,
+        featured_comment=(
+            comment_to_response(post.preview_comment)
+            if getattr(post, "preview_comment", None)
+            else None
+        ),
     )
 
 
@@ -129,6 +148,8 @@ def comment_to_response(
         ),
         created_at=comment.created_at,
         updated_at=comment.updated_at,
+        likes_count=getattr(comment, "likes_count", 0),
+        is_liked_by_current=getattr(comment, "is_liked_by_current", False),
     )
 
 
@@ -190,14 +211,57 @@ def toggle_like_result_to_response(result: ToggleLikeResult) -> ToggleLikeRespon
 
 def profile_result_to_response(result: ProfileResult) -> ProfilePageResponse:
     return ProfilePageResponse(
-        user=user_to_response(result.user, include_email=result.is_own_profile),
+        user=user_to_response(
+            result.user,
+            include_email=result.is_own_profile
+            or bool(result.user.profile and result.user.profile.show_email),
+            own_profile=result.is_own_profile,
+        ),
         is_own_profile=result.is_own_profile,
         is_friend=result.is_friend,
         is_subscribed=result.is_subscribed,
         is_subscribed_to_current=result.is_subscribed_to_current,
+        can_send_friend_request=result.can_send_friend_request,
+        can_send_message=result.can_send_message,
+        relationship_status=_relationship_status(result),
         current_user=user_to_response(result.current_user, include_email=True),
         posts=[post_to_response(post) for post in result.posts],
+        profile_visibility=result.user.profile.profile_visibility if result.is_own_profile and result.user.profile else None,
+        friend_request_policy=result.user.profile.friend_request_policy if result.is_own_profile and result.user.profile else None,
+        message_policy=result.user.profile.message_policy if result.is_own_profile and result.user.profile else None,
+        show_email=result.user.profile.show_email if result.is_own_profile and result.user.profile else None,
+        show_phone=result.user.profile.show_phone if result.is_own_profile and result.user.profile else None,
+        show_birth_date=result.user.profile.show_birth_date if result.is_own_profile and result.user.profile else None,
+        show_friends=result.user.profile.show_friends if result.is_own_profile and result.user.profile else None,
+        show_posts=result.user.profile.show_posts if result.is_own_profile and result.user.profile else None,
     )
+
+
+def profile_preview_to_response(user: Any) -> ProfilePreviewResponse:
+    profile = getattr(user, "profile", None)
+    return ProfilePreviewResponse(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        avatar=profile.avatar if profile else None,
+        last_seen_at=user.last_seen_at,
+    )
+
+
+def _relationship_status(result: ProfileResult) -> str:
+    if result.is_own_profile:
+        return "self"
+    if result.is_friend:
+        return "friend"
+    if result.is_subscribed_to_current:
+        return "incoming_request"
+    if result.is_subscribed:
+        return "outgoing_request"
+    if not result.can_send_friend_request:
+        return "profile_private"
+    if not result.can_send_message:
+        return "messages_restricted"
+    return "not_friend"
 
 
 def user_result_to_response(result: UserResult) -> UserEnvelopeResponse:
@@ -280,6 +344,20 @@ def friends_result_to_response(result: FriendsResult) -> FriendsResponse:
             for subscription in result.subscriptions
             if (subscription_response := user_to_response(subscription)) is not None
         ],
+    )
+
+
+def friend_recommendations_result_to_response(
+    result: FriendRecommendationsResult,
+) -> FriendRecommendationsResponse:
+    return FriendRecommendationsResponse(
+        recommendations=[
+            FriendRecommendationResponse(
+                user=required_user_to_response(item.user),
+                common_friends=item.common_friends,
+            )
+            for item in result.recommendations
+        ]
     )
 
 
