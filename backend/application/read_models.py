@@ -21,6 +21,7 @@ class ProfileReadModel(Protocol):
 
 
 class ProfileAvatarReadModel(Protocol):
+    id: int
     avatar_url: str
     created_at: datetime
 

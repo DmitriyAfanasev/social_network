@@ -6,6 +6,23 @@ from backend.presentation.messages.http.serializers import MessagePayload
 class WsMessageNew(TypedDict):
     type: str
     message: MessagePayload
+    recipient_ids: list[int]
+
+
+class WsMessageUpdated(TypedDict):
+    """Событие изменения сообщения."""
+
+    type: str
+    message: MessagePayload
+    recipient_ids: list[int]
+
+
+class WsMessageDeleted(TypedDict):
+    """Событие удаления сообщения."""
+
+    type: str
+    message: MessagePayload
+    recipient_ids: list[int]
 
 
 class WsConversationSubscribed(TypedDict):
@@ -18,6 +35,7 @@ class WsMessageRead(TypedDict):
     conversation_id: int
     message_id: int
     user_id: int
+    recipient_ids: list[int]
 
 
 class WsError(TypedDict):
@@ -25,4 +43,4 @@ class WsError(TypedDict):
     message: str
 
 
-WsEvent = WsMessageNew | WsConversationSubscribed | WsMessageRead | WsError
+WsEvent = WsMessageNew | WsMessageUpdated | WsMessageDeleted | WsConversationSubscribed | WsMessageRead | WsError

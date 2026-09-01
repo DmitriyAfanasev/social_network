@@ -51,7 +51,7 @@ async def subscribe_to_conversation(
     subscribed_conversations: set[int],
 ) -> None:
     """Verify conversation membership and subscribe the socket to it."""
-    await use_case.list_messages(conversation_id, user_id, None, 1)
+    await use_case.list_messages(conversation_id, user_id, 0, 1)
     await manager.subscribe(conversation_id, websocket)
     subscribed_conversations.add(conversation_id)
     await websocket.send_json({"type": CONVERSATION_SUBSCRIBED_EVENT, "conversation_id": conversation_id})
@@ -75,10 +75,19 @@ async def handle_socket_event(
         )
     elif event_type == MESSAGE_SEND_EVENT:
         result = await use_case.send_message(conversation_id, user_id, str(event.get("text", "")))
-        await manager.broadcast(conversation_id, {"type": MESSAGE_NEW_EVENT, "message": message_to_payload(result.message)})
+        recipient_ids = await use_case.get_participant_ids(conversation_id)
+        await manager.broadcast(
+            conversation_id,
+            {
+                "type": MESSAGE_NEW_EVENT,
+                "message": message_to_payload(result.message),
+                "recipient_ids": recipient_ids,
+            },
+        )
     elif event_type == "message.read":
         message_id = int(event["message_id"])
         await use_case.mark_read(conversation_id, user_id, message_id)
+        recipient_ids = await use_case.get_participant_ids(conversation_id)
         await manager.broadcast(
             conversation_id,
             {
@@ -86,6 +95,7 @@ async def handle_socket_event(
                 "conversation_id": conversation_id,
                 "message_id": message_id,
                 "user_id": user_id,
+                "recipient_ids": recipient_ids,
             },
         )
     elif event_type == WEBSOCKET_PING_EVENT:

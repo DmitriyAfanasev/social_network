@@ -1,5 +1,4 @@
 import logging
-import os
 from collections.abc import AsyncGenerator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
@@ -54,8 +53,6 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     :return: FastAPI: Настроенный экземпляр приложения
     """
     configure_logging(app_settings.logging.log_format)
-    os.makedirs(app_settings.file_storage.local_base_dir, exist_ok=True)
-
     application = FastAPI(lifespan=create_lifespan())
     setup_dishka(create_container(), application)
     application.add_middleware(
@@ -70,10 +67,5 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
         "/static",
         StaticFiles(directory=str(STATIC_DIR)),
         name="static",
-    )
-    application.mount(
-        app_settings.file_storage.local_url_prefix,
-        StaticFiles(directory=str(app_settings.file_storage.local_base_dir)),
-        name="client_files",
     )
     return application

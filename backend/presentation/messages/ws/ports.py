@@ -1,8 +1,13 @@
-from typing import Protocol
+import asyncio
+from collections.abc import Mapping
+from typing import Any, Protocol
 
 from fastapi import WebSocket
 
 from backend.presentation.messages.ws.schemas import WsEvent
+
+
+NotificationEvent = Mapping[str, Any]
 
 
 class MessageConnectionManagerPort(Protocol):
@@ -18,6 +23,22 @@ class MessageConnectionManagerPort(Protocol):
 
     async def broadcast(self, conversation_id: int, event: WsEvent) -> None:
         """Публикует событие диалога."""
+        ...
+
+    async def subscribe_notifications(self, user_id: int) -> asyncio.Queue[NotificationEvent]:
+        """Подписывает пользователя на события для SSE."""
+        ...
+
+    def unsubscribe_notifications(self, user_id: int, queue: asyncio.Queue[NotificationEvent]) -> None:
+        """Удаляет SSE-подписку пользователя."""
+        ...
+
+    async def publish_notification(
+        self,
+        recipient_ids: list[int],
+        event: NotificationEvent,
+    ) -> None:
+        """Публикует событие в SSE-потоки получателей."""
         ...
 
     def cleanup(self, websocket: WebSocket, conversations: set[int]) -> None:

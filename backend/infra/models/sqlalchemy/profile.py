@@ -36,8 +36,8 @@ class Profile(Base):
     bio: Mapped[str | None] = mapped_column(Text())
     avatar: Mapped[str] = mapped_column(
         Text(),
-        default="/client_files/avatars/дефолтный_аватар.jpg",
-        server_default="/client_files/avatars/дефолтный_аватар.jpg",
+        default="/media/default-avatar",
+        server_default="/media/default-avatar",
     )
 
     @property

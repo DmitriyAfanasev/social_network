@@ -1,10 +1,10 @@
 from typing import cast
 
 from backend.application.analytics_events import build_analytics_event_payload
-from backend.application.commands import CreateCommentCommand
+from backend.application.commands import CreateCommentCommand, UpdateCommentCommand
 from backend.application.event_types import COMMENT_CREATED_EVENT
 from backend.application.events import IntegrationEvent
-from backend.application.exceptions import NotFoundError, ValidationAppError
+from backend.application.exceptions import NotFoundError, PermissionDeniedError, ValidationAppError
 from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.transaction_manager import TransactionManager
@@ -91,3 +91,58 @@ class GetCommentsUseCase:
             limit=limit,
             post_id=post_id,
         )
+
+
+class UpdateCommentUseCase:
+    def __init__(
+        self,
+        comment_repository: CommentRepository,
+        transaction_manager: TransactionManager,
+    ) -> None:
+        self.comment_repository = comment_repository
+        self.transaction_manager = transaction_manager
+
+    async def execute(
+        self,
+        current_user: User,
+        comment_id: int,
+        command: UpdateCommentCommand,
+    ) -> CommentResult:
+        text = command.content.strip()
+        if not text:
+            raise ValidationAppError("Напишите комментарий.")
+
+        comment = await self.comment_repository.get_comment_by_id(comment_id)
+        if comment is None:
+            raise NotFoundError("Комментарий не найден")
+
+        current_user_id = cast(int, current_user.id)
+        if comment.user_id != current_user_id:
+            raise PermissionDeniedError("У вас нет прав на редактирование этого комментария")
+
+        async with self.transaction_manager:
+            updated_comment = await self.comment_repository.update(comment, text)
+
+        return CommentResult(comment=updated_comment, author=current_user)
+
+
+class DeleteCommentUseCase:
+    def __init__(
+        self,
+        comment_repository: CommentRepository,
+        transaction_manager: TransactionManager,
+    ) -> None:
+        self.comment_repository = comment_repository
+        self.transaction_manager = transaction_manager
+
+    async def execute(self, current_user: User, comment_id: int) -> None:
+        comment = await self.comment_repository.get_comment_by_id(comment_id)
+        if comment is None:
+            raise NotFoundError("Комментарий не найден")
+
+        current_user_id = cast(int, current_user.id)
+        if comment.user_id != current_user_id:
+            raise PermissionDeniedError("У вас нет прав на удаление этого комментария")
+
+        async with self.transaction_manager:
+            await self.comment_repository.delete(comment)

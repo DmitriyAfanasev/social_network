@@ -129,16 +129,32 @@ class ProfileRepository(ProfilePort):
                 ProfilePhoto.user_id == user_id,
             )
         )
-        if photo_url is None:
-            return None
+        if photo_url is not None:
+            await self.session.execute(
+                delete(ProfilePhoto).where(
+                    ProfilePhoto.id == photo_id,
+                    ProfilePhoto.user_id == user_id,
+                )
+            )
+            return photo_url
 
-        await self.session.execute(
-            delete(ProfilePhoto).where(
-                ProfilePhoto.id == photo_id,
-                ProfilePhoto.user_id == user_id,
+        avatar = await self.session.scalar(
+            select(ProfileAvatar).where(
+                ProfileAvatar.id == photo_id,
+                ProfileAvatar.user_id == user_id,
             )
         )
-        return photo_url
+        if avatar is None:
+            return None
+
+        current_avatar = await self.session.scalar(
+            select(ProfileModel.avatar).where(ProfileModel.user_id == user_id)
+        )
+        if avatar.avatar_url == current_avatar:
+            return None
+
+        await self.session.delete(avatar)
+        return avatar.avatar_url
 
     async def _get_model_by_id(self, user_id: int) -> UserModel:
         result = await self.session.execute(

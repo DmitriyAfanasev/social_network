@@ -13,6 +13,7 @@ from backend.application.exceptions import (
 )
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
+from backend.application.ports.media_storage import MediaStorage
 from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.post_repository import PostRepository
 from backend.application.ports.profile_repository import ProfileRepository
@@ -31,7 +32,7 @@ from backend.application.results import (
     UserResult,
 )
 from backend.domain.user.entity import User
-from backend.infra.config import DEFAULT_PATH_TO_AVATAR
+from backend.infra.config import DEFAULT_AVATAR_URL
 
 
 logger = logging.getLogger(__name__)
@@ -112,7 +113,7 @@ class UploadAvatarUseCase:
         self,
         profile_repository: ProfileRepository,
         transaction_manager: TransactionManager,
-        file_upload_service: FileUploadService,
+        file_upload_service: MediaStorage,
     ) -> None:
         self.profile_repository = profile_repository
         self.transaction_manager = transaction_manager
@@ -121,10 +122,12 @@ class UploadAvatarUseCase:
     async def execute(self, current_user: User, avatar: UploadFile) -> AvatarUploadResult:
         current_user_id = cast(int, current_user.id)
         try:
-            image_url = await self.file_upload_service.upload(
+            media = await self.file_upload_service.upload(
                 file=avatar,
                 directory=f"users/{current_user_id}/avatars",
+                uploaded_by=current_user_id,
             )
+            image_url = f"/media/{media.id}"
             async with self.transaction_manager:
                 await self.profile_repository.update_avatar(
                     current_user_id,
@@ -161,10 +164,10 @@ class RemoveAvatarUseCase:
         async with self.transaction_manager:
             await self.profile_repository.delete_avatar(
                 current_user_id,
-                DEFAULT_PATH_TO_AVATAR,
+                DEFAULT_AVATAR_URL,
             )
         return AvatarRemoveResult(
-            new_avatar=DEFAULT_PATH_TO_AVATAR,
+            new_avatar=DEFAULT_AVATAR_URL,
             message="Аватар удален",
         )
 
@@ -221,7 +224,7 @@ class GetProfilePhotosUseCase:
             created_at=avatar_history[0].created_at if avatar_history else None,
             photos=[
                 ProfilePhotoResult(
-                    id=None,
+                    id=avatar.id,
                     album_id=None,
                     photo_url=avatar.avatar_url,
                     caption=None,

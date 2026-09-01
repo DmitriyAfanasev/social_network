@@ -73,3 +73,8 @@ class UpdatePostCommand:
 class CreateCommentCommand:
     content: str
     parent_id: int | None = None
+
+
+@dataclass(frozen=True)
+class UpdateCommentCommand:
+    content: str

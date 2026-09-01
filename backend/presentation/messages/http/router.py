@@ -1,15 +1,16 @@
 from typing import Annotated
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, File, Form, Query, UploadFile, status
 
+from backend.application.ports.media_storage import MediaStorage
 from backend.application.use_cases.messages import MessagingUseCase
 from backend.domain.user.entity import User
 from backend.presentation.messages.auth import require_user_id
 from backend.presentation.messages.http.schemas import (
     DirectConversationRequest,
+    EditMessageRequest,
     MarkReadRequest,
-    SendMessageRequest,
 )
 from backend.presentation.messages.http.serializers import (
     ConversationPayload,
@@ -17,6 +18,11 @@ from backend.presentation.messages.http.serializers import (
     MessagePayload,
     conversation_to_payload,
     message_to_payload,
+)
+from backend.presentation.messages.ws.constants import (
+    MESSAGE_DELETED_EVENT,
+    MESSAGE_NEW_EVENT,
+    MESSAGE_UPDATED_EVENT,
 )
 from backend.presentation.messages.ws.ports import MessageConnectionManagerPort
 
@@ -56,15 +62,15 @@ async def list_messages(
     conversation_id: int,
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
-    cursor: Annotated[str | None, Query()] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> MessagePagePayload:
     """Возвращает страницу сообщений диалога в обратном хронологическом порядке.
 
-    Параметр ``cursor`` используется для загрузки следующей страницы, а
-    ``limit`` ограничивает количество сообщений от 1 до 100.
+    Параметр ``offset`` задаёт смещение страницы, а ``limit`` ограничивает
+    количество сообщений от 1 до 100.
     """
-    result = await use_case.list_messages(conversation_id, require_user_id(current_user), cursor, limit)
+    result = await use_case.list_messages(conversation_id, require_user_id(current_user), offset, limit)
     return {
         "items": [message_to_payload(item) for item in result.messages],
         "next_cursor": result.next_cursor,
@@ -75,15 +81,91 @@ async def list_messages(
 @router.post("/conversations/{conversation_id}/messages")
 async def send_message(
     conversation_id: int,
-    body: SendMessageRequest,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+    manager: FromDishka[MessageConnectionManagerPort],
+    media_storage: FromDishka[MediaStorage],
+    text: str = Form("", max_length=5000),
+    media: UploadFile | None = File(None),
+) -> MessagePayload:
+    """Сохраняет текст и/или медиа сообщения и уведомляет участников диалога."""
+    media_item = None
+    if media is not None and media.filename:
+        media_item = await media_storage.upload(
+            file=media,
+            directory=f"messages/{conversation_id}",
+            uploaded_by=require_user_id(current_user),
+        )
+    result = await use_case.send_message(
+        conversation_id,
+        require_user_id(current_user),
+        text,
+        media_item.id if media_item else None,
+    )
+    payload = message_to_payload(result.message)
+    recipient_ids = await use_case.get_participant_ids(conversation_id)
+    await manager.broadcast(
+        conversation_id,
+        {"type": MESSAGE_NEW_EVENT, "message": payload, "recipient_ids": recipient_ids},
+    )
+    return payload
+
+
+@router.patch("/conversations/{conversation_id}/messages/{message_id}")
+async def edit_message(
+    conversation_id: int,
+    message_id: int,
+    body: EditMessageRequest,
     use_case: FromDishka[MessagingUseCase],
     current_user: FromDishka[User],
     manager: FromDishka[MessageConnectionManagerPort],
 ) -> MessagePayload:
-    """Сохраняет сообщение и публикует событие для всех участников диалога."""
-    result = await use_case.send_message(conversation_id, require_user_id(current_user), body.text)
+    """Изменяет текст сообщения автора и рассылает событие `message.updated`."""
+    result = await use_case.edit_message(conversation_id, message_id, require_user_id(current_user), body.text)
     payload = message_to_payload(result.message)
-    await manager.broadcast(conversation_id, {"type": "message.new", "message": payload})
+    recipient_ids = await use_case.get_participant_ids(conversation_id)
+    await manager.broadcast(
+        conversation_id,
+        {"type": MESSAGE_UPDATED_EVENT, "message": payload, "recipient_ids": recipient_ids},
+    )
+    return payload
+
+
+@router.delete("/conversations/{conversation_id}/messages/{message_id}/media")
+async def remove_message_media(
+    conversation_id: int,
+    message_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+    manager: FromDishka[MessageConnectionManagerPort],
+) -> MessagePayload:
+    result = await use_case.remove_message_media(conversation_id, message_id, require_user_id(current_user))
+    payload = message_to_payload(result.message)
+    recipient_ids = await use_case.get_participant_ids(conversation_id)
+    await manager.broadcast(
+        conversation_id,
+        {"type": MESSAGE_UPDATED_EVENT, "message": payload, "recipient_ids": recipient_ids},
+    )
+    return payload
+
+
+
+@router.delete("/conversations/{conversation_id}/messages/{message_id}")
+async def delete_message(
+    conversation_id: int,
+    message_id: int,
+    use_case: FromDishka[MessagingUseCase],
+    current_user: FromDishka[User],
+    manager: FromDishka[MessageConnectionManagerPort],
+) -> MessagePayload:
+    """Удаляет сообщение автора и рассылает событие `message.deleted`."""
+    result = await use_case.delete_message(conversation_id, message_id, require_user_id(current_user))
+    payload = message_to_payload(result.message)
+    recipient_ids = await use_case.get_participant_ids(conversation_id)
+    await manager.broadcast(
+        conversation_id,
+        {"type": MESSAGE_DELETED_EVENT, "message": payload, "recipient_ids": recipient_ids},
+    )
     return payload
 
 

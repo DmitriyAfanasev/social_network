@@ -3,6 +3,7 @@ from .comment import Comment
 from .conversation import Conversation, ConversationParticipant, Message
 from .friendship import Friendship
 from .like import LikePost
+from .media import Media
 from .outbox_event import OutboxEvent
 from .post import Post
 from .profile import Profile
@@ -20,6 +21,7 @@ __all__ = (
     "ConversationParticipant",
     "Friendship",
     "LikePost",
+    "Media",
     "Message",
     "OutboxEvent",
     "Post",

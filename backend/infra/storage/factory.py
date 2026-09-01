@@ -1,17 +1,9 @@
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.infra.config import FileStorageConfig
-from backend.infra.storage.local_file_upload_service import LocalFileUploadService
 from backend.infra.storage.s3_file_upload_service import S3FileUploadService
 
 
 def create_file_upload_service(file_storage_config: FileStorageConfig) -> FileUploadService:
-    if file_storage_config.provider == "local":
-        return LocalFileUploadService(
-            base_dir=file_storage_config.local_base_dir,
-            url_prefix=file_storage_config.local_url_prefix,
-            max_size_bytes=file_storage_config.max_file_size_bytes,
-        )
-
     return S3FileUploadService(
         bucket_name=file_storage_config.s3_bucket_name,
         region_name=file_storage_config.s3_region_name,

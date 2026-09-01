@@ -17,6 +17,9 @@ class MessagePayload(TypedDict):
     sender_id: int
     text: str
     created_at: str
+    media_id: int | None
+    edited_at: str | None
+    deleted_at: str | None
 
 
 class MessagePagePayload(TypedDict):
@@ -46,4 +49,7 @@ def message_to_payload(message: object) -> MessagePayload:
         "sender_id": model.sender_id,
         "text": model.text,
         "created_at": model.created_at.isoformat(),
+        "media_id": model.media_id,
+        "edited_at": model.edited_at.isoformat() if model.edited_at else None,
+        "deleted_at": model.deleted_at.isoformat() if model.deleted_at else None,
     }

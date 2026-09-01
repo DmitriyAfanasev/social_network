@@ -1,7 +1,8 @@
 from backend.infra.config.settings import (
     BASE_DIR,
     CONVENTION,
-    DEFAULT_PATH_TO_AVATAR,
+    DEFAULT_AVATAR_OBJECT_KEY,
+    DEFAULT_AVATAR_URL,
     TEMPLATES,
     TEMPLATES_DIR,
     ClickHouseConfig,
@@ -21,7 +22,8 @@ from backend.infra.config.settings import (
 __all__ = (
     "BASE_DIR",
     "CONVENTION",
-    "DEFAULT_PATH_TO_AVATAR",
+    "DEFAULT_AVATAR_OBJECT_KEY",
+    "DEFAULT_AVATAR_URL",
     "TEMPLATES",
     "TEMPLATES_DIR",
     "ClickHouseConfig",

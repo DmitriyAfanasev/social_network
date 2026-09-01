@@ -37,6 +37,17 @@ class CommentRepository(CommentPort):
         await self.session.refresh(comment)
         return cast(CommentReadModel, comment)
 
+    async def update(self, comment: CommentReadModel, text: str) -> CommentReadModel:
+        db_comment = cast(Comment, comment)
+        db_comment.text = text
+        await self.session.flush()
+        await self.session.refresh(db_comment)
+        return cast(CommentReadModel, db_comment)
+
+    async def delete(self, comment: CommentReadModel) -> None:
+        await self.session.delete(cast(Comment, comment))
+        await self.session.flush()
+
     async def get_paginated(
         self,
         post_id: int,

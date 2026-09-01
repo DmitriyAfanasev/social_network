@@ -1,10 +1,15 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, status
 
-from backend.application.commands import CreateCommentCommand
-from backend.application.use_cases.comments import CreateCommentUseCase, GetCommentsUseCase
+from backend.application.commands import CreateCommentCommand, UpdateCommentCommand
+from backend.application.use_cases.comments import (
+    CreateCommentUseCase,
+    DeleteCommentUseCase,
+    GetCommentsUseCase,
+    UpdateCommentUseCase,
+)
 from backend.domain.user.entity import User
-from backend.presentation.comments.http.schemas import CommentCreateRequest
+from backend.presentation.comments.http.schemas import CommentCreateRequest, CommentUpdateRequest
 from backend.presentation.shared.http.schemas import CommentResponse, CommentsPageResponse
 from backend.presentation.shared.http.serializers import (
     comment_result_to_response,
@@ -43,3 +48,27 @@ async def create_comment(
         command=CreateCommentCommand(**body.model_dump()),
     )
     return comment_result_to_response(result)
+
+
+@router.patch("/comments/{comment_id}", response_model=CommentResponse)
+async def update_comment(
+    comment_id: int,
+    body: CommentUpdateRequest,
+    use_case: FromDishka[UpdateCommentUseCase],
+    current_user: FromDishka[User],
+) -> CommentResponse:
+    result = await use_case.execute(
+        current_user=current_user,
+        comment_id=comment_id,
+        command=UpdateCommentCommand(**body.model_dump()),
+    )
+    return comment_result_to_response(result)
+
+
+@router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_comment(
+    comment_id: int,
+    use_case: FromDishka[DeleteCommentUseCase],
+    current_user: FromDishka[User],
+) -> None:
+    await use_case.execute(current_user=current_user, comment_id=comment_id)

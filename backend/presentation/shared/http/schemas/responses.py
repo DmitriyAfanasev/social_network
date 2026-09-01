@@ -118,6 +118,7 @@ class AvatarRemoveResponse(BaseModel):
 
 
 class AvatarHistoryItemResponse(BaseModel):
+    id: int
     avatar_url: str
     created_at: datetime
     is_current: bool = False

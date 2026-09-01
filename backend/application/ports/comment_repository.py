@@ -23,6 +23,14 @@ class CommentRepository(ABC):
         pass
 
     @abstractmethod
+    async def update(self, comment: CommentReadModel, text: str) -> CommentReadModel:
+        pass
+
+    @abstractmethod
+    async def delete(self, comment: CommentReadModel) -> None:
+        pass
+
+    @abstractmethod
     async def get_paginated(
         self,
         post_id: int,

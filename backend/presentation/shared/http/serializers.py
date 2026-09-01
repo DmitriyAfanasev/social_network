@@ -221,6 +221,7 @@ def avatar_history_result_to_response(result: AvatarHistoryResult) -> AvatarHist
         current_avatar=result.current_avatar,
         avatars=[
             AvatarHistoryItemResponse(
+                id=avatar.id,
                 avatar_url=avatar.avatar_url,
                 created_at=avatar.created_at,
                 is_current=avatar.avatar_url == result.current_avatar,
