@@ -3,10 +3,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from backend.application.dto import CallDTO
 from backend.application.exceptions import PermissionDeniedError
 from backend.application.use_cases.messages import MessagingUseCase
 from backend.domain.user.entity import User
 from backend.presentation.messages.ws.constants import (
+    CALL_INVITE_EVENT,
+    CALL_START_EVENT,
     TYPING_EVENT,
     WEBSOCKET_PING_EVENT,
     WEBSOCKET_PONG_EVENT,
@@ -125,3 +128,28 @@ async def test_websocket_ping_updates_activity_through_use_case() -> None:
 
     activity.execute.assert_awaited_once_with(1)
     assert websocket.sent == [{"type": WEBSOCKET_PONG_EVENT}]
+
+
+@pytest.mark.application
+@pytest.mark.asyncio
+async def test_websocket_call_start_broadcasts_invitation_after_application_check() -> None:
+    websocket = FakeWebSocket()
+    manager = AsyncMock()
+    manager_use_case = make_messaging_use_case()
+    call_use_case = AsyncMock()
+    call_use_case.start.return_value = CallDTO("call-1", 1, 2, "audio", "ringing")
+
+    await handle_socket_event(
+        websocket,
+        {"type": CALL_START_EVENT, "conversation_id": 10, "target_user_id": 2},
+        1,
+        manager_use_case,
+        manager,
+        AsyncMock(),
+        {10},
+        call_use_case,
+    )
+
+    call_use_case.start.assert_awaited_once()
+    manager.broadcast.assert_awaited_once()
+    assert manager.broadcast.await_args.args[1]["type"] == CALL_INVITE_EVENT

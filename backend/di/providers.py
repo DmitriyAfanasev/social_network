@@ -15,6 +15,7 @@ from backend.application.ports.analytics_repository import AnalyticsRepository
 from backend.application.ports.audit_repository import AuditRepository
 from backend.application.ports.authorization import AuthorizationService
 from backend.application.ports.block_repository import BlockRepository
+from backend.application.ports.call_session_store import CallSessionStore
 from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
@@ -44,6 +45,7 @@ from backend.application.use_cases.auth import (
     ResetPasswordUseCase,
 )
 from backend.application.use_cases.blocks import BlockUserUseCase, UnblockUserUseCase
+from backend.application.use_cases.calls import CallUseCase
 from backend.application.use_cases.comment_likes import ToggleCommentLikeUseCase
 from backend.application.use_cases.comments import (
     CreateCommentUseCase,
@@ -96,6 +98,7 @@ from backend.infra.notifications.outbox_notification_sender import OutboxNotific
 from backend.infra.repositories.admin_repository import AdminRepository as InfraAdminRepository
 from backend.infra.repositories.audit_repository import AuditRepository as InfraAuditRepository
 from backend.infra.repositories.block_repository import BlockRepository as InfraBlockRepository
+from backend.infra.repositories.call_session_store import RedisCallSessionStore
 from backend.infra.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
 from backend.infra.repositories.comment_repository import CommentRepository as InfraCommentRepository
 from backend.infra.repositories.friend_repository import FriendRepository as InfraFriendRepository
@@ -306,6 +309,10 @@ class InfrastructureProvider(Provider):
     ) -> MessageEventBroker:
         return RedisMessageEventBroker(redis_config)
 
+    @provide(scope=Scope.APP)
+    def call_session_store(self, redis_config: RedisConfig) -> CallSessionStore:
+        return RedisCallSessionStore(redis_config)
+
     @provide(scope=Scope.APP, provides=MessageConnectionManagerPort)
     async def message_connection_manager(
         self,
@@ -352,6 +359,13 @@ class InfrastructureProvider(Provider):
 
 
 class ApplicationProvider(Provider):
+    @provide(scope=Scope.SESSION)
+    def websocket_call_use_case(
+        self,
+        call_session_store: CallSessionStore,
+        websocket_messaging_use_case: MessagingUseCase,
+    ) -> CallUseCase:
+        return CallUseCase(call_session_store, websocket_messaging_use_case)
     @provide(scope=Scope.REQUEST)
     def messaging_use_case(
         self,
@@ -408,8 +422,23 @@ class ApplicationProvider(Provider):
     ) -> GetCurrentUserUseCase:
         return GetCurrentUserUseCase(user_repository, token_service)
 
+    @provide(scope=Scope.SESSION)
+    def websocket_current_user_use_case(
+        self,
+        user_repository: UserRepositoryPort,
+        token_service: AuthTokenService,
+    ) -> GetCurrentUserUseCase:
+        return GetCurrentUserUseCase(user_repository, token_service)
+
     @provide(scope=Scope.REQUEST)
     def touch_user_activity_use_case(
+        self,
+        user_repository: UserRepositoryPort,
+    ) -> TouchUserActivityUseCase:
+        return TouchUserActivityUseCase(user_repository)
+
+    @provide(scope=Scope.SESSION)
+    def websocket_touch_user_activity_use_case(
         self,
         user_repository: UserRepositoryPort,
     ) -> TouchUserActivityUseCase:

@@ -3,6 +3,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from backend.application.exceptions import PermissionDeniedError
 from backend.application.use_cases.auth import GetCurrentUserUseCase
+from backend.application.use_cases.calls import CallUseCase
 from backend.application.use_cases.messages import MessagingUseCase
 from backend.application.use_cases.users import TouchUserActivityUseCase
 from backend.presentation.messages.ws.constants import WEBSOCKET_ERROR_EVENT
@@ -20,6 +21,7 @@ async def messages_socket(
     use_case: FromDishka[MessagingUseCase],
     current_user_use_case: FromDishka[GetCurrentUserUseCase],
     touch_user_activity: FromDishka[TouchUserActivityUseCase],
+    call_use_case: FromDishka[CallUseCase],
     manager: FromDishka[MessageConnectionManagerPort],
 ) -> None:
     """Открывает realtime-канал сообщений для авторизованного пользователя.
@@ -48,6 +50,7 @@ async def messages_socket(
                     manager,
                     touch_user_activity,
                     subscribed_conversations,
+                    call_use_case,
                 )
             except PermissionDeniedError as error:
                 await websocket.send_json(

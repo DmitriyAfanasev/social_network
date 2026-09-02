@@ -1,5 +1,6 @@
 from typing import TypedDict
 
+from backend.application.events import JsonValue
 from backend.presentation.messages.http.serializers import MessagePayload
 
 
@@ -51,4 +52,16 @@ class WsTyping(TypedDict):
     recipient_ids: list[int]
 
 
-WsEvent = WsMessageNew | WsMessageUpdated | WsMessageDeleted | WsConversationSubscribed | WsMessageRead | WsTyping | WsError
+class WsCallEvent(TypedDict):
+    type: str
+    sender_id: int
+    call_id: str
+    caller_id: int
+    callee_id: int
+    call_type: str
+    status: str
+    recipient_ids: list[int]
+    signal: dict[str, JsonValue] | None
+
+
+WsEvent = WsMessageNew | WsMessageUpdated | WsMessageDeleted | WsConversationSubscribed | WsMessageRead | WsTyping | WsCallEvent | WsError
