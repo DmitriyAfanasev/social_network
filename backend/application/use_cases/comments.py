@@ -1,5 +1,3 @@
-from typing import cast
-
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.commands import CreateCommentCommand, UpdateCommentCommand
 from backend.application.event_types import COMMENT_CREATED_EVENT
@@ -35,7 +33,7 @@ class CreateCommentUseCase:
         post_id: int,
         command: CreateCommentCommand,
     ) -> CommentResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         post = await self.comment_repository.get_post_by_id(post_id)
         if post is None:
             raise NotFoundError("Post not found")
@@ -124,7 +122,7 @@ class UpdateCommentUseCase:
         if comment is None:
             raise NotFoundError("Комментарий не найден")
 
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         if comment.user_id != current_user_id:
             raise PermissionDeniedError("У вас нет прав на редактирование этого комментария")
 
@@ -152,7 +150,7 @@ class DeleteCommentUseCase:
         if comment is None:
             raise NotFoundError("Комментарий не найден")
 
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         post = await self.comment_repository.get_post_by_id(comment.post_id)
         is_post_owner = post is not None and post.author_id == current_user_id
         is_moderator = self.authorization is not None and await self.authorization.has_permission(

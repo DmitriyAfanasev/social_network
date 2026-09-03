@@ -40,11 +40,11 @@ minikube ip
 sudo sh -c 'echo "<MINIKUBE_IP> my-site.ru" >> /etc/hosts'
 ```
 
-После этого HTTP-маршрут будет доступен как `http://my-site.ru`. Для HTTPS в локальном стенде используются `mkcert` или локальный cert-manager CA. Публичный Let’s Encrypt не подходит для домена, который существует только в `/etc/hosts`.
+После этого HTTP-маршрут будет доступен как `http://my-site.ru`.
 
 ## Ingress и Envoy
 
-`ingress-nginx` проще для первого стенда: он включается addon-командой и использует знакомый ресурс `Ingress`. `Envoy Gateway` ближе к современной production-модели Gateway API и полезен для изучения маршрутов, timeout, retries и TLS, но добавляет GatewayClass/Gateway/HTTPRoute и отдельный controller.
+`ingress-nginx` проще для первого стенда: он включается addon-командой и использует знакомый ресурс `Ingress`. `Envoy Gateway` ближе к современной production-модели Gateway API и полезен для изучения маршрутов, timeout и retries, но добавляет GatewayClass/Gateway/HTTPRoute и отдельный controller.
 
 Рекомендуемый путь:
 

@@ -168,4 +168,6 @@ redis-data/
 postgres_db/
 dump.rdb
 .vscode/
-frontend/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo

@@ -61,7 +61,6 @@ SSE/WebSocket клиенты переподключаются. Redis Pub/Sub н�
 - Secrets только через Kubernetes Secret/локальный secret manager.
 - GHCR token с минимальными правами `read:packages` для pull.
 - Kafka, PostgreSQL, Redis и ClickHouse не публиковать наружу в production.
-- TLS на edge и secure cookies.
 - NetworkPolicy: frontend → API, API → DB/Redis/S3, workers → Kafka/DB, analytics → Kafka/ClickHouse.
 - Не логировать access token, password, cookie и полный email payload.
 

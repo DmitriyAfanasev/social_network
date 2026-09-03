@@ -55,6 +55,7 @@ class ProfileUpdateCommand:
     city: str | None = None
     street: str | None = None
     bio: str | None = None
+    status: str | None = None
     profile_visibility: str | None = None
     friend_request_policy: str | None = None
     message_policy: str | None = None

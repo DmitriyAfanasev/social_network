@@ -1,7 +1,7 @@
 import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.domain.user.entity.profile import PROFILE_VISIBILITY_POLICIES
 
@@ -17,6 +17,7 @@ class ProfileBaseRequest(BaseModel):
     city: str | None = None
     street: str | None = None
     bio: str | None = None
+    status: str | None = Field(default=None, max_length=140)
     profile_visibility: str | None = None
     friend_request_policy: str | None = None
     message_policy: str | None = None
@@ -57,6 +58,14 @@ class ProfileBaseRequest(BaseModel):
             raise ValueError("Минимальный возраст регистрации — 14 лет.")
 
         return value
+
+    @field_validator("status")
+    @classmethod
+    def normalize_status(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        return normalized
 
     @model_validator(mode="after")
     def validate_phone_number(self) -> "ProfileBaseRequest":

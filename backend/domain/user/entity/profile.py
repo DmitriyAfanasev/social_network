@@ -25,6 +25,7 @@ class Profile:
     city: str | None = None
     street: str | None = None
     bio: str | None = None
+    status: str | None = None
     avatar: str | None = None
     profile_visibility: str = "everyone"
     friend_request_policy: str = "everyone"

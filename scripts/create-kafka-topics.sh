@@ -20,6 +20,8 @@ topics=(
   "analytics.dlq"
   "email.registration_confirmation_requested"
   "email.password_reset_requested"
+  "video.transcode.requested"
+  "video.transcode.completed"
 )
 
 echo "Waiting for Kafka..."

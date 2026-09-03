@@ -43,6 +43,11 @@
 
 ## 2. Аудио- и видеозвонки через WebRTC
 
+> Статус: базовый one-to-one signaling-контур реализован в Go-сервисе
+> `services/call-signaling`. Подробное описание запуска и протокола — в
+> [`docs/webrtc-go-migration.md`](webrtc-go-migration.md). Ниже остаются
+> следующие production-этапы.
+
 ### Цель
 
 Добавить звонки один-на-один и в будущем групповые звонки:
@@ -106,10 +111,9 @@ WebRTC сам по себе не устанавливает звонок. Он �
   sessions;
 - Kafka используется для domain/integration events, уведомлений и фоновых
   video jobs;
-- WebSocket остаётся realtime-каналом приложения и может быть signaling-
-  транспортом для первой версии WebRTC;
+- Python WebSocket остаётся realtime-каналом сообщений, а отдельный Go-
+  WebSocket `call-signaling` является signaling-транспортом WebRTC;
 - отдельные Go-сервисы не должны становиться зависимостью HTTP API;
 - для видео и звонков нужны отдельные healthcheck, metrics, retry policy и DLQ,
   если операция асинхронная;
 - все операции должны учитывать текущие privacy settings и RBAC.
-

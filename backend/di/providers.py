@@ -15,7 +15,6 @@ from backend.application.ports.analytics_repository import AnalyticsRepository
 from backend.application.ports.audit_repository import AuditRepository
 from backend.application.ports.authorization import AuthorizationService
 from backend.application.ports.block_repository import BlockRepository
-from backend.application.ports.call_session_store import CallSessionStore
 from backend.application.ports.comment_repository import CommentRepository
 from backend.application.ports.file_upload_service import FileUploadService
 from backend.application.ports.friend_repository import FriendRepository
@@ -23,15 +22,18 @@ from backend.application.ports.like_repository import LikeRepository
 from backend.application.ports.media_storage import MediaStorage
 from backend.application.ports.message_event_broker import MessageEventBroker
 from backend.application.ports.message_repository import MessageRepository
+from backend.application.ports.music_repository import MusicRepository
 from backend.application.ports.notification_sender import NotificationSender
 from backend.application.ports.outbox_repository import OutboxRepository
 from backend.application.ports.password_hasher import PasswordHasher
 from backend.application.ports.post_repository import PostRepository as PostRepositoryPort
 from backend.application.ports.profile_repository import ProfileRepository
+from backend.application.ports.search_repository import SearchRepository
 from backend.application.ports.token_service import AuthTokenService
 from backend.application.ports.token_store import PendingTokenStore
 from backend.application.ports.transaction_manager import TransactionManager
 from backend.application.ports.user_repository import UserRepository as UserRepositoryPort
+from backend.application.ports.video_repository import VideoRepository
 from backend.application.use_cases.admin import AdminRbacUseCase
 from backend.application.use_cases.analytics import GetAnalyticsSummaryUseCase
 from backend.application.use_cases.auth import (
@@ -45,7 +47,6 @@ from backend.application.use_cases.auth import (
     ResetPasswordUseCase,
 )
 from backend.application.use_cases.blocks import BlockUserUseCase, UnblockUserUseCase
-from backend.application.use_cases.calls import CallUseCase
 from backend.application.use_cases.comment_likes import ToggleCommentLikeUseCase
 from backend.application.use_cases.comments import (
     CreateCommentUseCase,
@@ -62,6 +63,7 @@ from backend.application.use_cases.friends import (
 )
 from backend.application.use_cases.likes import TogglePostLikeUseCase
 from backend.application.use_cases.messages import MessagingUseCase
+from backend.application.use_cases.music import DeleteMusicUseCase, ListMusicUseCase, UploadMusicUseCase
 from backend.application.use_cases.posts import (
     CreatePostUseCase,
     DeletePostUseCase,
@@ -81,7 +83,20 @@ from backend.application.use_cases.profiles import (
     UploadAvatarUseCase,
     UploadProfilePhotoUseCase,
 )
+from backend.application.use_cases.search import SearchUseCase
 from backend.application.use_cases.users import TouchUserActivityUseCase
+from backend.application.use_cases.videos import (
+    CreateVideoAlbumUseCase,
+    DeleteVideoAlbumUseCase,
+    DeleteVideoUseCase,
+    GetVideoUseCase,
+    ListVideoAlbumsUseCase,
+    RecordVideoViewUseCase,
+    ToggleVideoBookmarkUseCase,
+    ToggleVideoFavoriteUseCase,
+    ToggleVideoLikeUseCase,
+    UploadVideoUseCase,
+)
 from backend.infra.analytics.clickhouse_client import ClickHouseAnalyticsClient
 from backend.infra.config import (
     ClickHouseConfig,
@@ -98,17 +113,19 @@ from backend.infra.notifications.outbox_notification_sender import OutboxNotific
 from backend.infra.repositories.admin_repository import AdminRepository as InfraAdminRepository
 from backend.infra.repositories.audit_repository import AuditRepository as InfraAuditRepository
 from backend.infra.repositories.block_repository import BlockRepository as InfraBlockRepository
-from backend.infra.repositories.call_session_store import RedisCallSessionStore
 from backend.infra.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
 from backend.infra.repositories.comment_repository import CommentRepository as InfraCommentRepository
 from backend.infra.repositories.friend_repository import FriendRepository as InfraFriendRepository
 from backend.infra.repositories.like_repository import LikeRepository as InfraLikeRepository
 from backend.infra.repositories.message_repository import MessageRepository as InfraMessageRepository
+from backend.infra.repositories.music_repository import SQLAlchemyMusicRepository
 from backend.infra.repositories.outbox_repository import OutboxRepository as InfraOutboxRepository
 from backend.infra.repositories.pending_token_store import RedisPendingTokenStore
 from backend.infra.repositories.post_repository import PostRepository as InfraPostRepository
 from backend.infra.repositories.profile_repository import ProfileRepository as InfraProfileRepository
+from backend.infra.repositories.search_repository import SQLAlchemySearchRepository
 from backend.infra.repositories.user_repository import UserRepository as InfraUserRepository
+from backend.infra.repositories.video_repository import SQLAlchemyVideoRepository
 from backend.infra.security.authorization import AuthorizationService as InfraAuthorizationService
 from backend.infra.security.jwt_token_service import JwtAuthTokenService
 from backend.infra.security.password_hasher import BcryptPasswordHasher
@@ -309,10 +326,6 @@ class InfrastructureProvider(Provider):
     ) -> MessageEventBroker:
         return RedisMessageEventBroker(redis_config)
 
-    @provide(scope=Scope.APP)
-    def call_session_store(self, redis_config: RedisConfig) -> CallSessionStore:
-        return RedisCallSessionStore(redis_config)
-
     @provide(scope=Scope.APP, provides=MessageConnectionManagerPort)
     async def message_connection_manager(
         self,
@@ -357,15 +370,92 @@ class InfrastructureProvider(Provider):
             max_size_bytes=file_storage_config.max_file_size_bytes,
         )
 
+    @provide(scope=Scope.REQUEST, provides=VideoRepository)
+    def video_repository(self, session: AsyncSession) -> VideoRepository:
+        return SQLAlchemyVideoRepository(session)
+
+    @provide(scope=Scope.REQUEST, provides=MusicRepository)
+    def music_repository(self, session: AsyncSession) -> SQLAlchemyMusicRepository:
+        return SQLAlchemyMusicRepository(session)
+
+    @provide(scope=Scope.REQUEST, provides=SearchRepository)
+    def search_repository(self, session: AsyncSession) -> SQLAlchemySearchRepository:
+        return SQLAlchemySearchRepository(session)
+
 
 class ApplicationProvider(Provider):
-    @provide(scope=Scope.SESSION)
-    def websocket_call_use_case(
+    @provide(scope=Scope.REQUEST)
+    def search_use_case(self, search_repository: SearchRepository) -> SearchUseCase:
+        return SearchUseCase(search_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def list_music_use_case(self, music_repository: MusicRepository) -> ListMusicUseCase:
+        return ListMusicUseCase(music_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def upload_music_use_case(
         self,
-        call_session_store: CallSessionStore,
-        websocket_messaging_use_case: MessagingUseCase,
-    ) -> CallUseCase:
-        return CallUseCase(call_session_store, websocket_messaging_use_case)
+        media_storage: MediaStorage,
+        music_repository: MusicRepository,
+        transaction_manager: TransactionManager,
+    ) -> UploadMusicUseCase:
+        return UploadMusicUseCase(media_storage, music_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def delete_music_use_case(
+        self,
+        music_repository: MusicRepository,
+        media_storage: MediaStorage,
+        transaction_manager: TransactionManager,
+    ) -> DeleteMusicUseCase:
+        return DeleteMusicUseCase(music_repository, media_storage, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def upload_video_use_case(
+        self,
+        media_storage: MediaStorage,
+        video_repository: VideoRepository,
+        outbox_repository: OutboxRepository,
+        transaction_manager: TransactionManager,
+    ) -> UploadVideoUseCase:
+        return UploadVideoUseCase(media_storage, video_repository, outbox_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def get_video_use_case(self, video_repository: VideoRepository) -> GetVideoUseCase:
+        return GetVideoUseCase(video_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def list_video_albums_use_case(self, video_repository: VideoRepository) -> ListVideoAlbumsUseCase:
+        return ListVideoAlbumsUseCase(video_repository)
+
+    @provide(scope=Scope.REQUEST)
+    def create_video_album_use_case(self, video_repository: VideoRepository, transaction_manager: TransactionManager) -> CreateVideoAlbumUseCase:
+        return CreateVideoAlbumUseCase(video_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def delete_video_use_case(self, video_repository: VideoRepository, media_storage: MediaStorage, transaction_manager: TransactionManager) -> DeleteVideoUseCase:
+        return DeleteVideoUseCase(video_repository, media_storage, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def delete_video_album_use_case(self, video_repository: VideoRepository, media_storage: MediaStorage, transaction_manager: TransactionManager) -> DeleteVideoAlbumUseCase:
+        return DeleteVideoAlbumUseCase(video_repository, media_storage, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def record_video_view_use_case(self, video_repository: VideoRepository, transaction_manager: TransactionManager) -> RecordVideoViewUseCase:
+        return RecordVideoViewUseCase(video_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def toggle_video_like_use_case(self, video_repository: VideoRepository, transaction_manager: TransactionManager) -> ToggleVideoLikeUseCase:
+        return ToggleVideoLikeUseCase(video_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def toggle_video_bookmark_use_case(self, video_repository: VideoRepository, transaction_manager: TransactionManager) -> ToggleVideoBookmarkUseCase:
+        return ToggleVideoBookmarkUseCase(video_repository, transaction_manager)
+
+    @provide(scope=Scope.REQUEST)
+    def toggle_video_favorite_use_case(self, video_repository: VideoRepository, transaction_manager: TransactionManager) -> ToggleVideoFavoriteUseCase:
+        return ToggleVideoFavoriteUseCase(video_repository, transaction_manager)
+
     @provide(scope=Scope.REQUEST)
     def messaging_use_case(
         self,

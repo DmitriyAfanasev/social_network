@@ -1,5 +1,3 @@
-from typing import cast
-
 from backend.application.exceptions import NotFoundError, ValidationAppError
 from backend.application.ports.audit_repository import AuditRepository
 from backend.application.ports.block_repository import BlockRepository
@@ -17,7 +15,7 @@ class BlockUserUseCase:
         self.audit_repository = audit_repository
 
     async def execute(self, current_user: User, target_id: int) -> MessageResult:
-        blocker_id = cast(int, current_user.id)
+        blocker_id = current_user.require_id()
         if blocker_id == target_id:
             raise ValidationAppError("Нельзя заблокировать себя")
         if not await self.repository.user_exists(target_id):
@@ -40,7 +38,7 @@ class UnblockUserUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, target_id: int) -> MessageResult:
-        blocker_id = cast(int, current_user.id)
+        blocker_id = current_user.require_id()
         async with self.transaction_manager:
             removed = await self.repository.unblock(blocker_id, target_id)
         return MessageResult(message="Пользователь разблокирован" if removed else "Пользователь не был заблокирован")

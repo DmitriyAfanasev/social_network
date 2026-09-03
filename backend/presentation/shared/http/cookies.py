@@ -14,7 +14,7 @@ def set_access_token_cookie(
         httponly=True,
         samesite="lax",
         max_age=jwt_config.access_token_expire_minutes * 60,
-        secure=True,
+        secure=False,
     )
 
 
@@ -29,7 +29,7 @@ def set_refresh_token_cookie(
         httponly=True,
         samesite="lax",
         max_age=jwt_config.refresh_token_expire_days * 24 * 60 * 60,
-        secure=True,
+        secure=False,
     )
 
 

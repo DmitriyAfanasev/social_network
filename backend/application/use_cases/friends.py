@@ -1,5 +1,3 @@
-from typing import cast
-
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.event_types import (
     FRIEND_ACCEPTED_EVENT,
@@ -29,7 +27,7 @@ class GetFriendsUseCase:
         self.friend_repository = friend_repository
 
     async def execute(self, current_user: User) -> FriendsResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         friends = await self.friend_repository.list_friends(current_user_id)
         subscribers = await self.friend_repository.list_subscribers(current_user_id)
         subscriptions = await self.friend_repository.list_subscriptions(current_user_id)
@@ -49,7 +47,7 @@ class GetFriendRecommendationsUseCase:
     async def execute(self, current_user: User, limit: int = 10) -> FriendRecommendationsResult:
         if not 1 <= limit <= 50:
             raise ValidationAppError("Параметр limit должен быть от 1 до 50")
-        user_id = cast(int, current_user.id)
+        user_id = current_user.require_id()
         direct_friends = await self.friend_repository.list_friends(user_id)
         direct_ids = {friend.id for friend in direct_friends}
         candidates: dict[int, int] = {}
@@ -90,7 +88,7 @@ class AddFriendUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, friend_id: int) -> FriendActionResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         self._validate_pair(current_user_id, friend_id)
         if not await self.friend_repository.user_exists(friend_id):
             raise NotFoundError("User not found")
@@ -155,7 +153,7 @@ class RemoveFriendUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, friend_id: int) -> FriendActionResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         if current_user_id == friend_id:
             raise ValidationAppError("Нельзя удалить себя из друзей")
 
@@ -196,7 +194,7 @@ class CancelSubscriptionUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, target_id: int) -> FriendActionResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         if current_user_id == target_id:
             raise ValidationAppError("Нельзя отписаться от себя")
 

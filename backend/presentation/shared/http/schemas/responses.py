@@ -18,6 +18,7 @@ class ProfileResponse(BaseModel):
     city: str | None = None
     street: str | None = None
     bio: str | None = None
+    status: str | None = None
     avatar: str | None = None
 
 
@@ -133,6 +134,7 @@ class ProfilePageResponse(BaseModel):
     relationship_status: str = "not_friend"
     current_user: UserResponse | None
     posts: list[PostResponse]
+    friends: list[UserResponse] = Field(default_factory=list)
     profile_visibility: str | None = None
     friend_request_policy: str | None = None
     message_policy: str | None = None

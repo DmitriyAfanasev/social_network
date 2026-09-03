@@ -1,7 +1,3 @@
-"""
-Модуль для хранения use case'ов, связанных с пользователями.
-"""
-
 from backend.application.ports.user_repository import UserRepository
 
 

@@ -19,7 +19,6 @@ class AuthenticationError(ApplicationError):
             details=details,
         )
 
-
 class PermissionDeniedError(ApplicationError):
     def __init__(self, message: str = "Permission denied", details: Any = None):
         super().__init__(
@@ -58,10 +57,3 @@ class ExternalServiceError(ApplicationError):
             code="external_service_error",
             details=details,
         )
-
-
-class CallSessionStoreError(ExternalServiceError):
-    def __init__(self, message: str = "Call session store is unavailable", details: Any = None):
-        super().__init__(message=message, details=details)
-        self.status_code = 503
-        self.code = "call_session_store_error"

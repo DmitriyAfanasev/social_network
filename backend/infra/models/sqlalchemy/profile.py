@@ -34,6 +34,7 @@ class Profile(Base):
     street: Mapped[str | None] = mapped_column(String(100))
 
     bio: Mapped[str | None] = mapped_column(Text())
+    status: Mapped[str | None] = mapped_column(String(140), nullable=True)
     avatar: Mapped[str] = mapped_column(
         Text(),
         default="/media/default-avatar",

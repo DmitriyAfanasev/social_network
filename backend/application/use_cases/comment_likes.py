@@ -1,5 +1,3 @@
-from typing import cast
-
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.event_types import COMMENT_LIKE_TOGGLED_EVENT
 from backend.application.events import IntegrationEvent
@@ -17,7 +15,7 @@ class ToggleCommentLikeUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, comment_id: int) -> ToggleLikeResult:
-        user_id = cast(int, current_user.id)
+        user_id = current_user.require_id()
         async with self.transaction_manager:
             result = await self.repository.toggle_comment_like(user_id, comment_id)
             await self.outbox.add(IntegrationEvent(

@@ -181,6 +181,7 @@ class ProfileRepository(ProfilePort):
                 city=user_model.profile.city,
                 street=user_model.profile.street,
                 bio=user_model.profile.bio,
+                status=user_model.profile.status,
                 avatar=user_model.profile.avatar,
                 profile_visibility=user_model.profile.profile_visibility,
                 friend_request_policy=user_model.profile.friend_request_policy,

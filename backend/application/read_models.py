@@ -17,6 +17,7 @@ class ProfileReadModel(Protocol):
     city: str | None
     street: str | None
     bio: str | None
+    status: str | None
     avatar: str | None
     profile_visibility: str
     friend_request_policy: str

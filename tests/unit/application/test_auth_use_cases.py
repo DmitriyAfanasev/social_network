@@ -41,7 +41,7 @@ def registration_command() -> RegisterUserCommand:
         email="alice@example.com",
         password="secret",
         password2="secret",
-        base_url="https://example.com",
+        base_url="http://example.com",
     )
 
 
@@ -122,7 +122,7 @@ async def test_registration_confirmation_saves_token_and_sends_email() -> None:
 
     result = await RequestRegistrationConfirmationUseCase(
         repository, token_store, notification
-    ).execute(RegistrationConfirmationCommand("alice@example.com", "https://example.com"))
+    ).execute(RegistrationConfirmationCommand("alice@example.com", "http://example.com"))
 
     assert result.message == "Confirmation email sent"
     token_store.save_registration_confirmation_token.assert_awaited_once()
@@ -138,7 +138,7 @@ async def test_registration_confirmation_rejects_active_user() -> None:
     with pytest.raises(ValidationAppError, match="Email уже подтвержден"):
         await RequestRegistrationConfirmationUseCase(
             repository, Mock(), Mock()
-        ).execute(RegistrationConfirmationCommand("alice@example.com", "https://example.com"))
+    ).execute(RegistrationConfirmationCommand("alice@example.com", "http://example.com"))
 
 
 @pytest.mark.application
@@ -173,7 +173,7 @@ async def test_register_user_creates_inactive_user_and_sends_confirmation() -> N
 @pytest.mark.asyncio
 async def test_register_user_rejects_mismatched_passwords_before_dependencies() -> None:
     command = RegisterUserCommand(
-        username="alice", email="alice@example.com", password="one", password2="two", base_url="https://example.com"
+        username="alice", email="alice@example.com", password="one", password2="two", base_url="http://example.com"
     )
 
     with pytest.raises(ValidationAppError, match="Пароли не совпадают"):
@@ -214,7 +214,7 @@ async def test_request_password_reset_saves_token_and_sends_email() -> None:
 
     result = await RequestPasswordResetUseCase(
         repository, token_store, notification
-    ).execute(PasswordResetRequestCommand("alice@example.com", "https://example.com"))
+    ).execute(PasswordResetRequestCommand("alice@example.com", "http://example.com"))
 
     assert result.message == "Password reset email sent"
     token_store.save_password_reset_token.assert_awaited_once()

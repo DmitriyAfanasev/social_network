@@ -1,9 +1,10 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from backend.application.commands import ProfileUpdateCommand
+from backend.application.use_cases.music import ListMusicUseCase
 from backend.application.use_cases.profiles import (
     CreatePhotoAlbumUseCase,
     DeleteProfilePhotoUseCase,
@@ -16,12 +17,14 @@ from backend.application.use_cases.profiles import (
     UploadAvatarUseCase,
     UploadProfilePhotoUseCase,
 )
+from backend.application.use_cases.videos import ListVideoAlbumsUseCase
 from backend.domain.user.entity import User
 from backend.presentation.profiles.http.schemas import (
     AvatarSelectRequest,
     PhotoAlbumCreateRequest,
     ProfileUpdateRequest,
 )
+from backend.presentation.shared.http.auth import get_optional_current_user_from_cookie
 from backend.presentation.shared.http.schemas import (
     AvatarHistoryResponse,
     AvatarRemoveResponse,
@@ -47,7 +50,7 @@ from backend.presentation.shared.http.serializers import (
 router = APIRouter(prefix="/profile", tags=["Profile"], route_class=DishkaRoute)
 
 
-@router.get("/{profile_id:int}", response_model=ProfilePageResponse)
+@router.get("/{profile_id:int}")
 async def get_profile(
     profile_id: int,
     use_case: FromDishka[GetProfileUseCase],
@@ -57,7 +60,7 @@ async def get_profile(
     return profile_result_to_response(result)
 
 
-@router.patch("/{profile_id:int}", response_model=UserEnvelopeResponse)
+@router.patch("/{profile_id:int}")
 async def update_profile(
     profile_id: int,
     body: ProfileUpdateRequest,
@@ -72,7 +75,7 @@ async def update_profile(
     return user_result_to_response(result)
 
 
-@router.get("/{profile_id:int}/photos", response_model=ProfilePhotosResponse)
+@router.get("/{profile_id:int}/photos")
 async def get_profile_photos(
     profile_id: int,
     use_case: FromDishka[GetProfilePhotosUseCase],
@@ -82,7 +85,77 @@ async def get_profile_photos(
     return profile_photos_result_to_response(result)
 
 
-@router.post("/photos/albums", response_model=PhotoAlbumEnvelopeResponse)
+@router.get("/{profile_id:int}/videos")
+async def get_profile_videos(
+    profile_id: int,
+    use_case: FromDishka[ListVideoAlbumsUseCase],
+    current_user: Annotated[User | None, Depends(get_optional_current_user_from_cookie)],
+    tab: Literal["uploaded", "favorite", "viewed", "bookmarked"] = Query("uploaded"),
+    q: str = Query("", max_length=200),
+) -> dict[str, object]:
+    viewer_id = current_user.require_id() if current_user else None
+    owner_name = await use_case.get_owner_name(user_id=profile_id)
+    if tab != "uploaded" and viewer_id != profile_id:
+        return {"owner_name": owner_name, "albums": []}
+    albums = await use_case.execute_for_user(user_id=profile_id, viewer_id=viewer_id, tab=tab, search=q)
+    return {
+        "owner_name": owner_name,
+        "albums": [
+            {
+                "id": album.id,
+                "title": album.title,
+                "videos": [
+                    {
+                        "video_id": video.id,
+                        "media_id": video.media_id,
+                        "title": video.title,
+                        "owner_id": video.owner_id,
+                        "owner_name": video.owner_name,
+                        "status": video.status,
+                        "error": video.error_message,
+                        "original_filename": video.original_filename,
+                        "created_at": video.created_at,
+                        "duration": video.duration,
+                        "views_count": video.views_count,
+                        "likes_count": video.likes_count,
+                        "is_liked_by_current": video.is_liked_by_current,
+                        "is_bookmarked_by_current": video.is_bookmarked_by_current,
+                        "is_favorited_by_current": video.is_favorited_by_current,
+                    }
+                    for video in album.videos
+                ],
+            }
+            for album in albums
+        ],
+    }
+
+
+@router.get("/{profile_id:int}/music")
+async def get_profile_music(
+    profile_id: int,
+    use_case: FromDishka[ListMusicUseCase],
+    profile_use_case: FromDishka[GetProfileUseCase],
+    current_user: FromDishka[User],
+) -> dict[str, list[dict[str, object]]]:
+    await profile_use_case.execute(current_user=current_user, profile_id=profile_id)
+    tracks = await use_case.execute(user_id=profile_id)
+    return {
+        "tracks": [
+            {
+                "id": track.id,
+                "media_id": track.media_id,
+                "user_id": track.user_id,
+                "title": track.title,
+                "artist": track.artist,
+                "duration": track.duration,
+                "created_at": track.created_at,
+            }
+            for track in tracks
+        ]
+    }
+
+
+@router.post("/photos/albums")
 async def create_photo_album(
     body: PhotoAlbumCreateRequest,
     use_case: FromDishka[CreatePhotoAlbumUseCase],
@@ -92,7 +165,7 @@ async def create_photo_album(
     return photo_album_result_to_response(result)
 
 
-@router.post("/photos/albums/{album_id:int}", response_model=PhotoAlbumEnvelopeResponse)
+@router.post("/photos/albums/{album_id:int}")
 async def upload_profile_photo(
     album_id: int,
     use_case: FromDishka[UploadProfilePhotoUseCase],
@@ -109,7 +182,7 @@ async def upload_profile_photo(
     return photo_album_result_to_response(result)
 
 
-@router.delete("/photos/{photo_id:int}", response_model=MessageResponse)
+@router.delete("/photos/{photo_id:int}")
 async def delete_profile_photo(
     photo_id: int,
     use_case: FromDishka[DeleteProfilePhotoUseCase],
@@ -119,7 +192,7 @@ async def delete_profile_photo(
     return message_result_to_response(result)
 
 
-@router.patch("/avatar", response_model=AvatarUploadResponse)
+@router.patch("/avatar")
 async def upload_avatar(
     use_case: FromDishka[UploadAvatarUseCase],
     current_user: FromDishka[User],
@@ -129,7 +202,7 @@ async def upload_avatar(
     return avatar_upload_result_to_response(result)
 
 
-@router.get("/avatar/history", response_model=AvatarHistoryResponse)
+@router.get("/avatar/history")
 async def get_avatar_history(
     use_case: FromDishka[GetAvatarHistoryUseCase],
     current_user: FromDishka[User],
@@ -138,7 +211,7 @@ async def get_avatar_history(
     return avatar_history_result_to_response(result)
 
 
-@router.patch("/avatar/select", response_model=AvatarUploadResponse)
+@router.patch("/avatar/select")
 async def select_avatar(
     body: AvatarSelectRequest,
     use_case: FromDishka[SelectAvatarUseCase],
@@ -148,7 +221,7 @@ async def select_avatar(
     return avatar_upload_result_to_response(result)
 
 
-@router.delete("/avatar", response_model=AvatarRemoveResponse)
+@router.delete("/avatar")
 async def remove_avatar(
     use_case: FromDishka[RemoveAvatarUseCase],
     current_user: FromDishka[User],

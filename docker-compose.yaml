@@ -83,6 +83,48 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
 
+  video-worker:
+    build:
+      context: ./services/video-worker
+    init: true
+    stop_grace_period: 2m
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_GROUP_ID: video-worker
+      KAFKA_MAX_BYTES: "10000000"
+      S3_ENDPOINT: minio:9000
+      S3_BUCKET: general-project
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_SECURE: "false"
+
+  call-signaling:
+    build:
+      context: ./services/call-signaling
+    init: true
+    depends_on:
+      pg:
+        condition: service_started
+      redis:
+        condition: service_started
+    ports:
+      - "0.0.0.0:8001:8001"
+    environment:
+      CALL_SIGNALING_ADDR: "0.0.0.0:8001"
+      CALL_ALLOWED_ORIGINS: "${CALL_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
+      CALL_JWT_SECRET: "${APP_CONFIG__JWT__SECRET_KEY:-sercretkey}"
+      CALL_JWT_ALGORITHM: HS256
+      CALL_REDIS_ADDR: redis:6379
+      CALL_REDIS_DB: "0"
+      CALL_POSTGRES_URL: postgres://admin:password@pg:5432/database
+      CALL_SESSION_TTL: 2m
+      CALL_MAX_MESSAGE_BYTES: "262144"
+
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     ports:

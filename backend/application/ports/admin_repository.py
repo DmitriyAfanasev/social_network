@@ -2,10 +2,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any
 
+from backend.domain.user.entity import User
+
 
 class AdminRepository(ABC):
     @abstractmethod
-    async def list_roles(self) -> Sequence[Any]:
+    async def list_roles(self) -> Sequence[User]:
         pass
 
     @abstractmethod

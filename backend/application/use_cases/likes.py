@@ -1,5 +1,3 @@
-from typing import cast
-
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.event_types import POST_LIKE_TOGGLED_EVENT
 from backend.application.events import IntegrationEvent
@@ -23,7 +21,7 @@ class TogglePostLikeUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, post_id: int) -> ToggleLikeResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         like = LikePost(user_id=current_user_id, post_id=post_id)
         async with self.transaction_manager:
             like_data = await self.like_repository.toggle_post_like(

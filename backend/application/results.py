@@ -101,6 +101,7 @@ class ProfileResult:
     can_send_message: bool
     current_user: User
     posts: Sequence[PostReadModel]
+    friends: Sequence[UserReadModel]
 
 
 @dataclass(frozen=True)

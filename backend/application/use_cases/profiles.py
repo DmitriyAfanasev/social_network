@@ -1,10 +1,8 @@
 import logging
-from typing import cast
-
-from fastapi import UploadFile
 
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.commands import ProfileUpdateCommand
+from backend.application.constants import DEFAULT_AVATAR_URL
 from backend.application.event_types import PROFILE_PHOTO_DELETED_EVENT
 from backend.application.events import IntegrationEvent
 from backend.application.exceptions import (
@@ -12,7 +10,7 @@ from backend.application.exceptions import (
     ValidationAppError,
 )
 from backend.application.ports.block_repository import BlockRepository
-from backend.application.ports.file_upload_service import FileUploadService
+from backend.application.ports.file_upload_service import FileUploadService, UploadFileSource
 from backend.application.ports.friend_repository import FriendRepository
 from backend.application.ports.media_storage import MediaStorage
 from backend.application.ports.outbox_repository import OutboxRepository
@@ -34,7 +32,6 @@ from backend.application.results import (
 )
 from backend.domain.user.entity import User
 from backend.domain.user.policy import InteractionPolicy, RelationshipFacts
-from backend.infra.config import DEFAULT_AVATAR_URL
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +51,7 @@ class GetProfileUseCase:
         self.block_repository = block_repository
 
     async def execute(self, current_user: User, profile_id: int) -> ProfileResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         profile_user = await self.profile_repository.get_by_id(profile_id)
         relationship_facts = await self._relationship_facts(current_user_id, profile_id)
         if relationship_facts.is_blocked and current_user_id != profile_id:
@@ -94,6 +91,11 @@ class GetProfileUseCase:
             if is_own_profile or not profile_user.profile or profile_user.profile.show_posts
             else []
         )
+        friends = (
+            await self.friend_repository.list_friends(profile_id)
+            if is_own_profile or not profile_user.profile or profile_user.profile.show_friends
+            else []
+        )
 
         return ProfileResult(
             user=profile_user,
@@ -105,6 +107,7 @@ class GetProfileUseCase:
             can_send_message=can_send_message,
             current_user=current_user,
             posts=posts,
+            friends=friends,
         )
 
     async def _relationship_facts(self, actor_id: int, target_id: int) -> RelationshipFacts:
@@ -141,7 +144,7 @@ class UpdateProfileUseCase:
         profile_id: int,
         command: ProfileUpdateCommand,
     ) -> UserResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         profile_user = await self.profile_repository.get_by_id(profile_id)
         if profile_user.id != current_user_id:
             raise PermissionDeniedError("Это профиль чужого пользователя.")
@@ -161,8 +164,8 @@ class UploadAvatarUseCase:
         self.transaction_manager = transaction_manager
         self.file_upload_service = file_upload_service
 
-    async def execute(self, current_user: User, avatar: UploadFile) -> AvatarUploadResult:
-        current_user_id = cast(int, current_user.id)
+    async def execute(self, current_user: User, avatar: UploadFileSource) -> AvatarUploadResult:
+        current_user_id = current_user.require_id()
         try:
             media = await self.file_upload_service.upload(
                 file=avatar,
@@ -186,8 +189,6 @@ class UploadAvatarUseCase:
         except ValueError as e:
             raise ValidationAppError(str(e)) from e
         except (OSError, RuntimeError) as e:
-            # Технические детали (включая SQL и параметры запроса) остаются
-            # в traceback логов и не должны попадать в ответ API.
             logger.exception("Ошибка при загрузке аватара")
             raise ValidationAppError("Не удалось загрузить аватар") from e
 
@@ -202,7 +203,7 @@ class RemoveAvatarUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User) -> AvatarRemoveResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         async with self.transaction_manager:
             await self.profile_repository.delete_avatar(
                 current_user_id,
@@ -219,7 +220,7 @@ class GetAvatarHistoryUseCase:
         self.profile_repository = profile_repository
 
     async def execute(self, current_user: User) -> AvatarHistoryResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         profile_user = await self.profile_repository.get_by_id(current_user_id)
         current_avatar = profile_user.profile.avatar if profile_user.profile else None
         avatars = await self.profile_repository.get_avatar_history(current_user_id)
@@ -236,7 +237,7 @@ class SelectAvatarUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, avatar_url: str) -> AvatarUploadResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         if not await self.profile_repository.avatar_exists_in_history(current_user_id, avatar_url):
             raise ValidationAppError("Аватар не найден в истории")
 
@@ -254,7 +255,7 @@ class GetProfilePhotosUseCase:
         self.profile_repository = profile_repository
 
     async def execute(self, current_user: User, profile_id: int) -> ProfilePhotosResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         profile_user = await self.profile_repository.get_by_id(profile_id)
         avatar_history = await self.profile_repository.get_avatar_history(profile_id)
         custom_albums = await self.profile_repository.get_photo_albums(profile_id)
@@ -315,7 +316,7 @@ class CreatePhotoAlbumUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, title: str) -> PhotoAlbumResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         normalized_title = title.strip()
         if not normalized_title:
             raise ValidationAppError("Название альбома не может быть пустым")
@@ -344,11 +345,11 @@ class UploadProfilePhotoUseCase:
         self,
         current_user: User,
         album_id: int,
-        photo: UploadFile,
+        photo: UploadFileSource,
         caption: str | None = None,
     ) -> PhotoAlbumResult:
-        current_user_id = cast(int, current_user.id)
         album = await self.profile_repository.get_photo_album(album_id)
+        current_user_id = current_user.require_id()
         if album.user_id != current_user_id:
             raise PermissionDeniedError("Нельзя загружать фото в чужой альбом")
 
@@ -383,7 +384,7 @@ class DeleteProfilePhotoUseCase:
         self.transaction_manager = transaction_manager
 
     async def execute(self, current_user: User, photo_id: int) -> MessageResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         async with self.transaction_manager:
             deleted_file_url = await self.profile_repository.delete_photo(
                 user_id=current_user_id,

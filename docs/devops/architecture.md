@@ -4,7 +4,7 @@
 
 ```text
 Browser
-  ↓ HTTP/HTTPS
+  ↓ HTTP
 Envoy Gateway / Ingress
   ├── frontend Service
   └── api Service

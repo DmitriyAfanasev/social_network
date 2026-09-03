@@ -1,4 +1,5 @@
 import logging
+import os
 from collections.abc import AsyncGenerator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
@@ -20,6 +21,21 @@ FRONTEND_DEV_ORIGINS = (
     "http://localhost:5174",
     "http://127.0.0.1:5174",
 )
+
+
+def frontend_origins() -> tuple[str, ...]:
+    """Return default frontend origins plus explicitly configured LAN origins.
+
+    A phone opened at ``http://192.168.1.50:5173`` is a different browser
+    origin from ``http://localhost:5173``. CORS therefore needs the exact LAN
+    origin, while wildcard origins cannot be used with credentialed cookies.
+    """
+    configured = tuple(
+        origin.strip()
+        for origin in os.getenv("FRONTEND_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    )
+    return tuple(dict.fromkeys((*FRONTEND_DEV_ORIGINS, *configured)))
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +73,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     setup_dishka(create_container(), application)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=FRONTEND_DEV_ORIGINS,
+        allow_origins=frontend_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

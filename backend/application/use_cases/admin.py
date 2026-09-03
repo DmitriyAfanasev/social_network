@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 
 from backend.application.exceptions import PermissionDeniedError, ValidationAppError
 from backend.application.ports.admin_repository import AdminRepository
@@ -15,12 +15,12 @@ class AdminRbacUseCase:
         self.transaction_manager = transaction_manager
 
     async def _ensure(self, current_user: User, permission: str) -> int:
-        user_id = cast(int, current_user.id)
+        user_id = current_user.require_id()
         if not await self.authorization.has_permission(user_id, permission):
             raise PermissionDeniedError("Недостаточно прав")
         return user_id
 
-    async def list_roles(self, current_user: User) -> list[Any]:
+    async def list_roles(self, current_user: User) -> list[User]:
         await self._ensure(current_user, "roles.manage")
         return list(await self.repository.list_roles())
 

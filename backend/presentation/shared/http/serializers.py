@@ -67,6 +67,7 @@ def profile_to_response(profile: Any | None, *, own_profile: bool = False) -> Pr
         city=profile.city,
         street=profile.street,
         bio=profile.bio,
+        status=profile.status,
         avatar=profile.avatar,
     )
 
@@ -226,6 +227,7 @@ def profile_result_to_response(result: ProfileResult) -> ProfilePageResponse:
         relationship_status=_relationship_status(result),
         current_user=user_to_response(result.current_user, include_email=True),
         posts=[post_to_response(post) for post in result.posts],
+        friends=[friend_response for friend in result.friends if (friend_response := user_to_response(friend)) is not None],
         profile_visibility=result.user.profile.profile_visibility if result.is_own_profile and result.user.profile else None,
         friend_request_policy=result.user.profile.friend_request_policy if result.is_own_profile and result.user.profile else None,
         message_policy=result.user.profile.message_policy if result.is_own_profile and result.user.profile else None,

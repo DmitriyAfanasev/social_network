@@ -1,5 +1,4 @@
 import logging
-from typing import cast
 
 from backend.application.analytics_events import build_analytics_event_payload
 from backend.application.commands import CreatePostCommand, UpdatePostCommand
@@ -49,7 +48,7 @@ class GetFeedUseCase:
     async def execute(self, current_user: User | None, page: int = 1) -> FeedResult:
         posts, total_pages = await self.post_repository.get_paginated_by_likes(
             page=page,
-            current_user_id=cast(int, current_user.id) if current_user is not None else None,
+            current_user_id=current_user.require_id() if current_user is not None else None,
         )
         return FeedResult(
             current_user=current_user,
@@ -73,7 +72,7 @@ class CreatePostUseCase:
         self.file_upload_service = file_upload_service
 
     async def execute(self, current_user: User, command: CreatePostCommand) -> PostResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         has_attachment = bool(command.image and command.image.filename)
         content = _normalize_post_content(command.content, has_attachment=has_attachment)
 
@@ -135,7 +134,7 @@ class UpdatePostUseCase:
         post_id: int,
         command: UpdatePostCommand,
     ) -> PostResult:
-        current_user_id = cast(int, current_user.id)
+        current_user_id = current_user.require_id()
         post = await self.post_repository.get_by_id(post_id)
         if not post:
             raise NotFoundError("Пост не найден")
