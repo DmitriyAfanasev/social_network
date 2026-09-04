@@ -1,50 +1,43 @@
-/*
-Package store persists the small control-plane record of a call in Redis.
-
-Call state is short-lived and shared by all signaling replicas, which makes
-Redis a good fit: reads are fast, TTL removes abandoned invitations, and a Lua
-script can validate an actor and change a state in one atomic operation. Redis
-does not carry media packets and does not replace PostgreSQL authorization.
-*/
+// Package store хранит короткоживущие control-plane-сессии звонков в Redis.
 package store
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
+	"uuid"
 
 	"general-project/call-signaling/internal/domain"
+	"general-project/call-signaling/internal/ports"
 	"github.com/redis/go-redis/v9"
 )
 
 const sessionPrefix = "calls:session:"
 
-// RedisStore is the adapter around the calls:session:<id> hash namespace.
+// RedisStore — адаптер пространства hash-ключей calls:session:<id>.
 type RedisStore struct {
 	client *redis.Client
 	ttl    int
 }
 
-// NewRedisStore creates a store with a TTL expressed in seconds.
+// NewRedisStore создаёт хранилище с TTL в секундах.
 func NewRedisStore(client *redis.Client, ttlSeconds int) *RedisStore {
 	return &RedisStore{client: client, ttl: ttlSeconds}
 }
 
-// Save writes a session without changing its expiry. The signaling handler
-// normally uses Create and Transition, which both set/refresh the TTL.
+// Save сохраняет сессию без изменения срока действия ключа.
 func (s *RedisStore) Save(ctx context.Context, session domain.Session) error {
-	key := sessionPrefix + session.CallID
+	key := sessionPrefix + session.CallID.String()
 	return s.client.HSet(ctx, key, map[string]any{
 		"call_id": session.CallID, "caller_id": session.CallerID, "callee_id": session.CalleeID,
 		"call_type": string(session.CallType), "status": string(session.Status),
 	}).Err()
 }
 
-// Create stores the initial ringing session and assigns its expiration.
+// Create сохраняет начальную сессию и назначает ей срок действия.
 func (s *RedisStore) Create(ctx context.Context, session domain.Session) error {
-	key := sessionPrefix + session.CallID
+	key := sessionPrefix + session.CallID.String()
 	pipe := s.client.TxPipeline()
 	pipe.HSet(ctx, key, map[string]any{
 		"call_id": session.CallID, "caller_id": session.CallerID, "callee_id": session.CalleeID,
@@ -55,35 +48,44 @@ func (s *RedisStore) Create(ctx context.Context, session domain.Session) error {
 	return err
 }
 
-// Get loads a session; redis.Nil means the invitation expired or never existed.
-func (s *RedisStore) Get(ctx context.Context, callID string) (domain.Session, error) {
-	values, err := s.client.HGetAll(ctx, sessionPrefix+callID).Result()
+// Get загружает сессию; ErrNotFound означает истёкшее или неизвестное приглашение.
+func (s *RedisStore) Get(ctx context.Context, callID uuid.UUID) (domain.Session, error) {
+	values, err := s.client.HGetAll(ctx, sessionPrefix+callID.String()).Result()
 	if err != nil {
 		return domain.Session{}, err
 	}
 	if len(values) == 0 {
-		return domain.Session{}, redis.Nil
+		return domain.Session{}, ports.ErrNotFound
 	}
-	callerID, err := strconv.ParseInt(values["caller_id"], 10, 64)
+	callIDValue, err := uuid.Parse(values["call_id"])
+	if err != nil {
+		return domain.Session{}, fmt.Errorf("invalid call_id: %w", err)
+	}
+	callerID, err := uuid.Parse(values["caller_id"])
 	if err != nil {
 		return domain.Session{}, fmt.Errorf("invalid caller_id: %w", err)
 	}
-	calleeID, err := strconv.ParseInt(values["callee_id"], 10, 64)
+	calleeID, err := uuid.Parse(values["callee_id"])
 	if err != nil {
 		return domain.Session{}, fmt.Errorf("invalid callee_id: %w", err)
 	}
-	return domain.Session{CallID: values["call_id"], CallerID: callerID, CalleeID: calleeID, CallType: domain.CallType(values["call_type"]), Status: domain.CallStatus(values["status"])}, nil
+	return domain.Session{CallID: callIDValue, CallerID: callerID, CalleeID: calleeID, CallType: domain.CallType(values["call_type"]), Status: domain.CallStatus(values["status"])}, nil
 }
 
-// Refresh keeps an active call addressable while both browser sockets are alive.
-func (s *RedisStore) Refresh(ctx context.Context, callID string) error {
-	return s.client.Expire(ctx, sessionPrefix+callID, timeDurationSeconds(s.ttl)).Err()
+// Refresh продлевает TTL активного звонка, пока сокеты браузеров подключены.
+func (s *RedisStore) Refresh(ctx context.Context, callID uuid.UUID) error {
+	updated, err := s.client.Expire(ctx, sessionPrefix+callID.String(), timeDurationSeconds(s.ttl)).Result()
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return ports.ErrNotFound
+	}
+	return nil
 }
 
-// Transition runs the actor check and state transition in Redis atomically.
-// This matters when two replicas receive accept/end at nearly the same time:
-// only one command may legally move ringing to active or active to ended.
-func (s *RedisStore) Transition(ctx context.Context, callID string, actorID int64, action string) (domain.Session, error) {
+// Transition атомарно проверяет участника и меняет состояние в Redis.
+func (s *RedisStore) Transition(ctx context.Context, callID uuid.UUID, actorID uuid.UUID, action string) (domain.Session, error) {
 	const script = `
 local key = KEYS[1]
 if redis.call('EXISTS', key) == 0 then return {0, 'not_found'} end
@@ -102,7 +104,7 @@ redis.call('HSET', key, 'status', next)
 redis.call('EXPIRE', key, ARGV[3])
 return {1, next}
 `
-	result, err := s.client.Eval(ctx, script, []string{sessionPrefix + callID}, actorID, action, s.ttl).Result()
+	result, err := s.client.Eval(ctx, script, []string{sessionPrefix + callID.String()}, actorID.String(), action, s.ttl).Result()
 	if err != nil {
 		return domain.Session{}, err
 	}
@@ -111,6 +113,9 @@ return {1, next}
 		return domain.Session{}, errors.New("invalid transition response")
 	}
 	if fmt.Sprint(items[0]) != "1" {
+		if fmt.Sprint(items[1]) == "not_found" {
+			return domain.Session{}, ports.ErrNotFound
+		}
 		return domain.Session{}, fmt.Errorf("%s", fmt.Sprint(items[1]))
 	}
 	return s.Get(ctx, callID)

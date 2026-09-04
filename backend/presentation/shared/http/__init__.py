@@ -1,1 +1,0 @@
-"""Shared HTTP presentation utilities."""

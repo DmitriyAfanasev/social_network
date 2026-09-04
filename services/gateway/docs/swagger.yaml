@@ -1,0 +1,2493 @@
+basePath: /
+definitions:
+  ErrorResponse:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  actionResponse:
+    properties:
+      state:
+        type: string
+    type: object
+  addPhotoRequest:
+    properties:
+      caption:
+        type: string
+      media_id:
+        type: string
+    type: object
+  authResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/userResponse'
+    type: object
+  avatarHistoryResponse:
+    properties:
+      avatars:
+        items:
+          $ref: '#/definitions/avatarPayload'
+        type: array
+      current_avatar:
+        type: string
+    type: object
+  avatarPayload:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_current:
+        type: boolean
+      media_id:
+        type: string
+    type: object
+  avatarRequest:
+    properties:
+      media_id:
+        type: string
+    type: object
+  commentResponse:
+    properties:
+      author_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      post_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  commentsResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/commentResponse'
+        type: array
+    type: object
+  conversationResponse:
+    properties:
+      archived:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: string
+      last_message:
+        $ref: '#/definitions/messageResponse'
+      muted:
+        type: boolean
+      participant_ids:
+        items:
+          type: string
+        type: array
+      pinned:
+        type: boolean
+      updated_at:
+        type: string
+    type: object
+  conversationsResponse:
+    properties:
+      conversations:
+        items:
+          $ref: '#/definitions/conversationResponse'
+        type: array
+    type: object
+  directConversationRequest:
+    properties:
+      other_user_id:
+        type: string
+    type: object
+  emailRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  friendRequestActionResponse:
+    properties:
+      request_id:
+        type: string
+      state:
+        type: string
+    type: object
+  friendRequestResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      recipient_id:
+        type: string
+      responded_at:
+        type: string
+      sender_id:
+        type: string
+      status:
+        type: string
+    type: object
+  friendRequestsResponse:
+    properties:
+      incoming:
+        items:
+          $ref: '#/definitions/friendRequestResponse'
+        type: array
+      outgoing:
+        items:
+          $ref: '#/definitions/friendRequestResponse'
+        type: array
+    type: object
+  likeResponse:
+    properties:
+      liked:
+        type: boolean
+      post_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  mediaResponse:
+    properties:
+      checksum:
+        type: string
+      content_type:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      media_type:
+        type: string
+      original_filename:
+        type: string
+      size:
+        type: integer
+      uploaded_by:
+        type: string
+    type: object
+  messageRequest:
+    properties:
+      body:
+        type: string
+      media_id:
+        type: string
+    type: object
+  messageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  messagesResponse:
+    properties:
+      has_more:
+        type: boolean
+      messages:
+        items:
+          $ref: '#/definitions/messageResponse'
+        type: array
+    type: object
+  musicListResponse:
+    properties:
+      tracks:
+        items:
+          $ref: '#/definitions/musicResponse'
+        type: array
+    type: object
+  musicResponse:
+    properties:
+      artist:
+        type: string
+      created_at:
+        type: string
+      duration:
+        type: number
+      id:
+        type: string
+      media_id:
+        type: string
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
+  permissionsResponse:
+    properties:
+      permissions:
+        items:
+          type: string
+        type: array
+    type: object
+  photoAlbumPayload:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      photos:
+        items:
+          $ref: '#/definitions/photoPayload'
+        type: array
+      title:
+        type: string
+    type: object
+  photoAlbumRequest:
+    properties:
+      title:
+        type: string
+    type: object
+  photoAlbumResponse:
+    properties:
+      album:
+        $ref: '#/definitions/photoAlbumPayload'
+    type: object
+  photoPayload:
+    properties:
+      album_id:
+        type: string
+      caption:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      photo_url:
+        type: string
+    type: object
+  postRequest:
+    properties:
+      body:
+        type: string
+      media_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  postResponse:
+    properties:
+      author_id:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      media_ids:
+        items:
+          type: string
+        type: array
+      updated_at:
+        type: string
+    type: object
+  postsResponse:
+    properties:
+      posts:
+        items:
+          $ref: '#/definitions/postResponse'
+        type: array
+    type: object
+  presenceResponse:
+    properties:
+      online:
+        type: boolean
+      user_id:
+        type: string
+    type: object
+  profilePhotosResponse:
+    properties:
+      albums:
+        items:
+          $ref: '#/definitions/photoAlbumPayload'
+        type: array
+      is_own_profile:
+        type: boolean
+      owner_id:
+        type: string
+    type: object
+  profileResponse:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      created_at:
+        type: string
+      display_name:
+        type: string
+      handle:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  profilesResponse:
+    properties:
+      profiles:
+        items:
+          $ref: '#/definitions/profileResponse'
+        type: array
+    type: object
+  recommendationResponse:
+    properties:
+      common_friends:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  recommendationsResponse:
+    properties:
+      recommendations:
+        items:
+          $ref: '#/definitions/recommendationResponse'
+        type: array
+    type: object
+  refreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  registerRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  relationshipsResponse:
+    properties:
+      friends:
+        items:
+          type: string
+        type: array
+      subscribers:
+        items:
+          type: string
+        type: array
+      subscriptions:
+        items:
+          type: string
+        type: array
+    type: object
+  renditionResponse:
+    properties:
+      content_type:
+        type: string
+      created_at:
+        type: string
+      duration:
+        type: number
+      height:
+        type: integer
+      id:
+        type: string
+      size:
+        type: integer
+    type: object
+  resetPasswordRequest:
+    properties:
+      new_password:
+        type: string
+      token:
+        type: string
+    type: object
+  setHandleRequest:
+    properties:
+      handle:
+        type: string
+    type: object
+  tokenRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  updateProfileRequest:
+    properties:
+      bio:
+        type: string
+      display_name:
+        type: string
+    type: object
+  userResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      last_seen_at:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  videoAlbumListItem:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+      videos:
+        items:
+          $ref: '#/definitions/videoResponse'
+        type: array
+    type: object
+  videoAlbumListResponse:
+    properties:
+      albums:
+        items:
+          $ref: '#/definitions/videoAlbumListItem'
+        type: array
+    type: object
+  videoAlbumResponse:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+    type: object
+  videoFlagResponse:
+    properties:
+      bookmarked:
+        type: boolean
+      favorited:
+        type: boolean
+    type: object
+  videoLikeResponse:
+    properties:
+      liked:
+        type: boolean
+      likes_count:
+        type: integer
+    type: object
+  videoResponse:
+    properties:
+      album_id:
+        type: string
+      created_at:
+        type: string
+      duration:
+        type: number
+      id:
+        type: string
+      is_bookmarked_by_current:
+        type: boolean
+      is_favorited_by_current:
+        type: boolean
+      is_liked_by_current:
+        type: boolean
+      likes_count:
+        type: integer
+      media_id:
+        type: string
+      original_filename:
+        type: string
+      owner_id:
+        type: string
+      renditions:
+        items:
+          $ref: '#/definitions/renditionResponse'
+        type: array
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      views_count:
+        type: integer
+    type: object
+  videoViewResponse:
+    properties:
+      views_count:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: Единый публичный HTTP-контракт Go-бэкенда.
+  title: General Project API
+  version: "1.0"
+paths:
+  /v1/auth/confirm-registration:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Confirmation-токен
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/tokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Подтвердить регистрацию
+      tags:
+      - auth
+  /v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Вход пользователя
+      tags:
+      - auth
+  /v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh-токен
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/refreshRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Завершить сессию
+      tags:
+      - auth
+  /v1/auth/me/permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/permissionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить permissions пользователя
+      tags:
+      - auth
+  /v1/auth/password-reset:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Reset-токен и новый пароль
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/resetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Сбросить пароль
+      tags:
+      - auth
+  /v1/auth/password-reset-requests:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/emailRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Запросить сброс пароля
+      tags:
+      - auth
+  /v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh-токен
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/refreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Обновить токены
+      tags:
+      - auth
+  /v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/registerRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /v1/auth/registration-confirmation-requests:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/emailRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Повторно отправить подтверждение регистрации
+      tags:
+      - auth
+  /v1/content/comments/{commentID}:
+    delete:
+      parameters:
+      - description: UUID комментария
+        in: path
+        name: commentID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить комментарий
+      tags:
+      - content
+  /v1/content/feed:
+    get:
+      parameters:
+      - default: 20
+        description: Количество постов
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postsResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить ленту постов
+      tags:
+      - content
+  /v1/content/posts:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Текст и вложения поста
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/postRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/postResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Создать пост
+      tags:
+      - content
+  /v1/content/posts/{postID}:
+    delete:
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить пост
+      tags:
+      - content
+    get:
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить пост
+      tags:
+      - content
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      - description: Новый текст и вложения поста
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/postRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/postResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить пост
+      tags:
+      - content
+  /v1/content/posts/{postID}/comments:
+    get:
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      - default: 50
+        description: Количество комментариев
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/commentsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить комментарии поста
+      tags:
+      - content
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      - description: Текст комментария
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/postRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/commentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Создать комментарий
+      tags:
+      - content
+  /v1/content/posts/{postID}/like:
+    delete:
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/likeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Убрать лайк с поста
+      tags:
+      - content
+    post:
+      parameters:
+      - description: UUID поста
+        in: path
+        name: postID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/likeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Поставить лайк посту
+      tags:
+      - content
+  /v1/media:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Файл
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/mediaResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Загрузить медиа
+      tags:
+      - media
+  /v1/media/{mediaID}:
+    delete:
+      parameters:
+      - description: UUID медиаобъекта
+        in: path
+        name: mediaID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить медиа
+      tags:
+      - media
+    get:
+      parameters:
+      - description: UUID медиаобъекта
+        in: path
+        name: mediaID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/mediaResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить метаданные медиа
+      tags:
+      - media
+  /v1/media/music:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/musicListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить свою музыку
+      tags:
+      - media
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Аудиофайл
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Название
+        in: formData
+        name: title
+        type: string
+      - description: Исполнитель
+        in: formData
+        name: artist
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/musicResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Загрузить музыкальный трек
+      tags:
+      - media
+  /v1/media/music/{trackID}:
+    delete:
+      parameters:
+      - description: UUID трека
+        in: path
+        name: trackID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить музыкальный трек
+      tags:
+      - media
+  /v1/media/videos:
+    get:
+      parameters:
+      - description: UUID владельца
+        in: query
+        name: owner_id
+        type: string
+      - description: uploaded, favorite, viewed или bookmarked
+        in: query
+        name: tab
+        type: string
+      - description: Поиск по названию
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoAlbumListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить видео по альбомам
+      tags:
+      - media
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Видео
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Название видео
+        in: formData
+        name: title
+        type: string
+      - description: UUID альбома
+        in: formData
+        name: album_id
+        type: string
+      - description: Высоты через запятую
+        in: formData
+        name: heights
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/videoResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Загрузить видео
+      tags:
+      - media
+  /v1/media/videos/{videoID}:
+    delete:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить видео
+      tags:
+      - media
+    get:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить видео
+      tags:
+      - media
+  /v1/media/videos/{videoID}/bookmark:
+    delete:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoFlagResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить закладку видео
+      tags:
+      - media
+    post:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoFlagResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить закладку видео
+      tags:
+      - media
+  /v1/media/videos/{videoID}/favorite:
+    delete:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoFlagResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить избранное видео
+      tags:
+      - media
+    post:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoFlagResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить избранное видео
+      tags:
+      - media
+  /v1/media/videos/{videoID}/like:
+    post:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoLikeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Поставить или убрать like видео
+      tags:
+      - media
+  /v1/media/videos/{videoID}/view:
+    post:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoViewResponse'
+      summary: Зафиксировать просмотр видео
+      tags:
+      - media
+  /v1/media/videos/albums:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      parameters:
+      - description: Название альбома
+        in: formData
+        name: title
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/videoAlbumResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Создать альбом видео
+      tags:
+      - media
+  /v1/media/videos/albums/{albumID}:
+    delete:
+      parameters:
+      - description: UUID альбома
+        in: path
+        name: albumID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить альбом видео
+      tags:
+      - media
+  /v1/messaging/conversations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/conversationsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Список диалогов
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}:
+    delete:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Скрыть диалог
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/archive:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Архивировать диалог
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/history:
+    delete:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Очистить историю диалога
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/messages:
+    get:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      - description: Смещение
+        in: query
+        name: offset
+        type: integer
+      - default: 50
+        description: Размер страницы
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/messagesResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить сообщения
+      tags:
+      - messaging
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      - description: Сообщение
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/messageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отправить сообщение
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/messages/{messageID}/media:
+    delete:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      - description: UUID сообщения
+        in: path
+        name: messageID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить media сообщения
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/messages/{messageID}/read:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      - description: UUID сообщения
+        in: path
+        name: messageID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отметить сообщение прочитанным
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/mute:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Отключить уведомления диалога
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/pin:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Закрепить диалог
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/unarchive:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Вернуть диалог из архива
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/unmute:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Включить уведомления диалога
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/unpin:
+    patch:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Открепить диалог
+      tags:
+      - messaging
+  /v1/messaging/conversations/{conversationID}/unread:
+    post:
+      parameters:
+      - description: UUID диалога
+        in: path
+        name: conversationID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Пометить диалог непрочитанным
+      tags:
+      - messaging
+  /v1/messaging/conversations/direct:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Второй пользователь
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/directConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/conversationResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить прямой диалог
+      tags:
+      - messaging
+  /v1/messaging/messages/{messageID}:
+    delete:
+      parameters:
+      - description: UUID сообщения
+        in: path
+        name: messageID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить сообщение
+      tags:
+      - messaging
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID сообщения
+        in: path
+        name: messageID
+        required: true
+        type: string
+      - description: Новый текст
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/messageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/messageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Изменить сообщение
+      tags:
+      - messaging
+  /v1/messaging/presence/{userID}:
+    get:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Проверить presence пользователя
+      tags:
+      - messaging
+  /v1/notifications/stream:
+    get:
+      parameters:
+      - description: Access-токен для EventSource
+        in: query
+        name: access_token
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Открыть поток уведомлений
+      tags:
+      - messaging
+  /v1/profiles/{handle}:
+    get:
+      parameters:
+      - description: Публичный handle
+        in: path
+        name: handle
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profileResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить профиль по handle
+      tags:
+      - profiles
+  /v1/profiles/{handle}/photos:
+    get:
+      parameters:
+      - description: Публичный handle
+        in: path
+        name: handle
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profilePhotosResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить фото профиля
+      tags:
+      - profiles
+  /v1/profiles/me:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Публичные поля профиля
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/updateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Обновить публичный профиль
+      tags:
+      - profiles
+  /v1/profiles/me/avatar:
+    delete:
+      responses:
+        "204":
+          description: No Content
+      summary: Удалить аватар
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Медиаобъект
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/avatarRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/avatarHistoryResponse'
+      summary: Установить аватар
+      tags:
+      - profiles
+  /v1/profiles/me/avatar/history:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/avatarHistoryResponse'
+      summary: Получить историю аватаров
+      tags:
+      - profiles
+  /v1/profiles/me/avatar/select:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Медиаобъект
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/avatarRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/avatarHistoryResponse'
+      summary: Выбрать аватар из истории
+      tags:
+      - profiles
+  /v1/profiles/me/handle:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Новый handle
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/setHandleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Назначить handle профиля
+      tags:
+      - profiles
+  /v1/profiles/me/photo-albums:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Название альбома
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/photoAlbumRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/photoAlbumResponse'
+      summary: Создать фотоальбом
+      tags:
+      - profiles
+  /v1/profiles/me/photo-albums/{albumID}/photos:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID альбома
+        in: path
+        name: albumID
+        required: true
+        type: string
+      - description: Медиаобъект и подпись
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/addPhotoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/photoAlbumResponse'
+      summary: Добавить фото в альбом
+      tags:
+      - profiles
+  /v1/profiles/me/photos/{photoID}:
+    delete:
+      parameters:
+      - description: UUID фотографии
+        in: path
+        name: photoID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Удалить фото профиля
+      tags:
+      - profiles
+  /v1/profiles/search:
+    get:
+      parameters:
+      - description: Начало handle
+        in: query
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: Максимум результатов
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profilesResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Поиск профилей по handle
+      tags:
+      - profiles
+  /v1/social/blocks/{targetID}:
+    delete:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/actionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Снять блокировку
+      tags:
+      - blocks
+    put:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/actionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Заблокировать пользователя
+      tags:
+      - blocks
+  /v1/social/friend-requests:
+    get:
+      parameters:
+      - default: all
+        description: incoming, outgoing или all
+        in: query
+        name: direction
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/friendRequestsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить заявки в друзья
+      tags:
+      - friend-requests
+  /v1/social/friend-requests/{requestID}:
+    delete:
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/friendRequestActionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отменить заявку в друзья
+      tags:
+      - friend-requests
+  /v1/social/friend-requests/{requestID}/accept:
+    post:
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/friendRequestActionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Принять заявку в друзья
+      tags:
+      - friend-requests
+  /v1/social/friend-requests/{requestID}/decline:
+    post:
+      parameters:
+      - description: UUID заявки
+        in: path
+        name: requestID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/friendRequestActionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отклонить заявку в друзья
+      tags:
+      - friend-requests
+  /v1/social/friendships/{targetID}:
+    delete:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/actionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить из друзей
+      tags:
+      - friendships
+    put:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/friendRequestActionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отправить заявку в друзья
+      tags:
+      - friendships
+  /v1/social/recommendations:
+    get:
+      parameters:
+      - default: 10
+        description: Количество результатов
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/recommendationsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить рекомендации друзей
+      tags:
+      - social
+  /v1/social/relationships:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/relationshipsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить социальные связи
+      tags:
+      - social
+  /v1/social/subscriptions/{targetID}:
+    delete:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/actionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Отписаться от пользователя
+      tags:
+      - subscriptions
+    put:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/actionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Подписаться на пользователя
+      tags:
+      - subscriptions
+swagger: "2.0"

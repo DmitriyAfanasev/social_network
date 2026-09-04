@@ -111,7 +111,7 @@ WebRTC сам по себе не устанавливает звонок. Он �
   sessions;
 - Kafka используется для domain/integration events, уведомлений и фоновых
   video jobs;
-- Python WebSocket остаётся realtime-каналом сообщений, а отдельный Go-
+- Go messaging WebSocket остаётся realtime-каналом сообщений, а отдельный Go-
   WebSocket `call-signaling` является signaling-транспортом WebRTC;
 - отдельные Go-сервисы не должны становиться зависимостью HTTP API;
 - для видео и звонков нужны отдельные healthcheck, metrics, retry policy и DLQ,

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"uuid"
 
 	"general-project/video-worker/internal/config"
 	"github.com/minio/minio-go/v7"
@@ -19,14 +20,16 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// Job содержит команду на транскодирование видео.
 type Job struct {
-	VideoID          int    `json:"video_id"`
-	MediaID          int    `json:"media_id"`
-	Bucket           string `json:"bucket"`
-	ObjectKey        string `json:"object_key"`
-	RequestedHeights []int  `json:"requested_heights"`
+	VideoID          uuid.UUID `json:"video_id"`
+	MediaID          uuid.UUID `json:"media_id"`
+	Bucket           string    `json:"bucket"`
+	ObjectKey        string    `json:"object_key"`
+	RequestedHeights []int     `json:"requested_heights"`
 }
 
+// Rendition содержит результат обработки видео одного разрешения.
 type Rendition struct {
 	Height      int     `json:"height"`
 	ObjectKey   string  `json:"object_key"`
@@ -35,6 +38,7 @@ type Rendition struct {
 	Duration    float64 `json:"duration"`
 }
 
+// Worker читает команды транскодирования и публикует результаты.
 type Worker struct {
 	cfg      config.Config
 	logger   *slog.Logger
@@ -80,7 +84,7 @@ func (w *Worker) Run(ctx context.Context) error {
 		if err := w.process(ctx, job); err != nil {
 			w.logger.Error("video job failed", "video_id", job.VideoID, "error", err)
 			if publishErr := w.producer.WriteMessages(ctx, kafka.Message{
-				Key:   []byte(strconv.Itoa(job.VideoID)),
+				Key:   []byte(job.VideoID.String()),
 				Value: mustJSON(map[string]any{"video_id": job.VideoID, "status": "failed", "error_message": err.Error()}),
 			}); publishErr != nil {
 				w.logger.Error("video failure event failed", "video_id", job.VideoID, "error", publishErr)
@@ -146,7 +150,7 @@ func (w *Worker) process(ctx context.Context, job Job) error {
 		renditions = append(renditions, rendition)
 	}
 	return w.producer.WriteMessages(ctx, kafka.Message{
-		Key: []byte(strconv.Itoa(job.VideoID)),
+		Key: []byte(job.VideoID.String()),
 		Value: mustJSON(map[string]any{
 			"video_id":   job.VideoID,
 			"status":     "ready",
@@ -156,7 +160,7 @@ func (w *Worker) process(ctx context.Context, job Job) error {
 	})
 }
 
-func (w *Worker) transcode(ctx context.Context, input string, videoID, height int, duration float64) (Rendition, error) {
+func (w *Worker) transcode(ctx context.Context, input string, videoID uuid.UUID, height int, duration float64) (Rendition, error) {
 	w.logger.Info("transcoding started", "video_id", videoID, "height", height)
 	output, err := os.CreateTemp("", "video-rendition-*.mp4")
 	if err != nil {
@@ -169,7 +173,7 @@ func (w *Worker) transcode(ctx context.Context, input string, videoID, height in
 	if logs, err := cmd.CombinedOutput(); err != nil {
 		return Rendition{}, fmt.Errorf("ffmpeg %dp: %w: %s", height, err, string(logs))
 	}
-	key := filepath.Join("media", "videos", "renditions", strconv.Itoa(videoID), fmt.Sprintf("%dp.mp4", height))
+	key := filepath.Join("media", "videos", "renditions", videoID.String(), fmt.Sprintf("%dp.mp4", height))
 	if _, err := w.storage.FPutObject(ctx, w.cfg.S3Bucket, key, outputPath, minio.PutObjectOptions{ContentType: "video/mp4"}); err != nil {
 		return Rendition{}, err
 	}

@@ -1,68 +1,73 @@
-/*
-Package domain contains the call aggregate and its lifecycle rules.
-
-It intentionally knows nothing about WebSockets, Redis or PostgreSQL. The
-transport validates identity and the store persists state, while this package
-answers the business question: which transition is legal for this participant?
-That separation keeps handlers small and makes the state machine directly
-testable.
-*/
+// Package domain содержит агрегат звонка и правила его жизненного цикла.
 package domain
 
 import (
 	"errors"
 	"fmt"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
+// CallType определяет тип media-соединения.
 type CallType string
 
 const (
+	// Audio — аудиозвонок.
 	Audio CallType = "audio"
+	// Video — видеозвонок.
 	Video CallType = "video"
 )
 
+// CallStatus описывает состояние signaling-сессии.
 type CallStatus string
 
 const (
-	Ringing  CallStatus = "ringing"
-	Active   CallStatus = "active"
+	// Ringing — приглашение ожидает ответа.
+	Ringing CallStatus = "ringing"
+	// Active — звонок принят и media negotiation разрешён.
+	Active CallStatus = "active"
+	// Rejected — приглашение отклонено.
 	Rejected CallStatus = "rejected"
-	Ended    CallStatus = "ended"
+	// Ended — звонок завершён участником.
+	Ended CallStatus = "ended"
 )
 
 var (
+	// ErrNotParticipant означает, что пользователь не является участником звонка.
 	ErrNotParticipant = errors.New("user is not a participant of the call")
-	ErrInvalidState   = errors.New("invalid call state transition")
-	ErrOnlyCallee     = errors.New("only the callee may accept or reject a call")
+	// ErrInvalidState означает недопустимый переход состояния звонка.
+	ErrInvalidState = errors.New("invalid call state transition")
+	// ErrOnlyCallee означает, что действие доступно только вызываемому.
+	ErrOnlyCallee = errors.New("only the callee may accept or reject a call")
 )
 
+// Session содержит только управляющее состояние звонка, без аудио и видео.
 type Session struct {
-	// Session is control-plane data only; it never contains audio or video.
-	CallID   string     `json:"call_id"`
-	CallerID int64      `json:"caller_id"`
-	CalleeID int64      `json:"callee_id"`
+	CallID   uuid.UUID  `json:"call_id"`
+	CallerID uuid.UUID  `json:"caller_id"`
+	CalleeID uuid.UUID  `json:"callee_id"`
 	CallType CallType   `json:"call_type"`
 	Status   CallStatus `json:"status"`
 }
 
-// NewSession creates a ringing invitation and rejects malformed client input.
-func NewSession(callerID, calleeID int64, callType CallType) (Session, error) {
+// NewSession создаёт приглашение в состоянии ожидания и проверяет входные данные.
+func NewSession(callerID, calleeID uuid.UUID, callType CallType) (Session, error) {
+	if callerID == uuid.Nil() || calleeID == uuid.Nil() {
+		return Session{}, errors.New("caller and callee are required")
+	}
 	if callerID == calleeID {
 		return Session{}, errors.New("cannot call yourself")
 	}
 	if callType != Audio && callType != Video {
 		return Session{}, fmt.Errorf("unsupported call type %q", callType)
 	}
-	return Session{CallID: uuid.NewString(), CallerID: callerID, CalleeID: calleeID, CallType: callType, Status: Ringing}, nil
+	return Session{CallID: uuid.New(), CallerID: callerID, CalleeID: calleeID, CallType: callType, Status: Ringing}, nil
 }
 
-// Includes is the basic authorization predicate for call participants.
-func (s Session) Includes(userID int64) bool { return s.CallerID == userID || s.CalleeID == userID }
+// Includes проверяет, входит ли пользователь в звонок.
+func (s Session) Includes(userID uuid.UUID) bool { return s.CallerID == userID || s.CalleeID == userID }
 
-// Accept moves ringing to active. Only the invited callee may do this.
-func (s Session) Accept(userID int64) (Session, error) {
+// Accept переводит ожидающий звонок в активное состояние.
+func (s Session) Accept(userID uuid.UUID) (Session, error) {
 	if userID != s.CalleeID {
 		return Session{}, ErrOnlyCallee
 	}
@@ -73,8 +78,8 @@ func (s Session) Accept(userID int64) (Session, error) {
 	return s, nil
 }
 
-// Reject closes a ringing invitation without creating a media connection.
-func (s Session) Reject(userID int64) (Session, error) {
+// Reject закрывает ожидающее приглашение без media-соединения.
+func (s Session) Reject(userID uuid.UUID) (Session, error) {
 	if userID != s.CalleeID {
 		return Session{}, ErrOnlyCallee
 	}
@@ -85,9 +90,8 @@ func (s Session) Reject(userID int64) (Session, error) {
 	return s, nil
 }
 
-// End lets either participant terminate ringing or active calls. Terminal
-// states cannot be revived by delayed browser messages.
-func (s Session) End(userID int64) (Session, error) {
+// End позволяет любому участнику завершить ожидающий или активный звонок.
+func (s Session) End(userID uuid.UUID) (Session, error) {
 	if !s.Includes(userID) {
 		return Session{}, ErrNotParticipant
 	}

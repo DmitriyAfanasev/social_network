@@ -1,0 +1,163 @@
+version: "3"
+
+vars:
+  DATABASE_URL: '{{default "postgres://admin:password@localhost:5432/database?sslmode=disable" .DATABASE_URL}}'
+
+tasks:
+  fmt:
+    desc: Format all Go modules in the monorepo
+    cmds:
+      - gofmt -w $(find libs services -type f -name '*.go' -not -path '*/vendor/*')
+
+  test:
+    desc: Run all Go tests in the workspace
+    cmds:
+      - go -C libs/platform test ./...
+      - go -C services/analytics test ./...
+      - go -C services/admin test ./...
+      - go -C services/call-signaling test ./...
+      - go -C services/content test ./...
+      - go -C services/gateway test ./...
+      - go -C services/identity test ./...
+      - go -C services/media test ./...
+      - go -C services/messaging test ./...
+      - go -C services/profiles test ./...
+      - go -C services/social test ./...
+      - go -C services/video-worker test ./...
+
+  test:integration:identity:
+    desc: Run identity PostgreSQL repository integration test
+    cmds:
+      - go -C services/identity test ./internal/adapters/postgres -run TestPostgresIdentityRepositories -count=1
+
+  vet:
+    desc: Run go vet in the workspace
+    cmds:
+      - go -C libs/platform vet ./...
+      - go -C services/analytics vet ./...
+      - go -C services/admin vet ./...
+      - go -C services/call-signaling vet ./...
+      - go -C services/content vet ./...
+      - go -C services/gateway vet ./...
+      - go -C services/identity vet ./...
+      - go -C services/media vet ./...
+      - go -C services/messaging vet ./...
+      - go -C services/profiles vet ./...
+      - go -C services/social vet ./...
+      - go -C services/video-worker vet ./...
+
+  build:analytics:
+    desc: Build the analytics worker binary
+    cmds:
+      - go -C services/analytics build -o /tmp/general-project-analytics ./cmd/analytics
+
+  build:admin:
+    desc: Build the admin audit consumer binary
+    cmds:
+      - go -C services/admin build -o /tmp/general-project-admin ./cmd/admin
+
+  build:identity:
+    desc: Build the identity service binary
+    cmds:
+      - go build -o /tmp/general-project-identity ./services/identity/cmd/identity
+
+  build:profiles:
+    desc: Build the profiles service binary
+    cmds:
+      - go build -o /tmp/general-project-profiles ./services/profiles/cmd/profiles
+
+  build:social:
+    desc: Build the social service binary
+    cmds:
+      - go build -o /tmp/general-project-social ./services/social/cmd/social
+
+  build:content:
+    desc: Build the content service binary
+    cmds:
+      - go build -o /tmp/general-project-content ./services/content/cmd/content
+
+  build:media:
+    desc: Build the media service binary
+    cmds:
+      - go build -o /tmp/general-project-media ./services/media/cmd/media
+
+  build:messaging:
+    desc: Build the messaging service binary
+    cmds:
+      - go build -o /tmp/general-project-messaging ./services/messaging/cmd/messaging
+
+  build:call-signaling:
+    desc: Build the call signaling service binary
+    cmds:
+      - go build -o /tmp/general-project-call-signaling ./services/call-signaling/cmd/call-signaling
+
+  build:gateway:
+    desc: Build the gateway binary
+    cmds:
+      - go -C services/gateway build -o /tmp/general-project-gateway ./cmd/gateway
+
+  generate:swagger:
+    desc: Generate the unified Swagger/OpenAPI document for gateway
+    cmds:
+      - swag init --parseDependency --parseInternal --useStructName --dir services/gateway,services/identity,services/profiles,services/social,services/content,services/media,services/messaging --generalInfo cmd/gateway/main.go --output services/gateway/docs --outputTypes json,yaml
+
+  generate:proto:
+    desc: Generate protobuf and gRPC code from api/proto
+    cmds:
+      - buf generate
+
+  db:bootstrap:
+    desc: Create the service-owned PostgreSQL schemas
+    cmds:
+      - psql "{{.DATABASE_URL}}" -v ON_ERROR_STOP=1 -f db/bootstrap.sql
+
+  db:reset:
+    desc: Remove only the disposable local PostgreSQL volume
+    cmds:
+      - bash scripts/reset-local-db.sh
+
+  db:migrate:
+    desc: Apply goose migrations for one service
+    cmds:
+      - goose -dir services/{{.SERVICE}}/migrations -table {{.SCHEMA}}.goose_db_version postgres "{{.DATABASE_URL}}" up
+    requires:
+      vars: [SERVICE, SCHEMA]
+
+  db:rollback:
+    desc: Roll back the latest goose migration for one service
+    cmds:
+      - goose -dir services/{{.SERVICE}}/migrations -table {{.SCHEMA}}.goose_db_version postgres "{{.DATABASE_URL}}" down
+    requires:
+      vars: [SERVICE, SCHEMA]
+
+  db:rollback:all:
+    desc: Roll back all goose migrations for one service
+    cmds:
+      - goose -dir services/{{.SERVICE}}/migrations -table {{.SCHEMA}}.goose_db_version postgres "{{.DATABASE_URL}}" down-to 0
+    requires:
+      vars: [SERVICE, SCHEMA]
+
+  db:smoke:
+    desc: Bootstrap an isolated PostgreSQL instance and verify goose up/down
+    cmds:
+      - bash scripts/goose-smoke-check.sh
+
+  db:migrate:all:
+    desc: Apply all currently available service migrations
+    deps:
+      - task: db:migrate
+        vars: {SERVICE: identity, SCHEMA: identity}
+      - task: db:migrate
+        vars: {SERVICE: profiles, SCHEMA: profiles}
+      - task: db:migrate
+        vars: {SERVICE: social, SCHEMA: social}
+      - task: db:migrate
+        vars: {SERVICE: content, SCHEMA: content}
+      - task: db:migrate
+        vars: {SERVICE: media, SCHEMA: media}
+      - task: db:migrate
+        vars: {SERVICE: messaging, SCHEMA: messaging}
+      - task: db:migrate
+        vars: {SERVICE: analytics, SCHEMA: analytics}
+      - task: db:migrate
+        vars: {SERVICE: admin, SCHEMA: admin}

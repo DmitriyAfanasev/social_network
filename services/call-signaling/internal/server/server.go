@@ -1,12 +1,4 @@
-/*
-Package server implements the WebRTC signaling control plane.
-
-The server does not decode, mix or forward RTP/SRTP. Its job is intentionally
-small but security-sensitive: authenticate the WebSocket, authorize the room,
-validate the call lifecycle, and copy offer/answer/ICE JSON to the other peer.
-The browsers still own the RTCPeerConnection and negotiate the encrypted media
-path directly (or through TURN when ICE selects a relay).
-*/
+// Package server содержит WebSocket transport call signaling.
 package server
 
 import (
@@ -18,123 +10,104 @@ import (
 	"net/http"
 	"slices"
 	"sync"
+	"uuid"
 
-	"general-project/call-signaling/internal/auth"
+	"github.com/gorilla/websocket"
+
+	"general-project/call-signaling/internal/application"
 	"general-project/call-signaling/internal/authz"
 	"general-project/call-signaling/internal/domain"
-	"general-project/call-signaling/internal/store"
-	"github.com/gorilla/websocket"
-	"github.com/redis/go-redis/v9"
+	"general-project/call-signaling/internal/ports"
+	platformauth "general-project/libs/platform/auth"
+	"general-project/libs/platform/httpx"
 )
 
-const (
-	callEventsChannel = "calls:events"
-	maxSignalBytes    = 262144
-)
+const maxSignalBytes = 262144
 
-// Signal is the application envelope around one WebRTC negotiation message.
-// SDP and ICE are kept as raw JSON because signaling must not rewrite browser
-// generated candidates or codec attributes.
+// Signal содержит одно opaque-сообщение WebRTC negotiation.
 type Signal struct {
 	Kind      string          `json:"kind,omitempty"`
 	SDP       json.RawMessage `json:"sdp,omitempty"`
 	Candidate json.RawMessage `json:"candidate,omitempty"`
 }
 
-// ClientEvent is the only input shape accepted from a browser. The server gets
-// sender identity from the JWT connection, never from this structure.
+// ClientEvent содержит единственную форму команды от браузера.
 type ClientEvent struct {
-	Type           string  `json:"type"`
-	ConversationID int64   `json:"conversation_id"`
-	TargetUserID   int64   `json:"target_user_id"`
-	CallID         string  `json:"call_id"`
-	CallType       string  `json:"call_type"`
-	Signal         *Signal `json:"signal"`
+	Type           string    `json:"type"`
+	ConversationID uuid.UUID `json:"conversation_id"`
+	TargetUserID   uuid.UUID `json:"target_user_id"`
+	CallID         uuid.UUID `json:"call_id"`
+	CallType       string    `json:"call_type"`
+	Signal         *Signal   `json:"signal"`
 }
 
-// Event is sent to one or both authorized call participants. RecipientIDs is
-// also used by the Redis fan-out layer to prevent delivery to unrelated rooms.
+// Event отправляется авторизованным участникам звонка.
 type Event struct {
-	Type           string  `json:"type"`
-	Message        string  `json:"message,omitempty"`
-	ConversationID int64   `json:"conversation_id"`
-	SenderID       int64   `json:"sender_id"`
-	CallID         string  `json:"call_id"`
-	CallerID       int64   `json:"caller_id"`
-	CalleeID       int64   `json:"callee_id"`
-	CallType       string  `json:"call_type"`
-	Status         string  `json:"status"`
-	RecipientIDs   []int64 `json:"recipient_ids"`
-	Signal         *Signal `json:"signal,omitempty"`
+	Type           string      `json:"type"`
+	Message        string      `json:"message,omitempty"`
+	ConversationID uuid.UUID   `json:"conversation_id"`
+	SenderID       uuid.UUID   `json:"sender_id"`
+	CallID         uuid.UUID   `json:"call_id"`
+	CallerID       uuid.UUID   `json:"caller_id"`
+	CalleeID       uuid.UUID   `json:"callee_id"`
+	CallType       string      `json:"call_type"`
+	Status         string      `json:"status"`
+	RecipientIDs   []uuid.UUID `json:"recipient_ids"`
+	Signal         *Signal     `json:"signal,omitempty"`
 }
 
-// envelope is the Redis Pub/Sub wire format; conversation_id selects local rooms.
-type envelope struct {
-	ConversationID int64 `json:"conversation_id"`
-	Event          Event `json:"event"`
-}
-
-// client couples a WebSocket to its authenticated user. The write mutex is
-// required because Redis fan-out and request handling can write concurrently.
+// client связывает WebSocket с идентификатором аутентифицированного пользователя.
 type client struct {
-	userID int64
+	userID uuid.UUID
 	conn   *websocket.Conn
 	mu     sync.Mutex
 }
 
-// send serializes writes per connection; gorilla/websocket permits one writer.
+// send сериализует записи: gorilla/websocket допускает только одного writer.
 func (c *client) send(value Event) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.conn.WriteJSON(value)
 }
 
-// Hub tracks local sockets. It is intentionally process-local; Redis Pub/Sub
-// makes the same event visible to every replica for horizontal scaling.
+// Hub хранит локальные сокеты, а межпроцессную доставку делегирует брокеру.
 type Hub struct {
-	mu      sync.RWMutex
-	rooms   map[int64]map[*client]struct{}
-	redis   *redis.Client
-	store   *store.RedisStore
-	authorz *authz.Repository
-	logger  *slog.Logger
+	mu     sync.RWMutex
+	rooms  map[uuid.UUID]map[*client]struct{}
+	broker ports.EventBroker
+	logger *slog.Logger
 }
 
-// NewHub wires local connection tracking to shared Redis and PostgreSQL adapters.
-func NewHub(redisClient *redis.Client, sessionStore *store.RedisStore, authorizer *authz.Repository, logger *slog.Logger) *Hub {
-	return &Hub{rooms: make(map[int64]map[*client]struct{}), redis: redisClient, store: sessionStore, authorz: authorizer, logger: logger}
+// NewHub создаёт локальный реестр WebSocket-подключений.
+func NewHub(broker ports.EventBroker, logger *slog.Logger) *Hub {
+	return &Hub{rooms: make(map[uuid.UUID]map[*client]struct{}), broker: broker, logger: logger}
 }
 
-// Run consumes signaling events published by this or another service replica.
+// Run принимает события от всех экземпляров call-signaling.
 func (h *Hub) Run(ctx context.Context) error {
-	subscriber := h.redis.Subscribe(ctx, callEventsChannel)
-	defer subscriber.Close()
-	for message := range subscriber.Channel() {
-		var value envelope
-		if err := json.Unmarshal([]byte(message.Payload), &value); err != nil {
-			h.logger.Warn("invalid Redis signaling event", "error", err)
-			continue
+	return h.broker.Subscribe(ctx, func(event ports.SignalingEvent) error {
+		var value Event
+		if err := json.Unmarshal(event.Payload, &value); err != nil {
+			h.logger.Warn("invalid signaling event", "error", err)
+			return nil
 		}
-		h.broadcastLocal(value.ConversationID, value.Event)
-	}
-	return ctx.Err()
+		h.broadcastLocal(event.ConversationID, value)
+		return nil
+	})
 }
 
-// broadcast publishes once to Redis; local delivery happens in the subscriber
-// loop, so all replicas follow the same delivery path.
-func (h *Hub) broadcast(ctx context.Context, conversationID int64, event Event) error {
-	payload, err := json.Marshal(envelope{ConversationID: conversationID, Event: event})
+func (h *Hub) broadcast(ctx context.Context, conversationID uuid.UUID, event Event) error {
+	payload, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
-	return h.redis.Publish(ctx, callEventsChannel, payload).Err()
+	return h.broker.Publish(ctx, ports.SignalingEvent{ConversationID: conversationID, Payload: payload})
 }
 
-// broadcastLocal filters both by conversation room and recipient user id.
-func (h *Hub) broadcastLocal(conversationID int64, event Event) {
+func (h *Hub) broadcastLocal(conversationID uuid.UUID, event Event) {
 	h.mu.RLock()
 	clients := make([]*client, 0, len(h.rooms[conversationID]))
-	allowed := make(map[int64]struct{}, len(event.RecipientIDs))
+	allowed := make(map[uuid.UUID]struct{}, len(event.RecipientIDs))
 	for _, id := range event.RecipientIDs {
 		allowed[id] = struct{}{}
 	}
@@ -151,8 +124,7 @@ func (h *Hub) broadcastLocal(conversationID int64, event Event) {
 	}
 }
 
-// add subscribes a connection to one authorized conversation room.
-func (h *Hub) add(conversationID int64, item *client) {
+func (h *Hub) add(conversationID uuid.UUID, item *client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.rooms[conversationID] == nil {
@@ -161,8 +133,7 @@ func (h *Hub) add(conversationID int64, item *client) {
 	h.rooms[conversationID][item] = struct{}{}
 }
 
-// remove unregisters a closed or failed connection from a room.
-func (h *Hub) remove(conversationID int64, item *client) {
+func (h *Hub) remove(conversationID uuid.UUID, item *client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.rooms[conversationID], item)
@@ -171,43 +142,44 @@ func (h *Hub) remove(conversationID int64, item *client) {
 	}
 }
 
-// Handler authenticates connections and dispatches signaling commands.
+// Handler аутентифицирует WebSocket и запускает команды call signaling.
 type Handler struct {
-	Hub            *Hub
-	Verifier       *auth.Verifier
-	Logger         *slog.Logger
-	AllowedOrigins []string
-	MaxMessageSize int64
+	hub            *Hub
+	calls          *application.Service
+	verifier       platformauth.TokenVerifier
+	readiness      ports.ReadinessChecker
+	allowedOrigins []string
+	maxMessageSize int64
 }
 
-// ServeHTTP upgrades an authenticated request and keeps reading commands until
-// the browser closes the socket. A rejected handshake never enters the hub.
+// NewHandler создаёт transport с application-сервисом и техническими портами.
+func NewHandler(calls *application.Service, hub *Hub, verifier platformauth.TokenVerifier, readiness ports.ReadinessChecker, allowedOrigins []string, maxMessageSize int64) *Handler {
+	return &Handler{hub: hub, calls: calls, verifier: verifier, readiness: readiness, allowedOrigins: allowedOrigins, maxMessageSize: maxMessageSize}
+}
+
+// ServeHTTP аутентифицирует запрос, подписывает сокет на команды и пересылает сигналы.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/ws" {
-		http.NotFound(w, r)
-		return
-	}
-	userID, err := h.Verifier.UserID(r)
+	userID, err := h.userID(r)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "требуется действующий access-токен")
 		return
 	}
 	upgrader := websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: func(request *http.Request) bool {
 		origin := request.Header.Get("Origin")
-		return origin == "" || slices.Contains(h.AllowedOrigins, origin)
+		return origin == "" || slices.Contains(h.allowedOrigins, origin)
 	}}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
 	}
-	readLimit := h.MaxMessageSize
+	defer conn.Close()
+	readLimit := h.maxMessageSize
 	if readLimit <= 0 {
 		readLimit = maxSignalBytes
 	}
 	conn.SetReadLimit(readLimit)
 	item := &client{userID: userID, conn: conn}
-	defer conn.Close()
-	rooms := make(map[int64]struct{})
+	rooms := make(map[uuid.UUID]struct{})
 	for {
 		var input ClientEvent
 		if err := conn.ReadJSON(&input); err != nil {
@@ -218,19 +190,35 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for conversationID := range rooms {
-		h.Hub.remove(conversationID, item)
+		h.hub.remove(conversationID, item)
 	}
 }
 
-// handle contains the protocol state machine at the transport boundary:
-// subscribe first, then start/transition/forward only for that subscribed room.
-func (h *Handler) handle(ctx context.Context, item *client, input ClientEvent, rooms map[int64]struct{}) error {
+// Ready возвращает готовность PostgreSQL и Redis-зависимостей.
+func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
+	if err := h.readiness.Check(r.Context()); err != nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "dependencies_unavailable", "зависимости недоступны")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ready"}` + "\n"))
+}
+
+// Health возвращает liveness-состояние процесса.
+func Health(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}` + "\n"))
+}
+
+func (h *Handler) handle(ctx context.Context, item *client, input ClientEvent, rooms map[uuid.UUID]struct{}) error {
 	switch input.Type {
 	case "conversation.subscribe":
-		if err := h.Hub.authorz.CanSubscribe(ctx, input.ConversationID, item.userID); err != nil {
+		if err := h.calls.Subscribe(ctx, input.ConversationID, item.userID); err != nil {
 			return err
 		}
-		h.Hub.add(input.ConversationID, item)
+		h.hub.add(input.ConversationID, item)
 		rooms[input.ConversationID] = struct{}{}
 		return item.send(Event{Type: "conversation.subscribed", ConversationID: input.ConversationID})
 	case "ping":
@@ -239,32 +227,13 @@ func (h *Handler) handle(ctx context.Context, item *client, input ClientEvent, r
 		if _, ok := rooms[input.ConversationID]; !ok {
 			return authz.ErrForbidden
 		}
-		session, err := h.Hub.store.Get(ctx, input.CallID)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				return errors.New("call not found")
-			}
-			return err
-		}
-		if err := h.Hub.authorz.CanUseCall(ctx, input.ConversationID, item.userID, session.CallerID, session.CalleeID); err != nil {
-			return err
-		}
-		if session.Status != domain.Active {
-			return errors.New("call is not active")
-		}
-		return h.Hub.store.Refresh(ctx, input.CallID)
+		return h.calls.KeepAlive(ctx, input.ConversationID, item.userID, input.CallID)
 	case "call.start":
 		if _, ok := rooms[input.ConversationID]; !ok {
 			return authz.ErrForbidden
 		}
-		if err := h.Hub.authorz.CanStart(ctx, input.ConversationID, item.userID, input.TargetUserID); err != nil {
-			return err
-		}
-		session, err := domain.NewSession(item.userID, input.TargetUserID, domain.CallType(input.CallType))
+		session, err := h.calls.Start(ctx, input.ConversationID, item.userID, input.TargetUserID, domain.CallType(input.CallType))
 		if err != nil {
-			return err
-		}
-		if err := h.Hub.store.Create(ctx, session); err != nil {
 			return err
 		}
 		return h.publishCall(ctx, input.ConversationID, item.userID, session, "call.invite", nil)
@@ -272,65 +241,69 @@ func (h *Handler) handle(ctx context.Context, item *client, input ClientEvent, r
 		if _, ok := rooms[input.ConversationID]; !ok {
 			return authz.ErrForbidden
 		}
-		session, err := h.Hub.store.Get(ctx, input.CallID)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				return errors.New("call not found")
-			}
-			return err
-		}
-		if err := h.Hub.authorz.CanUseCall(ctx, input.ConversationID, item.userID, session.CallerID, session.CalleeID); err != nil {
-			return err
-		}
-		session, err = h.Hub.store.Transition(ctx, input.CallID, item.userID, input.Type[len("call."):])
+		session, err := h.calls.Transition(ctx, input.ConversationID, item.userID, input.CallID, input.Type[len("call."):])
 		if err != nil {
 			return err
 		}
 		return h.publishCall(ctx, input.ConversationID, item.userID, session, input.Type, nil)
 	case "call.signal":
-		if input.Signal == nil || (input.Signal.Kind != "offer" && input.Signal.Kind != "answer" && input.Signal.Kind != "ice") {
+		if _, ok := rooms[input.ConversationID]; !ok || !validSignal(input.Signal) {
 			return errors.New("invalid signal")
 		}
-		if _, ok := rooms[input.ConversationID]; !ok {
-			return authz.ErrForbidden
-		}
-		session, err := h.Hub.store.Get(ctx, input.CallID)
+		session, err := h.calls.AuthorizeSignal(ctx, input.ConversationID, item.userID, input.CallID)
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				return errors.New("call not found")
-			}
 			return err
 		}
-		if err := h.Hub.authorz.CanUseCall(ctx, input.ConversationID, item.userID, session.CallerID, session.CalleeID); err != nil {
-			return err
-		}
-		if session.Status != domain.Active {
-			return errors.New("call is not active")
-		}
-		return h.publishCall(ctx, input.ConversationID, item.userID, session, "call.signal", input.Signal)
+		return h.publishCall(ctx, input.ConversationID, item.userID, session, input.Type, input.Signal)
 	default:
 		return fmt.Errorf("unknown event type %q", input.Type)
 	}
 }
 
-// publishCall converts a domain session into the stable browser protocol and
-// sends it through Redis so caller and callee receive the same event shape.
-func (h *Handler) publishCall(ctx context.Context, conversationID, senderID int64, session domain.Session, eventType string, signal *Signal) error {
-	event := Event{Type: eventType, ConversationID: conversationID, SenderID: senderID, CallID: session.CallID, CallerID: session.CallerID, CalleeID: session.CalleeID, CallType: string(session.CallType), Status: string(session.Status), RecipientIDs: []int64{session.CallerID, session.CalleeID}, Signal: signal}
-	return h.Hub.broadcast(ctx, conversationID, event)
+func (h *Handler) publishCall(ctx context.Context, conversationID, senderID uuid.UUID, session application.SessionDTO, eventType string, signal *Signal) error {
+	event := Event{Type: eventType, ConversationID: conversationID, SenderID: senderID, CallID: session.CallID, CallerID: session.CallerID, CalleeID: session.CalleeID, CallType: string(session.CallType), Status: string(session.Status), RecipientIDs: []uuid.UUID{session.CallerID, session.CalleeID}, Signal: signal}
+	return h.hub.broadcast(ctx, conversationID, event)
 }
 
-// publicError avoids exposing database/Redis internals while retaining useful
-// validation messages for the browser UI.
-func publicError(err error) string {
-	if errors.Is(err, authz.ErrForbidden) {
-		return "операция запрещена"
+func (h *Handler) userID(r *http.Request) (uuid.UUID, error) {
+	token := r.URL.Query().Get("access_token")
+	if token == "" {
+		var ok bool
+		token, ok = platformauth.BearerToken(r.Header.Get("Authorization"))
+		if !ok {
+			return uuid.Nil(), platformauth.ErrUnauthorized
+		}
 	}
-	return err.Error()
+	return h.verifier.UserID(token)
 }
 
-// Health is a lightweight readiness/liveness endpoint for Compose and probes.
-func Health(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok\n"))
+func validSignal(signal *Signal) bool {
+	if signal == nil {
+		return false
+	}
+	switch signal.Kind {
+	case "offer", "answer":
+		return len(signal.SDP) > 0
+	case "ice":
+		return len(signal.Candidate) > 0
+	default:
+		return false
+	}
+}
+
+func publicError(err error) string {
+	switch {
+	case errors.Is(err, authz.ErrForbidden):
+		return "операция запрещена"
+	case errors.Is(err, domain.ErrOnlyCallee):
+		return "действие доступно только вызываемому"
+	case errors.Is(err, domain.ErrInvalidState):
+		return "недопустимое состояние звонка"
+	case errors.Is(err, application.ErrCallNotFound):
+		return "звонок не найден"
+	case errors.Is(err, application.ErrCallNotActive):
+		return "звонок не активен"
+	default:
+		return err.Error()
+	}
 }

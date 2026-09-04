@@ -1,9 +1,8 @@
 package config
 
 import (
+	platformconfig "general-project/libs/platform/config"
 	"log/slog"
-	"os"
-	"strconv"
 )
 
 const (
@@ -26,41 +25,15 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		KafkaBrokers:  env("KAFKA_BROKERS", "localhost:9092"),
-		KafkaGroupID:  env("KAFKA_GROUP_ID", "video-worker"),
-		KafkaMaxBytes: positiveInt(env("KAFKA_MAX_BYTES", "10000000"), 10000000),
-		S3Endpoint:    env("S3_ENDPOINT", "localhost:9000"),
-		S3Bucket:      env("S3_BUCKET", "general-project"),
-		S3AccessKey:   env("S3_ACCESS_KEY", "minioadmin"),
-		S3SecretKey:   env("S3_SECRET_KEY", "minioadmin"),
-		S3Secure:      env("S3_SECURE", "false") == "true",
-		ParallelJobs:  positiveInt(env("VIDEO_PARALLEL_JOBS", "3"), 3),
-		LogLevel:      parseLevel(env("LOG_LEVEL", "INFO")),
-	}
-}
-
-func env(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-func positiveInt(value string, fallback int) int {
-	parsed, err := strconv.Atoi(value)
-	if err != nil || parsed < 1 {
-		return fallback
-	}
-	return parsed
-}
-func parseLevel(value string) slog.Level {
-	switch value {
-	case "DEBUG":
-		return slog.LevelDebug
-	case "WARN":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
+		KafkaBrokers:  platformconfig.Env("KAFKA_BROKERS", "localhost:9092"),
+		KafkaGroupID:  platformconfig.Env("KAFKA_GROUP_ID", "video-worker"),
+		KafkaMaxBytes: platformconfig.PositiveInt(platformconfig.Env("KAFKA_MAX_BYTES", "10000000"), 10000000),
+		S3Endpoint:    platformconfig.Env("S3_ENDPOINT", "localhost:9000"),
+		S3Bucket:      platformconfig.Env("S3_BUCKET", "general-project"),
+		S3AccessKey:   platformconfig.Env("S3_ACCESS_KEY", "minioadmin"),
+		S3SecretKey:   platformconfig.Env("S3_SECRET_KEY", "minioadmin"),
+		S3Secure:      platformconfig.Env("S3_SECURE", "false") == "true",
+		ParallelJobs:  platformconfig.PositiveInt(platformconfig.Env("VIDEO_PARALLEL_JOBS", "3"), 3),
+		LogLevel:      platformconfig.LogLevel(platformconfig.Env("LOG_LEVEL", "INFO")),
 	}
 }

@@ -1,0 +1,18 @@
+go 1.27.0
+
+toolchain go1.27.1
+
+use (
+	./libs/platform
+	./services/admin
+	./services/analytics
+	./services/call-signaling
+	./services/content
+	./services/gateway
+	./services/identity
+	./services/media
+	./services/messaging
+	./services/profiles
+	./services/social
+	./services/video-worker
+)

@@ -1,0 +1,41 @@
+name: Go backend
+
+on:
+  push:
+    branches: [main, dev, go-migration]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: true
+
+      - name: Install task and goose
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.44.1
+          go install github.com/pressly/goose/v3/cmd/goose@v3.24.3
+
+      - name: Format check
+        run: |
+          task fmt
+          git diff --exit-code
+
+      - name: Test
+        run: task test
+
+      - name: Vet
+        run: task vet
+
+      - name: Validate Compose
+        run: docker compose config -q
+
+      - name: Goose migration smoke-check
+        run: task db:smoke

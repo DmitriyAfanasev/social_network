@@ -1,0 +1,174 @@
+// Package postgres содержит PostgreSQL-адаптеры profiles-сервиса.
+package postgres
+
+import (
+	"context"
+	"errors"
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"general-project/profiles/internal/domain"
+	"general-project/profiles/internal/ports"
+)
+
+// ProfileRepository реализует операции профиля через pgx.
+type ProfileRepository struct {
+	pool *pgxpool.Pool
+}
+
+// NewProfileRepository создаёт PostgreSQL-адаптер профилей.
+func NewProfileRepository(pool *pgxpool.Pool) *ProfileRepository {
+	return &ProfileRepository{pool: pool}
+}
+
+// FindByHandle загружает публичный профиль по URL-handle.
+func (r *ProfileRepository) FindByHandle(ctx context.Context, handle string) (domain.Profile, error) {
+	const query = `
+		SELECT user_id, handle, display_name, bio, avatar_url, created_at, updated_at
+		FROM profiles.profiles
+		WHERE lower(handle) = lower($1)`
+	return r.findOne(ctx, query, handle)
+}
+
+// SearchByHandle ищет профили по началу handle с ограничением результата.
+func (r *ProfileRepository) SearchByHandle(ctx context.Context, query string, limit int) ([]domain.Profile, error) {
+	const statement = `
+		SELECT user_id, handle, display_name, bio, avatar_url, created_at, updated_at
+		FROM profiles.profiles
+		WHERE lower(handle) LIKE lower($1) || '%'
+		ORDER BY lower(handle)
+		LIMIT $2`
+
+	rows, err := r.pool.Query(ctx, statement, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	profiles := make([]domain.Profile, 0, limit)
+	for rows.Next() {
+		var profile domain.Profile
+		if err := rows.Scan(
+			&profile.UserID,
+			&profile.Handle,
+			&profile.DisplayName,
+			&profile.Bio,
+			&profile.AvatarURL,
+			&profile.CreatedAt,
+			&profile.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, profile)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return profiles, nil
+}
+
+// FindByUserID загружает профиль владельца по UUID пользователя.
+func (r *ProfileRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (domain.Profile, error) {
+	const query = `
+		SELECT user_id, handle, display_name, bio, avatar_url, created_at, updated_at
+		FROM profiles.profiles
+		WHERE user_id = $1`
+	return r.findOne(ctx, query, userID)
+}
+
+// SetHandle создаёт профиль при первом назначении handle или обновляет его.
+func (r *ProfileRepository) SetHandle(ctx context.Context, userID uuid.UUID, handle string) (domain.Profile, error) {
+	const query = `
+		INSERT INTO profiles.profiles (user_id, handle)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id) DO UPDATE
+		SET handle = EXCLUDED.handle, updated_at = now()
+		RETURNING user_id, handle, display_name, bio, avatar_url, created_at, updated_at`
+
+	var profile domain.Profile
+	err := r.pool.QueryRow(ctx, query, userID, handle).Scan(
+		&profile.UserID,
+		&profile.Handle,
+		&profile.DisplayName,
+		&profile.Bio,
+		&profile.AvatarURL,
+		&profile.CreatedAt,
+		&profile.UpdatedAt,
+	)
+	if isUniqueViolation(err) {
+		return domain.Profile{}, ports.ErrAlreadyExists
+	}
+	if err != nil {
+		return domain.Profile{}, err
+	}
+	return profile, nil
+}
+
+// UpdatePublicProfile обновляет отображаемое имя и описание существующего профиля.
+func (r *ProfileRepository) UpdatePublicProfile(ctx context.Context, userID uuid.UUID, displayName string, bio string) (domain.Profile, error) {
+	const query = `
+		UPDATE profiles.profiles
+		SET display_name = $2, bio = $3, updated_at = now()
+		WHERE user_id = $1
+		RETURNING user_id, handle, display_name, bio, avatar_url, created_at, updated_at`
+
+	var profile domain.Profile
+	err := r.pool.QueryRow(ctx, query, userID, displayName, bio).Scan(
+		&profile.UserID,
+		&profile.Handle,
+		&profile.DisplayName,
+		&profile.Bio,
+		&profile.AvatarURL,
+		&profile.CreatedAt,
+		&profile.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Profile{}, ports.ErrNotFound
+	}
+	if err != nil {
+		return domain.Profile{}, err
+	}
+	return profile, nil
+}
+
+// UpdateAvatar сохраняет URL текущего аватара пользователя.
+func (r *ProfileRepository) UpdateAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) (domain.Profile, error) {
+	const query = `
+		UPDATE profiles.profiles
+		SET avatar_url = $2, updated_at = now()
+		WHERE user_id = $1
+		RETURNING user_id, handle, display_name, bio, avatar_url, created_at, updated_at`
+	return r.scanProfile(ctx, query, userID, avatarURL)
+}
+
+func (r *ProfileRepository) findOne(ctx context.Context, query string, arg any) (domain.Profile, error) {
+	return r.scanProfile(ctx, query, arg)
+}
+
+func (r *ProfileRepository) scanProfile(ctx context.Context, query string, args ...any) (domain.Profile, error) {
+	var profile domain.Profile
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
+		&profile.UserID,
+		&profile.Handle,
+		&profile.DisplayName,
+		&profile.Bio,
+		&profile.AvatarURL,
+		&profile.CreatedAt,
+		&profile.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Profile{}, ports.ErrNotFound
+	}
+	if err != nil {
+		return domain.Profile{}, err
+	}
+	return profile, nil
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
