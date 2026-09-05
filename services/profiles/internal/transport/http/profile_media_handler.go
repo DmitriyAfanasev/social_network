@@ -26,7 +26,13 @@ func (h *Handler) GetPhotos(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "требуется действующий access-токен")
 		return
 	}
-	profile, err := h.profiles.GetByHandle(r.Context(), chi.URLParam(r, "handle"))
+	identifier := chi.URLParam(r, "handle")
+	profile, err := func() (application.ProfileDTO, error) {
+		if userID, parseErr := uuid.Parse(identifier); parseErr == nil {
+			return h.profiles.GetByUserID(r.Context(), userID)
+		}
+		return h.profiles.GetByHandle(r.Context(), identifier)
+	}()
 	if err != nil {
 		writeProfileError(w, err)
 		return

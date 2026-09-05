@@ -34,14 +34,19 @@ type MusicDTO struct {
 
 // MusicService реализует сценарии музыкальных треков.
 type MusicService struct {
-	media *MediaService
-	music ports.MusicRepository
-	cache ports.MediaCache
+	media      *MediaService
+	music      ports.MusicRepository
+	cache      ports.MediaCache
+	visibility ports.MusicVisibilityReader
 }
 
 // NewMusicService создаёт application-сервис музыкальных треков.
-func NewMusicService(media *MediaService, music ports.MusicRepository, cache ports.MediaCache) *MusicService {
-	return &MusicService{media: media, music: music, cache: cache}
+func NewMusicService(media *MediaService, music ports.MusicRepository, cache ports.MediaCache, visibility ...ports.MusicVisibilityReader) *MusicService {
+	var reader ports.MusicVisibilityReader
+	if len(visibility) > 0 {
+		reader = visibility[0]
+	}
+	return &MusicService{media: media, music: music, cache: cache, visibility: reader}
 }
 
 // Create загружает audio-файл и создаёт метаданные музыкального трека.
@@ -75,6 +80,24 @@ func (s *MusicService) Create(ctx context.Context, userID uuid.UUID, input Creat
 
 // ListMine возвращает музыкальные треки текущего пользователя.
 func (s *MusicService) ListMine(ctx context.Context, userID uuid.UUID) ([]MusicDTO, error) {
+	return s.list(ctx, userID)
+}
+
+// ListForViewer возвращает музыку владельца с учётом политики видимости.
+func (s *MusicService) ListForViewer(ctx context.Context, ownerID uuid.UUID, viewerID uuid.UUID) ([]MusicDTO, error) {
+	if s.visibility != nil {
+		allowed, err := s.visibility.CanViewMusic(ctx, viewerID, ownerID)
+		if err != nil {
+			return nil, err
+		}
+		if !allowed {
+			return nil, ErrForbidden
+		}
+	}
+	return s.list(ctx, ownerID)
+}
+
+func (s *MusicService) list(ctx context.Context, userID uuid.UUID) ([]MusicDTO, error) {
 	cacheKey := musicCacheKey(userID)
 	if s.cache != nil {
 		if payload, err := s.cache.Get(ctx, cacheKey); err == nil && payload != nil {

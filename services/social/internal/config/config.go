@@ -11,6 +11,7 @@ type Config struct {
 	JWTSecret    string
 	KafkaBrokers string
 	EventsTopic  string
+	ProfilesURL  string
 }
 
 // Load загружает конфигурацию social-сервиса из переменных окружения.
@@ -22,5 +23,6 @@ func Load() Config {
 		JWTSecret:    platformconfig.Env("SOCIAL_JWT_SECRET", "local-identity-secret"),
 		KafkaBrokers: platformconfig.Env("SOCIAL_KAFKA_BROKERS", "localhost:9092"),
 		EventsTopic:  platformconfig.Env("SOCIAL_EVENTS_TOPIC", "application.events"),
+		ProfilesURL:  platformconfig.Env("SOCIAL_PROFILES_URL", "http://localhost:8102"),
 	}
 }

@@ -41,12 +41,15 @@ type UpdatePostInput struct {
 
 // PostDTO представляет безопасный результат application-сценария поста.
 type PostDTO struct {
-	ID        uuid.UUID
-	AuthorID  uuid.UUID
-	Body      string
-	MediaIDs  []uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID            uuid.UUID
+	AuthorID      uuid.UUID
+	Body          string
+	MediaIDs      []uuid.UUID
+	LikesCount    int
+	LikedByViewer bool
+	LikedUserIDs  []uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // ContentService реализует сценарии текстовых постов.
@@ -55,6 +58,14 @@ type ContentService struct {
 	cache  ports.PostCache
 	media  ports.MediaReferenceChecker
 	outbox ports.OutboxRepository
+	likes  ports.LikeStatsReader
+}
+
+// NewContentServiceWithLikes создаёт content-сервис с чтением статистики лайков.
+func NewContentServiceWithLikes(posts ports.PostRepository, cache ports.PostCache, media ports.MediaReferenceChecker, outbox ports.OutboxRepository, likes ports.LikeStatsReader) *ContentService {
+	service := NewContentService(posts, cache, media, outbox)
+	service.likes = likes
+	return service
 }
 
 // NewContentService создаёт application-сервис постов.
@@ -101,12 +112,15 @@ func (s *ContentService) CreatePost(ctx context.Context, authorID uuid.UUID, inp
 }
 
 // GetPost возвращает пост по UUID и использует cache read-модели.
-func (s *ContentService) GetPost(ctx context.Context, postID uuid.UUID) (PostDTO, error) {
+func (s *ContentService) GetPost(ctx context.Context, postID uuid.UUID, viewerIDs ...uuid.UUID) (PostDTO, error) {
 	cacheKey := postCacheKey(postID)
 	if s.cache != nil {
 		if payload, err := s.cache.Get(ctx, cacheKey); err == nil && payload != nil {
 			var cached PostDTO
 			if json.Unmarshal(payload, &cached) == nil {
+				if err := s.enrichLikeStats(ctx, &cached, firstViewer(viewerIDs)); err != nil {
+					return PostDTO{}, err
+				}
 				return cached, nil
 			}
 		}
@@ -117,11 +131,14 @@ func (s *ContentService) GetPost(ctx context.Context, postID uuid.UUID) (PostDTO
 	}
 	dto := toPostDTO(post)
 	s.cachePost(ctx, cacheKey, dto)
+	if err := s.enrichLikeStats(ctx, &dto, firstViewer(viewerIDs)); err != nil {
+		return PostDTO{}, err
+	}
 	return dto, nil
 }
 
 // ListRecent возвращает последние посты с ограничением размера страницы.
-func (s *ContentService) ListRecent(ctx context.Context, limit int) ([]PostDTO, error) {
+func (s *ContentService) ListRecent(ctx context.Context, limit int, viewerIDs ...uuid.UUID) ([]PostDTO, error) {
 	if limit < 1 || limit > 50 {
 		return nil, ErrValidation
 	}
@@ -130,6 +147,9 @@ func (s *ContentService) ListRecent(ctx context.Context, limit int) ([]PostDTO, 
 		if payload, err := s.cache.Get(ctx, cacheKey); err == nil && payload != nil {
 			var cached []PostDTO
 			if json.Unmarshal(payload, &cached) == nil {
+				if err := s.enrichLikeStatsForPosts(ctx, cached, firstViewer(viewerIDs)); err != nil {
+					return nil, err
+				}
 				return cached, nil
 			}
 		}
@@ -146,6 +166,9 @@ func (s *ContentService) ListRecent(ctx context.Context, limit int) ([]PostDTO, 
 		if payload, marshalErr := json.Marshal(result); marshalErr == nil {
 			_ = s.cache.Set(ctx, cacheKey, payload, feedCacheTTL)
 		}
+	}
+	if err := s.enrichLikeStatsForPosts(ctx, result, firstViewer(viewerIDs)); err != nil {
+		return nil, err
 	}
 	return result, nil
 }
@@ -242,6 +265,44 @@ func (s *ContentService) validateMedia(ctx context.Context, userID uuid.UUID, me
 
 func toPostDTO(post domain.Post) PostDTO {
 	return PostDTO{ID: post.ID, AuthorID: post.AuthorID, Body: post.Body, MediaIDs: append([]uuid.UUID(nil), post.MediaIDs...), CreatedAt: post.CreatedAt, UpdatedAt: post.UpdatedAt}
+}
+
+func firstViewer(viewerIDs []uuid.UUID) uuid.UUID {
+	if len(viewerIDs) > 0 {
+		return viewerIDs[0]
+	}
+	return uuid.Nil()
+}
+
+func (s *ContentService) enrichLikeStatsForPosts(ctx context.Context, posts []PostDTO, viewerID uuid.UUID) error {
+	for index := range posts {
+		if err := s.enrichLikeStats(ctx, &posts[index], viewerID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ContentService) enrichLikeStats(ctx context.Context, post *PostDTO, viewerID uuid.UUID) error {
+	if s.likes == nil {
+		return nil
+	}
+	count, err := s.likes.Count(ctx, post.ID)
+	if err != nil {
+		return err
+	}
+	post.LikesCount = count
+	post.LikedUserIDs, err = s.likes.ListUserIDs(ctx, post.ID)
+	if err != nil {
+		return err
+	}
+	if viewerID != uuid.Nil() {
+		post.LikedByViewer, err = s.likes.Has(ctx, post.ID, viewerID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func postCacheKey(postID uuid.UUID) string {

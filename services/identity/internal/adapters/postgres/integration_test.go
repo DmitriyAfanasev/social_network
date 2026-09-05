@@ -35,7 +35,7 @@ func TestPostgresIdentityRepositories(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM identity.users WHERE id = $1`, userID)
 	})
 
-	created, err := userRepository.Create(ctx, user, "bcrypt-hash")
+	created, err := userRepository.Create(ctx, user, "bcrypt-hash", nil)
 	require.NoError(t, err)
 	require.Equal(t, userID, created.ID)
 	require.NotZero(t, created.CreatedAt)

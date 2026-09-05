@@ -60,6 +60,8 @@ type MediaCache interface {
 // ObjectStorage хранит бинарное содержимое и не знает о доменной модели media.
 type ObjectStorage interface {
 	Put(ctx context.Context, objectKey string, contentType string, content io.Reader, size int64) error
+	Get(ctx context.Context, objectKey string) (io.ReadCloser, error)
+	GetRange(ctx context.Context, objectKey string, start int64, end int64) (io.ReadCloser, error)
 	Delete(ctx context.Context, objectKey string) error
 }
 

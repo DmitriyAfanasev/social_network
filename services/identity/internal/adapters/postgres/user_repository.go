@@ -77,7 +77,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 }
 
 // Create сохраняет пользователя и его credentials одной транзакцией.
-func (r *UserRepository) Create(ctx context.Context, user domain.User, passwordHash string) (domain.User, error) {
+func (r *UserRepository) Create(ctx context.Context, user domain.User, passwordHash string, event *ports.OutboxEvent) (domain.User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return domain.User{}, err
@@ -104,6 +104,15 @@ func (r *UserRepository) Create(ctx context.Context, user domain.User, passwordH
 		SELECT $1, id FROM identity.roles WHERE name = 'user'`
 	if _, err := tx.Exec(ctx, roleQuery, user.ID); err != nil {
 		return domain.User{}, err
+	}
+	if event != nil {
+		const outboxQuery = `
+			INSERT INTO identity.outbox_events
+				(id, event_type, aggregate_id, payload, correlation_id, available_at, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		if _, err := tx.Exec(ctx, outboxQuery, event.ID, event.EventType, event.AggregateID, event.Payload, event.CorrelationID, event.AvailableAt, event.CreatedAt); err != nil {
+			return domain.User{}, err
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return domain.User{}, err

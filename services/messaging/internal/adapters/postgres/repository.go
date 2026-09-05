@@ -104,10 +104,11 @@ func (r *Repository) ListConversations(ctx context.Context, userID uuid.UUID, ar
 
 func (r *Repository) lastMessage(ctx context.Context, conversationID uuid.UUID, clearedAt *time.Time) (*domain.Message, error) {
 	const query = `
-		SELECT id, conversation_id, sender_id, body, media_id, created_at, edited_at, deleted_at
-		FROM messaging.messages
-		WHERE conversation_id = $1 AND ($2::timestamptz IS NULL OR created_at > $2)
-		ORDER BY created_at DESC, id DESC
+		SELECT message.id, message.conversation_id, message.sender_id, message.body, message.media_id,
+			message.created_at, message.edited_at, message.deleted_at
+		FROM messaging.messages AS message
+		WHERE message.conversation_id = $1 AND ($2::timestamptz IS NULL OR message.created_at > $2)
+		ORDER BY message.created_at DESC, message.id DESC
 		LIMIT 1`
 	var message domain.Message
 	if err := r.pool.QueryRow(ctx, query, conversationID, clearedAt).Scan(&message.ID, &message.ConversationID, &message.SenderID, &message.Body, &message.MediaID, &message.CreatedAt, &message.EditedAt, &message.DeletedAt); errors.Is(err, pgx.ErrNoRows) {
@@ -124,7 +125,8 @@ func (r *Repository) ListMessages(ctx context.Context, userID uuid.UUID, convers
 		return nil, false, ports.ErrNotFound
 	}
 	const query = `
-		SELECT id, conversation_id, sender_id, body, media_id, created_at, edited_at, deleted_at
+		SELECT message.id, message.conversation_id, message.sender_id, message.body, message.media_id,
+			message.created_at, message.edited_at, message.deleted_at
 		FROM messaging.messages AS message
 		JOIN messaging.conversation_participants AS participant
 			ON participant.conversation_id = message.conversation_id AND participant.user_id = $1

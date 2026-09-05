@@ -15,8 +15,39 @@ type ProfileDTO struct {
 	DisplayName string
 	Bio         string
 	AvatarURL   string
+	Details     ProfileDetailsDTO
+	Privacy     ProfilePrivacyDTO
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+// ProfileDetailsDTO представляет дополнительные сведения профиля на границе application-слоя.
+type ProfileDetailsDTO struct {
+	FirstName   string
+	LastName    string
+	MiddleName  string
+	BirthDate   string
+	Gender      string
+	PhoneNumber string
+	Country     string
+	City        string
+	Street      string
+	Status      string
+}
+
+// ProfilePrivacyDTO представляет политики видимости и взаимодействия профиля.
+type ProfilePrivacyDTO struct {
+	ProfileVisibility   string
+	FriendRequestPolicy string
+	MessagePolicy       string
+	PhoneVisibility     string
+	BirthDateVisibility string
+	GenderVisibility    string
+	LocationVisibility  string
+	StatusVisibility    string
+	FriendsVisibility   string
+	PostsVisibility     string
+	MusicVisibility     string
 }
 
 func toProfileDTO(profile domain.Profile) ProfileDTO {
@@ -26,8 +57,21 @@ func toProfileDTO(profile domain.Profile) ProfileDTO {
 		DisplayName: profile.DisplayName,
 		Bio:         profile.Bio,
 		AvatarURL:   profile.AvatarURL,
-		CreatedAt:   profile.CreatedAt,
-		UpdatedAt:   profile.UpdatedAt,
+		Details: ProfileDetailsDTO{
+			FirstName: profile.Details.FirstName, LastName: profile.Details.LastName, MiddleName: profile.Details.MiddleName,
+			BirthDate: profile.Details.BirthDate, Gender: profile.Details.Gender, PhoneNumber: profile.Details.PhoneNumber,
+			Country: profile.Details.Country, City: profile.Details.City, Street: profile.Details.Street, Status: profile.Details.Status,
+		},
+		Privacy: ProfilePrivacyDTO{
+			ProfileVisibility: profile.Privacy.ProfileVisibility, FriendRequestPolicy: profile.Privacy.FriendRequestPolicy,
+			MessagePolicy: profile.Privacy.MessagePolicy, PhoneVisibility: profile.Privacy.PhoneVisibility,
+			BirthDateVisibility: profile.Privacy.BirthDateVisibility, GenderVisibility: profile.Privacy.GenderVisibility,
+			LocationVisibility: profile.Privacy.LocationVisibility, StatusVisibility: profile.Privacy.StatusVisibility,
+			FriendsVisibility: profile.Privacy.FriendsVisibility, PostsVisibility: profile.Privacy.PostsVisibility,
+			MusicVisibility: profile.Privacy.MusicVisibility,
+		},
+		CreatedAt: profile.CreatedAt,
+		UpdatedAt: profile.UpdatedAt,
 	}
 }
 

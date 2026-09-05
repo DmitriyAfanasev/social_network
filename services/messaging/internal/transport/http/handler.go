@@ -71,6 +71,8 @@ func messagingErrorStatus(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, application.ErrValidation):
 		return http.StatusUnprocessableEntity, "validation_error", "данные сообщения некорректны"
+	case errors.Is(err, application.ErrInteractionForbidden):
+		return http.StatusForbidden, "message_forbidden", "политика профиля запрещает отправлять этому пользователю сообщения"
 	case errors.Is(err, ports.ErrForbidden):
 		return http.StatusForbidden, "forbidden", "операция недоступна"
 	case errors.Is(err, ports.ErrNotFound):

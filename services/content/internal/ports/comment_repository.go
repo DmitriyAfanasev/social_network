@@ -20,3 +20,10 @@ type LikeRepository interface {
 	Add(ctx context.Context, postID uuid.UUID, userID uuid.UUID) error
 	Remove(ctx context.Context, postID uuid.UUID, userID uuid.UUID) (bool, error)
 }
+
+// LikeStatsReader читает количество лайков и состояние лайка пользователя.
+type LikeStatsReader interface {
+	Count(ctx context.Context, postID uuid.UUID) (int, error)
+	Has(ctx context.Context, postID uuid.UUID, userID uuid.UUID) (bool, error)
+	ListUserIDs(ctx context.Context, postID uuid.UUID) ([]uuid.UUID, error)
+}

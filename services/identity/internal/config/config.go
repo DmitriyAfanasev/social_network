@@ -19,6 +19,8 @@ type Config struct {
 	RefreshTTL       time.Duration
 	ConfirmationTTL  time.Duration
 	PasswordResetTTL time.Duration
+	KafkaBrokers     string
+	EventsTopic      string
 }
 
 // Load загружает конфигурацию identity-сервиса из переменных окружения.
@@ -35,5 +37,7 @@ func Load() Config {
 		RefreshTTL:       platformconfig.SecondsDuration(platformconfig.Env("IDENTITY_REFRESH_TTL", "604800"), 7*24*time.Hour),
 		ConfirmationTTL:  platformconfig.SecondsDuration(platformconfig.Env("IDENTITY_CONFIRMATION_TTL", "1800"), 30*time.Minute),
 		PasswordResetTTL: platformconfig.SecondsDuration(platformconfig.Env("IDENTITY_PASSWORD_RESET_TTL", "600"), 10*time.Minute),
+		KafkaBrokers:     platformconfig.Env("IDENTITY_KAFKA_BROKERS", "localhost:9092"),
+		EventsTopic:      platformconfig.Env("IDENTITY_EVENTS_TOPIC", "application.events"),
 	}
 }

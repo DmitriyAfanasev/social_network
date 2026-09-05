@@ -3,7 +3,7 @@ FROM golang:1.27-alpine AS build
 WORKDIR /src
 
 COPY libs/platform/go.mod libs/platform/go.sum ./libs/platform/
-COPY services/profiles/go.mod ./services/profiles/
+COPY services/profiles/go.mod services/profiles/go.sum ./services/profiles/
 COPY libs/platform ./libs/platform
 COPY services/profiles ./services/profiles
 

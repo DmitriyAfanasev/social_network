@@ -11,6 +11,7 @@ import (
 )
 
 type userIDContextKey struct{}
+type accessTokenContextKey struct{}
 
 // TokenVerifier извлекает идентификатор пользователя из access-токена.
 type TokenVerifier interface {
@@ -32,6 +33,7 @@ func Middleware(verifier TokenVerifier) func(http.Handler) http.Handler {
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDContextKey{}, userID)
+			ctx = context.WithValue(ctx, accessTokenContextKey{}, token)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -58,6 +60,7 @@ func OptionalMiddleware(verifier TokenVerifier) func(http.Handler) http.Handler 
 				return
 			}
 			ctx := context.WithValue(r.Context(), userIDContextKey{}, userID)
+			ctx = context.WithValue(ctx, accessTokenContextKey{}, token)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -67,6 +70,17 @@ func OptionalMiddleware(verifier TokenVerifier) func(http.Handler) http.Handler 
 func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	userID, ok := ctx.Value(userIDContextKey{}).(uuid.UUID)
 	return userID, ok && userID != uuid.Nil()
+}
+
+// AccessTokenFromContext возвращает проверенный bearer-токен из контекста запроса.
+func AccessTokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(accessTokenContextKey{}).(string)
+	return token, ok && token != ""
+}
+
+// ContextWithAccessToken сохраняет проверенный access-токен в контексте фонового обработчика.
+func ContextWithAccessToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, accessTokenContextKey{}, token)
 }
 
 // BearerToken извлекает токен из значения HTTP-заголовка Authorization.

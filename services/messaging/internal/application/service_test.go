@@ -166,6 +166,15 @@ type fakeRealtimeBroker struct {
 	events []ports.RealtimeEvent
 }
 
+type fakeMessagePolicyReader struct {
+	allowed bool
+	err     error
+}
+
+func (f fakeMessagePolicyReader) CanMessage(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+	return f.allowed, f.err
+}
+
 func (f *fakeRealtimeBroker) Publish(_ context.Context, event ports.RealtimeEvent) error {
 	f.events = append(f.events, event)
 	return nil
@@ -208,6 +217,33 @@ func TestMessageServiceRejectsDirectConversationWithSelf(t *testing.T) {
 	_, err := service.GetOrCreateDirect(context.Background(), userID, userID)
 
 	require.ErrorIs(t, err, ErrValidation)
+}
+
+func TestMessageServiceHonorsMessagePolicy(t *testing.T) {
+	t.Parallel()
+
+	repository := newFakeMessagingRepository()
+	service := NewMessageService(repository, nil, nil, fakeMessagePolicyReader{allowed: false})
+
+	_, err := service.GetOrCreateDirect(context.Background(), uuid.New(), uuid.New())
+
+	require.ErrorIs(t, err, ErrInteractionForbidden)
+	require.Empty(t, repository.conversations)
+}
+
+func TestMessageServiceHonorsMessagePolicyForExistingConversation(t *testing.T) {
+	t.Parallel()
+
+	repository := newFakeMessagingRepository()
+	first, second := uuid.New(), uuid.New()
+	conversation, err := repository.GetOrCreateDirect(context.Background(), first, second)
+	require.NoError(t, err)
+	service := NewMessageService(repository, nil, nil, fakeMessagePolicyReader{allowed: false})
+
+	_, _, err = service.SendMessage(context.Background(), first, conversation.ID, SendMessageInput{Body: "сообщение"})
+
+	require.ErrorIs(t, err, ErrInteractionForbidden)
+	require.Empty(t, repository.messages)
 }
 
 func TestMessageServiceSendsMessageToParticipants(t *testing.T) {

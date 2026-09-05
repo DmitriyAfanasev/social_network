@@ -83,6 +83,11 @@ type SocialCache interface {
 	Delete(ctx context.Context, keys ...string) error
 }
 
+// ProfilePolicyReader читает политику заявок целевого профиля.
+type ProfilePolicyReader interface {
+	GetFriendRequestPolicy(ctx context.Context, targetID uuid.UUID) (string, error)
+}
+
 // ReadinessChecker проверяет готовность social-сервиса принимать трафик.
 type ReadinessChecker interface {
 	Check(ctx context.Context) error

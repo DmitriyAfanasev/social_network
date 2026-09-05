@@ -41,6 +41,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	if token, ok := platformauth.BearerToken(r.Header.Get("Authorization")); ok {
+		r = r.WithContext(platformauth.ContextWithAccessToken(r.Context(), token))
+	}
 	upgrader := websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: sameOrigin}
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

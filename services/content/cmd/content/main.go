@@ -56,7 +56,7 @@ func main() {
 	outbox := postgres.NewOutboxRepository(pool)
 	postCache := cache.NewRedis(redisClient)
 	mediaChecker := mediahttpadapter.NewClient(cfg.MediaAddr)
-	contentService := application.NewContentService(posts, postCache, mediaChecker, outbox)
+	contentService := application.NewContentServiceWithLikes(posts, postCache, mediaChecker, outbox, likes)
 	eventPublisher := eventsadapter.NewPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
 	defer eventPublisher.Close()
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
@@ -79,10 +79,10 @@ func main() {
 	router.Get("/readyz", handler.Ready)
 	router.Route("/v1/content", func(router chi.Router) {
 		limiter := ratelimit.NewRedisFixedWindow(redisClient)
-		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "content:read:" + httpx.ClientIP(r)
 		})).Get("/posts/{postID}", handler.GetByID)
-		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "content:feed:" + httpx.ClientIP(r)
 		})).Get("/feed", handler.Feed)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {

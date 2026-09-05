@@ -6,6 +6,7 @@ import (
 	"uuid"
 
 	"general-project/content/internal/application"
+	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
 	"github.com/go-chi/chi/v5"
 )
@@ -24,7 +25,8 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_post_id", "некорректный UUID поста")
 		return
 	}
-	post, err := h.content.GetPost(r.Context(), postID)
+	viewerID, _ := auth.UserIDFromContext(r.Context())
+	post, err := h.content.GetPost(r.Context(), postID, viewerID)
 	if err != nil {
 		writePostError(w, err)
 		return
@@ -50,7 +52,8 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = parsed
 	}
-	posts, err := h.content.ListRecent(r.Context(), limit)
+	viewerID, _ := auth.UserIDFromContext(r.Context())
+	posts, err := h.content.ListRecent(r.Context(), limit, viewerID)
 	if err != nil {
 		writePostError(w, err)
 		return

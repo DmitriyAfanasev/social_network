@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -108,7 +109,20 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (Regist
 		Email:  email,
 		Status: domain.UserStatusPending,
 	}
-	created, err := s.users.Create(ctx, user, passwordHash)
+	now := time.Now().UTC()
+	payload, err := json.Marshal(map[string]string{"user_id": user.ID.String(), "email": user.Email})
+	if err != nil {
+		return RegistrationDTO{}, err
+	}
+	event := &ports.OutboxEvent{
+		ID:          uuid.New(),
+		EventType:   "identity.user.registered",
+		AggregateID: &user.ID,
+		Payload:     payload,
+		AvailableAt: now,
+		CreatedAt:   now,
+	}
+	created, err := s.users.Create(ctx, user, passwordHash, event)
 	if errors.Is(err, ports.ErrAlreadyExists) {
 		return RegistrationDTO{}, ErrConflict
 	}

@@ -26,6 +26,7 @@ import (
 	"general-project/libs/platform/httpx"
 	platformpostgres "general-project/libs/platform/postgres"
 	"general-project/libs/platform/ratelimit"
+	accessadapter "general-project/messaging/internal/adapters/access"
 	eventsadapter "general-project/messaging/internal/adapters/events"
 	postgresadapter "general-project/messaging/internal/adapters/postgres"
 	redisadapter "general-project/messaging/internal/adapters/redis"
@@ -58,7 +59,8 @@ func main() {
 	broker := redisadapter.NewRedisRealtimeBrokerWithLimit(redisClient, cfg.RealtimeInflightLimit)
 	defer broker.Close()
 	presence := redisadapter.NewRedisPresenceStore(redisClient)
-	messageService := application.NewMessageService(repository, cache.NewRedis(redisClient), broker)
+	messageAccess := accessadapter.NewClient(cfg.ProfilesURL, cfg.SocialURL)
+	messageService := application.NewMessageService(repository, cache.NewRedis(redisClient), broker, messageAccess)
 	verifier := auth.NewJWTVerifier(cfg.JWTSecret)
 	notificationHub := ssestransport.NewHub()
 	consumerGroupID := cfg.KafkaGroupID + "-" + strconv.Itoa(os.Getpid())

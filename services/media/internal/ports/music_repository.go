@@ -14,3 +14,8 @@ type MusicRepository interface {
 	FindByID(ctx context.Context, trackID uuid.UUID) (domain.MusicTrack, error)
 	Delete(ctx context.Context, trackID uuid.UUID) error
 }
+
+// MusicVisibilityReader проверяет право просматривать музыку владельца.
+type MusicVisibilityReader interface {
+	CanViewMusic(ctx context.Context, viewerID uuid.UUID, ownerID uuid.UUID) (bool, error)
+}

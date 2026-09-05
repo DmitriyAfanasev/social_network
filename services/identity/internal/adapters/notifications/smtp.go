@@ -30,7 +30,7 @@ func (s *SMTP) Send(ctx context.Context, notification ports.Notification) error 
 	if s.addr == "" || s.from == "" || notification.Email == "" || notification.Token == "" {
 		return fmt.Errorf("SMTP notification is not configured")
 	}
-	path := "confirm"
+	path := "confirm-registration"
 	subject := "Подтверждение регистрации"
 	if notification.Purpose == "password_reset" {
 		path = "password-reset"

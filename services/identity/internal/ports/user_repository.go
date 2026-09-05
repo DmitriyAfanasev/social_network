@@ -22,7 +22,7 @@ var (
 type UserRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (domain.User, error)
 	FindByEmail(ctx context.Context, email string) (domain.AuthUser, error)
-	Create(ctx context.Context, user domain.User, passwordHash string) (domain.User, error)
+	Create(ctx context.Context, user domain.User, passwordHash string, event *OutboxEvent) (domain.User, error)
 	Activate(ctx context.Context, id uuid.UUID) (domain.User, error)
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	ListPermissions(ctx context.Context, userID uuid.UUID) ([]string, error)

@@ -26,6 +26,7 @@ import (
 	"general-project/libs/platform/ratelimit"
 	eventsadapter "general-project/social/internal/adapters/events"
 	postgresadapter "general-project/social/internal/adapters/postgres"
+	profilesadapter "general-project/social/internal/adapters/profiles"
 	"general-project/social/internal/application"
 	"general-project/social/internal/config"
 	httptransport "general-project/social/internal/transport/http"
@@ -54,7 +55,8 @@ func main() {
 	eventPublisher := eventsadapter.NewPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
 	defer eventPublisher.Close()
 	socialCache := cache.NewRedis(redisClient)
-	socialService := application.NewSocialServiceWithOutbox(blocks, relationships, socialCache, outbox)
+	profilePolicy := profilesadapter.NewClient(cfg.ProfilesURL)
+	socialService := application.NewSocialServiceWithOutbox(blocks, relationships, socialCache, outbox, profilePolicy)
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
 	go func() {
 		if publishErr := outboxPublisher.Run(ctx, time.Second); publishErr != nil && ctx.Err() == nil {
@@ -107,6 +109,9 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "social:relationships:read:" + httpx.ClientIP(r)
 		})).Get("/relationships", handler.GetRelationships)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
+			return "social:relationship:read:" + httpx.ClientIP(r)
+		})).Get("/relationships/{targetID}", handler.GetRelationship)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
 			return "social:recommendations:read:" + httpx.ClientIP(r)
 		})).Get("/recommendations", handler.GetRecommendations)

@@ -198,7 +198,21 @@ definitions:
     type: object
   messageResponse:
     properties:
-      message:
+      body:
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      deleted:
+        type: boolean
+      edited_at:
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      sender_id:
         type: string
     type: object
   messagesResponse:
@@ -300,6 +314,14 @@ definitions:
         type: string
       id:
         type: string
+      is_liked_by_current:
+        type: boolean
+      liked_user_ids:
+        items:
+          type: string
+        type: array
+      likes_count:
+        type: integer
       media_ids:
         items:
           type: string
@@ -321,6 +343,56 @@ definitions:
       user_id:
         type: string
     type: object
+  privacyRequest:
+    properties:
+      birth_date_visibility:
+        type: string
+      friend_request_policy:
+        type: string
+      friends_visibility:
+        type: string
+      gender_visibility:
+        type: string
+      location_visibility:
+        type: string
+      message_policy:
+        type: string
+      music_visibility:
+        type: string
+      phone_visibility:
+        type: string
+      posts_visibility:
+        type: string
+      profile_visibility:
+        type: string
+      status_visibility:
+        type: string
+    type: object
+  privacyResponse:
+    properties:
+      birth_date_visibility:
+        type: string
+      friend_request_policy:
+        type: string
+      friends_visibility:
+        type: string
+      gender_visibility:
+        type: string
+      location_visibility:
+        type: string
+      message_policy:
+        type: string
+      music_visibility:
+        type: string
+      phone_visibility:
+        type: string
+      posts_visibility:
+        type: string
+      profile_visibility:
+        type: string
+      status_visibility:
+        type: string
+    type: object
   profilePhotosResponse:
     properties:
       albums:
@@ -338,11 +410,33 @@ definitions:
         type: string
       bio:
         type: string
+      birth_date:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
       created_at:
         type: string
       display_name:
         type: string
+      first_name:
+        type: string
+      gender:
+        type: string
       handle:
+        type: string
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      phone_number:
+        type: string
+      privacy:
+        $ref: '#/definitions/privacyResponse'
+      status:
+        type: string
+      street:
         type: string
       updated_at:
         type: string
@@ -381,6 +475,15 @@ definitions:
         type: string
       password:
         type: string
+    type: object
+  relationshipAccessResponse:
+    properties:
+      is_blocked:
+        type: boolean
+      is_friend:
+        type: boolean
+      is_friend_of_friend:
+        type: boolean
     type: object
   relationshipsResponse:
     properties:
@@ -433,7 +536,27 @@ definitions:
     properties:
       bio:
         type: string
+      birth_date:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
       display_name:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      phone_number:
+        type: string
+      status:
+        type: string
+      street:
         type: string
     type: object
   userResponse:
@@ -1121,8 +1244,35 @@ paths:
       summary: Получить метаданные медиа
       tags:
       - media
+  /v1/media/{mediaID}/content:
+    get:
+      parameters:
+      - description: UUID медиаобъекта
+        in: path
+        name: mediaID
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Скачать или воспроизвести медиа
+      tags:
+      - media
   /v1/media/music:
     get:
+      parameters:
+      - description: UUID владельца
+        in: query
+        name: owner_id
+        type: string
       produces:
       - application/json
       responses:
@@ -1945,6 +2095,21 @@ paths:
       tags:
       - profiles
   /v1/profiles/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить свой профиль
+      tags:
+      - profiles
     patch:
       consumes:
       - application/json
@@ -2134,6 +2299,50 @@ paths:
         "204":
           description: No Content
       summary: Удалить фото профиля
+      tags:
+      - profiles
+  /v1/profiles/me/privacy:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/privacyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить настройки приватности
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Настройки приватности
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/privacyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/privacyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Обновить настройки приватности
       tags:
       - profiles
   /v1/profiles/search:
@@ -2433,6 +2642,32 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Получить социальные связи
+      tags:
+      - social
+  /v1/social/relationships/{targetID}:
+    get:
+      parameters:
+      - description: UUID пользователя
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/relationshipAccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Проверить социальную близость
       tags:
       - social
   /v1/social/subscriptions/{targetID}:

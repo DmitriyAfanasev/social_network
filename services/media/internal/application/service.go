@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"time"
@@ -146,6 +147,35 @@ func (s *MediaService) GetByID(ctx context.Context, mediaID uuid.UUID) (MediaDTO
 		}
 	}
 	return dto, nil
+}
+
+// OpenContent открывает бинарное содержимое активного медиаобъекта.
+func (s *MediaService) OpenContent(ctx context.Context, mediaID uuid.UUID) (io.ReadCloser, MediaDTO, error) {
+	media, err := s.media.FindByID(ctx, mediaID)
+	if err != nil {
+		return nil, MediaDTO{}, err
+	}
+	content, err := s.storage.Get(ctx, media.ObjectKey)
+	if err != nil {
+		return nil, MediaDTO{}, err
+	}
+	return content, toMediaDTO(media), nil
+}
+
+// OpenContentRange открывает байтовый диапазон активного медиаобъекта.
+func (s *MediaService) OpenContentRange(ctx context.Context, mediaID uuid.UUID, start int64, end int64) (io.ReadCloser, MediaDTO, error) {
+	media, err := s.media.FindByID(ctx, mediaID)
+	if err != nil {
+		return nil, MediaDTO{}, err
+	}
+	if start < 0 || end < start || (media.Size > 0 && end >= media.Size) {
+		return nil, MediaDTO{}, ErrValidation
+	}
+	content, err := s.storage.GetRange(ctx, media.ObjectKey, start, end)
+	if err != nil {
+		return nil, MediaDTO{}, err
+	}
+	return content, toMediaDTO(media), nil
 }
 
 // Delete удаляет объект из storage и помечает метаданные удалёнными.

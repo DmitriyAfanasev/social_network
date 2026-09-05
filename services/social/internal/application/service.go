@@ -68,6 +68,7 @@ type SocialService struct {
 	relationships ports.FriendshipRepository
 	cache         ports.SocialCache
 	outbox        ports.OutboxRepository
+	profilePolicy ports.ProfilePolicyReader
 }
 
 // NewSocialService создаёт application-сервис социальных отношений.
@@ -80,9 +81,12 @@ func NewSocialService(blocks ports.BlockRepository, relationships ports.Friendsh
 }
 
 // NewSocialServiceWithOutbox создаёт social-сервис с надёжной публикацией событий.
-func NewSocialServiceWithOutbox(blocks ports.BlockRepository, relationships ports.FriendshipRepository, cache ports.SocialCache, outbox ports.OutboxRepository) *SocialService {
+func NewSocialServiceWithOutbox(blocks ports.BlockRepository, relationships ports.FriendshipRepository, cache ports.SocialCache, outbox ports.OutboxRepository, policies ...ports.ProfilePolicyReader) *SocialService {
 	service := NewSocialService(blocks, relationships, cache)
 	service.outbox = outbox
+	if len(policies) > 0 {
+		service.profilePolicy = policies[0]
+	}
 	return service
 }
 
@@ -255,6 +259,24 @@ func (s *SocialService) SendFriendRequest(ctx context.Context, actorID uuid.UUID
 	if isFriend {
 		return FriendRequestActionDTO{State: "friends"}, nil
 	}
+	if s.profilePolicy != nil {
+		policy, policyErr := s.profilePolicy.GetFriendRequestPolicy(ctx, targetID)
+		if policyErr != nil {
+			return FriendRequestActionDTO{}, policyErr
+		}
+		if policy == "nobody" {
+			return FriendRequestActionDTO{}, ErrFriendRequestForbidden
+		}
+		if policy == "friends_of_friends" {
+			allowed, checkErr := s.isFriendOfFriend(ctx, actorID, targetID)
+			if checkErr != nil {
+				return FriendRequestActionDTO{}, checkErr
+			}
+			if !allowed {
+				return FriendRequestActionDTO{}, ErrFriendRequestForbidden
+			}
+		}
+	}
 	now := time.Now().UTC()
 	request := domain.FriendRequest{ID: uuid.New(), SenderID: actorID, RecipientID: targetID, Status: domain.FriendRequestPending, CreatedAt: now}
 	var event *ports.OutboxEvent
@@ -272,6 +294,23 @@ func (s *SocialService) SendFriendRequest(ctx context.Context, actorID uuid.UUID
 	}
 	s.invalidate(ctx, actorID, targetID)
 	return FriendRequestActionDTO{RequestID: stored.ID, State: string(stored.Status)}, nil
+}
+
+func (s *SocialService) isFriendOfFriend(ctx context.Context, actorID uuid.UUID, targetID uuid.UUID) (bool, error) {
+	friends, err := s.relationships.ListFriends(ctx, actorID)
+	if err != nil {
+		return false, err
+	}
+	for _, friendID := range friends {
+		connected, checkErr := s.relationships.IsFriend(ctx, friendID, targetID)
+		if checkErr != nil {
+			return false, checkErr
+		}
+		if connected {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // ListFriendRequests возвращает входящие или исходящие pending-заявки.

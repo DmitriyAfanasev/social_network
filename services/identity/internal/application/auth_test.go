@@ -17,6 +17,7 @@ import (
 type fakeUserRepository struct {
 	createdUser    domain.User
 	createdHash    string
+	createdEvent   *ports.OutboxEvent
 	findByEmail    domain.AuthUser
 	findByEmailErr error
 	findByID       domain.User
@@ -37,9 +38,10 @@ func (f *fakeUserRepository) FindByEmail(_ context.Context, _ string) (domain.Au
 	return f.findByEmail, f.findByEmailErr
 }
 
-func (f *fakeUserRepository) Create(_ context.Context, user domain.User, passwordHash string) (domain.User, error) {
+func (f *fakeUserRepository) Create(_ context.Context, user domain.User, passwordHash string, event *ports.OutboxEvent) (domain.User, error) {
 	f.createdUser = user
 	f.createdHash = passwordHash
+	f.createdEvent = event
 	if f.createErr != nil {
 		return domain.User{}, f.createErr
 	}
@@ -167,6 +169,13 @@ func TestAuthServiceRegisterNormalizesEmailAndMapsDTO(t *testing.T) {
 	require.Equal(t, "alice@example.com", result.User.Email)
 	require.Equal(t, "confirmation email sent", result.Message)
 	require.Equal(t, uuid.Nil(), refresh.savedUserID)
+	require.NotNil(t, repository.createdEvent)
+	require.Equal(t, "identity.user.registered", repository.createdEvent.EventType)
+	require.Equal(t, userIDFromEvent(repository.createdEvent), repository.createdUser.ID)
+}
+
+func userIDFromEvent(event *ports.OutboxEvent) uuid.UUID {
+	return *event.AggregateID
 }
 
 func TestAuthServiceRegisterReturnsConflict(t *testing.T) {

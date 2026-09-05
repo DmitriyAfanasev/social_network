@@ -18,6 +18,8 @@ type Config struct {
 	DatabaseURL   string
 	RedisAddr     string
 	JWTSecret     string
+	ProfilesURL   string
+	SocialURL     string
 	KafkaBrokers  string
 	KafkaGroupID  string
 	KafkaMaxBytes int
@@ -36,6 +38,8 @@ func Load() Config {
 		DatabaseURL:   platformconfig.Env("MEDIA_DATABASE_URL", "postgres://admin:password@localhost:5432/database?sslmode=disable"),
 		RedisAddr:     platformconfig.Env("MEDIA_REDIS_ADDR", "localhost:6379"),
 		JWTSecret:     platformconfig.Env("MEDIA_JWT_SECRET", "local-identity-secret"),
+		ProfilesURL:   platformconfig.Env("MEDIA_PROFILES_URL", "http://localhost:8102"),
+		SocialURL:     platformconfig.Env("MEDIA_SOCIAL_URL", "http://localhost:8103"),
 		KafkaBrokers:  platformconfig.Env("MEDIA_KAFKA_BROKERS", "localhost:9092"),
 		KafkaGroupID:  platformconfig.Env("MEDIA_KAFKA_GROUP_ID", "media-video-completions"),
 		KafkaMaxBytes: 10_000_000,

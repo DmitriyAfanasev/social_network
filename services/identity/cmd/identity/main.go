@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 
+	eventsadapter "general-project/identity/internal/adapters/events"
 	"general-project/identity/internal/adapters/notifications"
 	postgresadapter "general-project/identity/internal/adapters/postgres"
 	"general-project/identity/internal/adapters/security"
@@ -52,6 +53,16 @@ func main() {
 	users := postgresadapter.NewUserRepository(pool)
 	refreshTokens := postgresadapter.NewRefreshTokenStore(pool)
 	verificationTokens := postgresadapter.NewVerificationTokenStore(pool)
+	outbox := postgresadapter.NewOutboxRepository(pool)
+	eventPublisher := eventsadapter.NewPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
+	defer eventPublisher.Close()
+	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
+	go func() {
+		if publishErr := outboxPublisher.Run(ctx, time.Second); publishErr != nil && ctx.Err() == nil {
+			logger.Error("identity outbox publisher stopped", "error", publishErr)
+			stop()
+		}
+	}()
 	hasher := security.NewBcryptHasher(0)
 	tokens := token.NewJWTIssuer(cfg.JWTSecret, cfg.AccessTTL)
 	verificationSender := notifications.NewSMTP(cfg.SMTPAddr, cfg.SMTPFrom)

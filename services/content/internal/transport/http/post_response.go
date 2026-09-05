@@ -12,12 +12,15 @@ import (
 )
 
 type postResponse struct {
-	ID        string   `json:"id"`
-	AuthorID  string   `json:"author_id"`
-	Body      string   `json:"body"`
-	MediaIDs  []string `json:"media_ids,omitempty"`
-	CreatedAt string   `json:"created_at"`
-	UpdatedAt string   `json:"updated_at"`
+	ID            string   `json:"id"`
+	AuthorID      string   `json:"author_id"`
+	Body          string   `json:"body"`
+	MediaIDs      []string `json:"media_ids,omitempty"`
+	LikesCount    int      `json:"likes_count"`
+	LikedByViewer bool     `json:"is_liked_by_current"`
+	LikedUserIDs  []string `json:"liked_user_ids,omitempty"`
+	CreatedAt     string   `json:"created_at"`
+	UpdatedAt     string   `json:"updated_at"`
 }
 
 type postsResponse struct {
@@ -26,12 +29,14 @@ type postsResponse struct {
 
 func mapPostResponse(post application.PostDTO) postResponse {
 	return postResponse{
-		ID:        post.ID.String(),
-		AuthorID:  post.AuthorID.String(),
-		Body:      post.Body,
-		MediaIDs:  mediaIDStrings(post.MediaIDs),
-		CreatedAt: post.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
-		UpdatedAt: post.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
+		ID:         post.ID.String(),
+		AuthorID:   post.AuthorID.String(),
+		Body:       post.Body,
+		MediaIDs:   mediaIDStrings(post.MediaIDs),
+		LikesCount: post.LikesCount, LikedByViewer: post.LikedByViewer,
+		LikedUserIDs: userIDStrings(post.LikedUserIDs),
+		CreatedAt:    post.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
+		UpdatedAt:    post.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
 	}
 }
 
@@ -39,6 +44,14 @@ func mediaIDStrings(mediaIDs []uuid.UUID) []string {
 	result := make([]string, 0, len(mediaIDs))
 	for _, mediaID := range mediaIDs {
 		result = append(result, mediaID.String())
+	}
+	return result
+}
+
+func userIDStrings(userIDs []uuid.UUID) []string {
+	result := make([]string, 0, len(userIDs))
+	for _, userID := range userIDs {
+		result = append(result, userID.String())
 	}
 	return result
 }

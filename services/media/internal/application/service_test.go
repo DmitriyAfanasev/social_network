@@ -1,6 +1,7 @@
 package application
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -59,6 +60,25 @@ type fakeObjectStorage struct {
 	objects     map[string][]byte
 	putError    error
 	deletedKeys []string
+}
+
+func (f *fakeObjectStorage) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	value, ok := f.objects[key]
+	if !ok {
+		return nil, ports.ErrNotFound
+	}
+	return io.NopCloser(bytes.NewReader(value)), nil
+}
+
+func (f *fakeObjectStorage) GetRange(_ context.Context, key string, start int64, end int64) (io.ReadCloser, error) {
+	value, ok := f.objects[key]
+	if !ok {
+		return nil, ports.ErrNotFound
+	}
+	if start < 0 || end < start || end >= int64(len(value)) {
+		return nil, ports.ErrNotFound
+	}
+	return io.NopCloser(bytes.NewReader(value[start : end+1])), nil
 }
 
 type fakeMediaOutbox struct{}
@@ -342,6 +362,45 @@ func TestMediaServiceGetByIDUsesCache(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, cached.OriginalFilename, result.OriginalFilename)
+}
+
+func TestMediaServiceOpensContentFromStorage(t *testing.T) {
+	t.Parallel()
+
+	mediaID := uuid.New()
+	repository := &fakeMediaRepository{media: map[uuid.UUID]domain.Media{
+		mediaID: {ID: mediaID, ObjectKey: "objects/file", ContentType: "image/png", Size: 4},
+	}}
+	storage := &fakeObjectStorage{objects: map[string][]byte{"objects/file": []byte("data")}}
+	service := NewMediaService(repository, nil, storage, "general-project")
+
+	content, media, err := service.OpenContent(context.Background(), mediaID)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = content.Close() })
+
+	value, err := io.ReadAll(content)
+	require.NoError(t, err)
+	require.Equal(t, []byte("data"), value)
+	require.Equal(t, "image/png", media.ContentType)
+}
+
+func TestMediaServiceOpensContentRangeFromStorage(t *testing.T) {
+	t.Parallel()
+
+	mediaID := uuid.New()
+	repository := &fakeMediaRepository{media: map[uuid.UUID]domain.Media{
+		mediaID: {ID: mediaID, ObjectKey: "objects/file", ContentType: "audio/mpeg", Size: 6},
+	}}
+	service := NewMediaService(repository, nil, &fakeObjectStorage{objects: map[string][]byte{"objects/file": []byte("stream")}}, "general-project")
+
+	content, media, err := service.OpenContentRange(context.Background(), mediaID, 1, 3)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = content.Close() })
+
+	value, err := io.ReadAll(content)
+	require.NoError(t, err)
+	require.Equal(t, []byte("tre"), value)
+	require.Equal(t, int64(6), media.Size)
 }
 
 func TestVideoServiceCreatesAssetAndPublishesTranscodeRequest(t *testing.T) {

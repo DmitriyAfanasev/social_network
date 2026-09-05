@@ -35,6 +35,11 @@ type MessagingRepository interface {
 	ParticipantIDs(ctx context.Context, userID uuid.UUID, conversationID uuid.UUID) ([]uuid.UUID, error)
 }
 
+// MessagePolicyReader проверяет, может ли пользователь начать диалог с целью.
+type MessagePolicyReader interface {
+	CanMessage(ctx context.Context, actorID uuid.UUID, targetID uuid.UUID) (bool, error)
+}
+
 // MessageCache хранит горячие read-модели сообщений и диалогов.
 type MessageCache interface {
 	Get(ctx context.Context, key string) ([]byte, error)

@@ -15,6 +15,8 @@ import (
 var (
 	// ErrValidation означает, что входные данные messaging некорректны.
 	ErrValidation = errors.New("messaging validation failed")
+	// ErrInteractionForbidden означает, что политика профиля запрещает сообщение.
+	ErrInteractionForbidden = errors.New("messaging interaction forbidden")
 )
 
 const (
@@ -71,17 +73,31 @@ type MessageService struct {
 	repository ports.MessagingRepository
 	cache      ports.MessageCache
 	broker     ports.RealtimeBroker
+	policy     ports.MessagePolicyReader
 }
 
 // NewMessageService создаёт application-сервис messaging.
-func NewMessageService(repository ports.MessagingRepository, cache ports.MessageCache, broker ports.RealtimeBroker) *MessageService {
-	return &MessageService{repository: repository, cache: cache, broker: broker}
+func NewMessageService(repository ports.MessagingRepository, cache ports.MessageCache, broker ports.RealtimeBroker, policies ...ports.MessagePolicyReader) *MessageService {
+	var policy ports.MessagePolicyReader
+	if len(policies) > 0 {
+		policy = policies[0]
+	}
+	return &MessageService{repository: repository, cache: cache, broker: broker, policy: policy}
 }
 
 // GetOrCreateDirect возвращает прямой диалог между двумя пользователями.
 func (s *MessageService) GetOrCreateDirect(ctx context.Context, userID uuid.UUID, otherUserID uuid.UUID) (ConversationDTO, error) {
 	if userID == otherUserID {
 		return ConversationDTO{}, ErrValidation
+	}
+	if s.policy != nil {
+		allowed, err := s.policy.CanMessage(ctx, userID, otherUserID)
+		if err != nil {
+			return ConversationDTO{}, err
+		}
+		if !allowed {
+			return ConversationDTO{}, ErrInteractionForbidden
+		}
 	}
 	conversation, err := s.repository.GetOrCreateDirect(ctx, userID, otherUserID)
 	if err != nil {
@@ -198,11 +214,25 @@ func (s *MessageService) SendMessage(ctx context.Context, userID uuid.UUID, conv
 	if len([]rune(body)) < 1 || len([]rune(body)) > 5000 {
 		return MessageDTO{}, nil, ErrValidation
 	}
-	message, err := s.repository.CreateMessage(ctx, domain.Message{ID: uuid.New(), ConversationID: conversationID, SenderID: userID, Body: body, MediaID: input.MediaID})
+	recipients, err := s.repository.ParticipantIDs(ctx, userID, conversationID)
 	if err != nil {
 		return MessageDTO{}, nil, err
 	}
-	recipients, err := s.repository.ParticipantIDs(ctx, userID, conversationID)
+	if s.policy != nil {
+		for _, recipientID := range recipients {
+			if recipientID == userID {
+				continue
+			}
+			allowed, policyErr := s.policy.CanMessage(ctx, userID, recipientID)
+			if policyErr != nil {
+				return MessageDTO{}, nil, policyErr
+			}
+			if !allowed {
+				return MessageDTO{}, nil, ErrInteractionForbidden
+			}
+		}
+	}
+	message, err := s.repository.CreateMessage(ctx, domain.Message{ID: uuid.New(), ConversationID: conversationID, SenderID: userID, Body: body, MediaID: input.MediaID})
 	if err != nil {
 		return MessageDTO{}, nil, err
 	}

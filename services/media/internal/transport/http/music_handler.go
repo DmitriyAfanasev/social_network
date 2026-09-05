@@ -2,8 +2,10 @@ package httptransport
 
 import (
 	"net/http"
+	"strings"
 	"uuid"
 
+	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
 	"general-project/media/internal/application"
 	"github.com/go-chi/chi/v5"
@@ -11,19 +13,30 @@ import (
 
 const maxMusicUploadSize int64 = 15 * 1024 * 1024
 
-// ListMusic возвращает музыкальные треки текущего пользователя.
+// ListMusic возвращает музыкальные треки владельца с учётом приватности.
 // @Summary Получить свою музыку
 // @Tags media
 // @Produce json
+// @Param owner_id query string false "UUID владельца"
 // @Success 200 {object} musicListResponse
 // @Failure 401 {object} httpx.ErrorResponse
 // @Router /v1/media/music [get]
 func (h *Handler) ListMusic(w http.ResponseWriter, r *http.Request) {
-	userID, ok := h.authenticatedUser(w, r)
-	if !ok {
+	viewerID, _ := auth.UserIDFromContext(r.Context())
+	ownerID := viewerID
+	if value := strings.TrimSpace(r.URL.Query().Get("owner_id")); value != "" {
+		parsed, err := uuid.Parse(value)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "invalid_owner_id", "некорректный UUID владельца")
+			return
+		}
+		ownerID = parsed
+	}
+	if ownerID == uuid.Nil() {
+		httpx.WriteError(w, http.StatusUnauthorized, "unauthorized", "требуется действующий access-токен или owner_id")
 		return
 	}
-	tracks, err := h.music.ListMine(r.Context(), userID)
+	tracks, err := h.music.ListForViewer(r.Context(), ownerID, viewerID)
 	if err != nil {
 		writeMediaError(w, err)
 		return

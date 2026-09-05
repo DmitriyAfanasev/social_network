@@ -152,6 +152,24 @@ func (f *fakeLikeRepository) Remove(_ context.Context, _ uuid.UUID, _ uuid.UUID)
 	return true, nil
 }
 
+func (f *fakeLikeRepository) Count(context.Context, uuid.UUID) (int, error) {
+	if f.liked {
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (f *fakeLikeRepository) Has(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
+	return f.liked, nil
+}
+
+func (f *fakeLikeRepository) ListUserIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
+	if !f.liked {
+		return nil, nil
+	}
+	return []uuid.UUID{uuid.New()}, nil
+}
+
 func (f *fakePostCache) Get(_ context.Context, key string) ([]byte, error) {
 	return f.values[key], nil
 }

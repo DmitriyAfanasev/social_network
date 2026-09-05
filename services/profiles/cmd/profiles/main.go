@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"uuid"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
@@ -24,9 +27,12 @@ import (
 	"general-project/libs/platform/httpx"
 	"general-project/libs/platform/postgres"
 	"general-project/libs/platform/ratelimit"
+	eventsadapter "general-project/profiles/internal/adapters/events"
 	postgresadapter "general-project/profiles/internal/adapters/postgres"
+	socialadapter "general-project/profiles/internal/adapters/social"
 	"general-project/profiles/internal/application"
 	"general-project/profiles/internal/config"
+	"general-project/profiles/internal/ports"
 	httptransport "general-project/profiles/internal/transport/http"
 )
 
@@ -51,7 +57,32 @@ func main() {
 	profiles := postgresadapter.NewProfileRepository(pool)
 	profileMediaRepository := postgresadapter.NewProfileMediaRepository(pool)
 	profileCache := cache.NewRedis(redisClient)
-	profileService := application.NewProfileService(profiles, profileCache)
+	socialClient := socialadapter.NewClient(cfg.SocialURL)
+	profileService := application.NewProfileService(profiles, profileCache, socialClient)
+	eventConsumer := eventsadapter.NewConsumer(cfg.KafkaBrokers, cfg.EventsTopic, cfg.ConsumerGroup)
+	defer eventConsumer.Close()
+	go func() {
+		handleEvent := func(eventCtx context.Context, event ports.IntegrationEvent) error {
+			if event.EventType != "identity.user.registered" {
+				return nil
+			}
+			var payload struct {
+				UserID string `json:"user_id"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err != nil {
+				return err
+			}
+			userID, err := uuid.Parse(payload.UserID)
+			if err != nil {
+				return err
+			}
+			return profileService.EnsureProfile(eventCtx, userID)
+		}
+		if consumeErr := eventConsumer.Run(ctx, handleEvent); consumeErr != nil && ctx.Err() == nil {
+			logger.Error("profiles event consumer stopped", "error", consumeErr)
+			stop()
+		}
+	}()
 	profileMediaService := application.NewProfileMediaService(profiles, profileMediaRepository, profileMediaRepository, profileCache)
 	verifier := auth.NewJWTVerifier(cfg.JWTSecret)
 	handler := httptransport.NewHandler(readiness, profileService, profileMediaService)
@@ -67,15 +98,24 @@ func main() {
 		router.With(ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "profiles:search:" + httpx.ClientIP(r)
 		})).Get("/search", handler.Search)
-		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "profiles:read:" + httpx.ClientIP(r)
 		})).Get("/{handle}", handler.GetByHandle)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+			return "profiles:me:" + httpx.ClientIP(r)
+		})).Get("/me", handler.GetMine)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {
 			return "profiles:set-handle:" + httpx.ClientIP(r)
 		})).Put("/me/handle", handler.SetHandle)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {
 			return "profiles:update:" + httpx.ClientIP(r)
 		})).Patch("/me", handler.UpdatePublicProfile)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
+			return "profiles:privacy:read:" + httpx.ClientIP(r)
+		})).Get("/me/privacy", handler.GetPrivacy)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {
+			return "profiles:privacy:write:" + httpx.ClientIP(r)
+		})).Put("/me/privacy", handler.UpdatePrivacy)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "profiles:photos:read:" + httpx.ClientIP(r)
 		})).Get("/{handle}/photos", handler.GetPhotos)

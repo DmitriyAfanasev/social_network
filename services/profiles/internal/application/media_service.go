@@ -199,7 +199,7 @@ func toPhotoAlbumDTO(album domain.ProfilePhotoAlbum) ProfilePhotoAlbumDTO {
 }
 
 func mediaURL(mediaID uuid.UUID) string {
-	return "/v1/media/" + mediaID.String()
+	return "/v1/media/" + mediaID.String() + "/content"
 }
 
 func profileMediaCacheKey(userID uuid.UUID) string {

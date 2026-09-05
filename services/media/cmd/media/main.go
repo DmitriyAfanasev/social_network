@@ -24,6 +24,7 @@ import (
 	"general-project/libs/platform/httpx"
 	platformpostgres "general-project/libs/platform/postgres"
 	"general-project/libs/platform/ratelimit"
+	accessadapter "general-project/media/internal/adapters/access"
 	eventsadapter "general-project/media/internal/adapters/events"
 	postgresadapter "general-project/media/internal/adapters/postgres"
 	storageadapter "general-project/media/internal/adapters/storage"
@@ -77,7 +78,8 @@ func main() {
 	defer videoPublisher.Close()
 	videoService := application.NewVideoService(mediaService, videoRepository, videoPublisher, mediaCache)
 	musicRepository := postgresadapter.NewMusicRepository(pool)
-	musicService := application.NewMusicService(mediaService, musicRepository, mediaCache)
+	musicAccess := accessadapter.NewClient(cfg.ProfilesURL, cfg.SocialURL)
+	musicService := application.NewMusicService(mediaService, musicRepository, mediaCache, musicAccess)
 	videoConsumer := eventsadapter.NewKafkaConsumer(cfg.KafkaBrokers, config.VideoTranscodeCompletedTopic, cfg.KafkaGroupID, cfg.KafkaMaxBytes)
 	go func() {
 		if consumeErr := videoConsumer.Run(ctx, videoService.Complete); consumeErr != nil && ctx.Err() == nil {
@@ -97,6 +99,9 @@ func main() {
 	router.Route("/v1/media", func(router chi.Router) {
 		limiter := ratelimit.NewRedisFixedWindow(redisClient)
 		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+			return "media:content:" + httpx.ClientIP(r)
+		})).Get("/{mediaID}/content", handler.StreamContent)
+		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "media:read:" + httpx.ClientIP(r)
 		})).Get("/{mediaID}", handler.GetByID)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 10, time.Minute, func(r *http.Request) string {
@@ -108,7 +113,7 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 5, time.Minute, func(r *http.Request) string {
 			return "media:video:create:" + httpx.ClientIP(r)
 		})).Post("/videos", handler.CreateVideo)
-		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "media:video:list:" + httpx.ClientIP(r)
 		})).Get("/videos", handler.ListVideos)
 		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
@@ -141,7 +146,7 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "media:video:favorite:" + httpx.ClientIP(r)
 		})).Delete("/videos/{videoID}/favorite", handler.SetFavorite)
-		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "media:music:read:" + httpx.ClientIP(r)
 		})).Get("/music", handler.ListMusic)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 10, time.Minute, func(r *http.Request) string {

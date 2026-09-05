@@ -49,6 +49,15 @@ func (f *fakeProfileRepository) FindByUserID(_ context.Context, userID uuid.UUID
 	return profile, nil
 }
 
+func (f *fakeProfileRepository) EnsureByUserID(_ context.Context, userID uuid.UUID) (domain.Profile, error) {
+	profile, ok := f.byUser[userID]
+	if !ok {
+		profile = domain.Profile{UserID: userID, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+		f.byUser[userID] = profile
+	}
+	return profile, nil
+}
+
 func (f *fakeProfileRepository) SetHandle(_ context.Context, userID uuid.UUID, handle string) (domain.Profile, error) {
 	if _, ok := f.byHandle[handle]; ok {
 		return domain.Profile{}, ports.ErrAlreadyExists
@@ -74,6 +83,28 @@ func (f *fakeProfileRepository) UpdatePublicProfile(_ context.Context, userID uu
 	return profile, nil
 }
 
+func (f *fakeProfileRepository) UpdateProfileDetails(_ context.Context, userID uuid.UUID, details domain.ProfileDetails) (domain.Profile, error) {
+	profile, ok := f.byUser[userID]
+	if !ok {
+		return domain.Profile{}, ports.ErrNotFound
+	}
+	profile.Details = details
+	profile.UpdatedAt = time.Now()
+	f.byUser[userID] = profile
+	return profile, nil
+}
+
+func (f *fakeProfileRepository) UpdateProfilePrivacy(_ context.Context, userID uuid.UUID, privacy domain.ProfilePrivacy) (domain.Profile, error) {
+	profile, ok := f.byUser[userID]
+	if !ok {
+		return domain.Profile{}, ports.ErrNotFound
+	}
+	profile.Privacy = privacy
+	profile.UpdatedAt = time.Now()
+	f.byUser[userID] = profile
+	return profile, nil
+}
+
 func (f *fakeProfileRepository) UpdateAvatar(_ context.Context, userID uuid.UUID, avatarURL string) (domain.Profile, error) {
 	profile, ok := f.byUser[userID]
 	if !ok {
@@ -86,6 +117,14 @@ func (f *fakeProfileRepository) UpdateAvatar(_ context.Context, userID uuid.UUID
 
 type fakeProfileCache struct {
 	values map[string][]byte
+}
+
+type fakeRelationshipReader struct {
+	access ports.RelationshipAccess
+}
+
+func (f fakeRelationshipReader) GetRelationship(context.Context, uuid.UUID, uuid.UUID) (ports.RelationshipAccess, error) {
+	return f.access, nil
 }
 
 func (f *fakeProfileCache) Get(_ context.Context, key string) ([]byte, error) {
@@ -159,6 +198,41 @@ func TestProfileServiceRejectsInvalidHandle(t *testing.T) {
 	_, err := service.SetHandle(context.Background(), uuid.New(), "bad handle")
 
 	require.ErrorIs(t, err, ErrValidation)
+}
+
+func TestProfileServiceFiltersDetailsByPrivacy(t *testing.T) {
+	t.Parallel()
+
+	ownerID := uuid.New()
+	viewerID := uuid.New()
+	repository := &fakeProfileRepository{byUser: map[uuid.UUID]domain.Profile{
+		ownerID: {
+			UserID:  ownerID,
+			Details: domain.ProfileDetails{PhoneNumber: "+70000000000", Country: "Россия", City: "Самара", Status: "На связи"},
+			Privacy: domain.ProfilePrivacy{PhoneVisibility: "friends", LocationVisibility: "friends_of_friends", StatusVisibility: "nobody"},
+		},
+	}}
+	service := NewProfileService(repository, nil, fakeRelationshipReader{access: ports.RelationshipAccess{IsFriendOfFriend: true}})
+
+	result, err := service.GetByUserID(context.Background(), ownerID, viewerID)
+
+	require.NoError(t, err)
+	require.Empty(t, result.Details.PhoneNumber)
+	require.Equal(t, "Россия", result.Details.Country)
+	require.Empty(t, result.Details.Status)
+}
+
+func TestProfileServiceEnsuresInitialProfile(t *testing.T) {
+	t.Parallel()
+
+	userID := uuid.New()
+	repository := &fakeProfileRepository{byUser: map[uuid.UUID]domain.Profile{}}
+	service := NewProfileService(repository, nil)
+
+	err := service.EnsureProfile(context.Background(), userID)
+
+	require.NoError(t, err)
+	require.Equal(t, userID, repository.byUser[userID].UserID)
 }
 
 func TestProfileServiceUpdatesPublicFieldsAndInvalidatesHandleCache(t *testing.T) {

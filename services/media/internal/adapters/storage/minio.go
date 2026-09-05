@@ -45,6 +45,20 @@ func (s *MinIOStorage) Put(ctx context.Context, objectKey string, contentType st
 	return err
 }
 
+// Get открывает бинарное содержимое объекта для потоковой отдачи клиенту.
+func (s *MinIOStorage) Get(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	return s.client.GetObject(ctx, s.bucket, objectKey, minio.GetObjectOptions{})
+}
+
+// GetRange открывает указанный байтовый диапазон объекта.
+func (s *MinIOStorage) GetRange(ctx context.Context, objectKey string, start int64, end int64) (io.ReadCloser, error) {
+	options := minio.GetObjectOptions{}
+	if err := options.SetRange(start, end); err != nil {
+		return nil, err
+	}
+	return s.client.GetObject(ctx, s.bucket, objectKey, options)
+}
+
 // Delete удаляет объект из bucket.
 func (s *MinIOStorage) Delete(ctx context.Context, objectKey string) error {
 	return s.client.RemoveObject(ctx, s.bucket, objectKey, minio.RemoveObjectOptions{})

@@ -843,6 +843,14 @@
                     "media"
                 ],
                 "summary": "Получить свою музыку",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID владельца",
+                        "name": "owner_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1466,6 +1474,40 @@
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/media/{mediaID}/content": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Скачать или воспроизвести медиа",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID медиаобъекта",
+                        "name": "mediaID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
                         }
                     },
                     "404": {
@@ -2106,6 +2148,29 @@
             }
         },
         "/v1/profiles/me": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Получить свой профиль",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/profileResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "consumes": [
                     "application/json"
@@ -2400,6 +2465,74 @@
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/v1/profiles/me/privacy": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Получить настройки приватности",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/privacyResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Обновить настройки приватности",
+                "parameters": [
+                    {
+                        "description": "Настройки приватности",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/privacyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/privacyResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
                     }
                 }
             }
@@ -2930,6 +3063,46 @@
                 }
             }
         },
+        "/v1/social/relationships/{targetID}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Проверить социальную близость",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователя",
+                        "name": "targetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/relationshipAccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/social/subscriptions/{targetID}": {
             "put": {
                 "produces": [
@@ -3323,7 +3496,28 @@
         "messageResponse": {
             "type": "object",
             "properties": {
-                "message": {
+                "body": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "edited_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "media_id": {
+                    "type": "string"
+                },
+                "sender_id": {
                     "type": "string"
                 }
             }
@@ -3481,6 +3675,18 @@
                 "id": {
                     "type": "string"
                 },
+                "is_liked_by_current": {
+                    "type": "boolean"
+                },
+                "liked_user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "likes_count": {
+                    "type": "integer"
+                },
                 "media_ids": {
                     "type": "array",
                     "items": {
@@ -3514,6 +3720,82 @@
                 }
             }
         },
+        "privacyRequest": {
+            "type": "object",
+            "properties": {
+                "birth_date_visibility": {
+                    "type": "string"
+                },
+                "friend_request_policy": {
+                    "type": "string"
+                },
+                "friends_visibility": {
+                    "type": "string"
+                },
+                "gender_visibility": {
+                    "type": "string"
+                },
+                "location_visibility": {
+                    "type": "string"
+                },
+                "message_policy": {
+                    "type": "string"
+                },
+                "music_visibility": {
+                    "type": "string"
+                },
+                "phone_visibility": {
+                    "type": "string"
+                },
+                "posts_visibility": {
+                    "type": "string"
+                },
+                "profile_visibility": {
+                    "type": "string"
+                },
+                "status_visibility": {
+                    "type": "string"
+                }
+            }
+        },
+        "privacyResponse": {
+            "type": "object",
+            "properties": {
+                "birth_date_visibility": {
+                    "type": "string"
+                },
+                "friend_request_policy": {
+                    "type": "string"
+                },
+                "friends_visibility": {
+                    "type": "string"
+                },
+                "gender_visibility": {
+                    "type": "string"
+                },
+                "location_visibility": {
+                    "type": "string"
+                },
+                "message_policy": {
+                    "type": "string"
+                },
+                "music_visibility": {
+                    "type": "string"
+                },
+                "phone_visibility": {
+                    "type": "string"
+                },
+                "posts_visibility": {
+                    "type": "string"
+                },
+                "profile_visibility": {
+                    "type": "string"
+                },
+                "status_visibility": {
+                    "type": "string"
+                }
+            }
+        },
         "profilePhotosResponse": {
             "type": "object",
             "properties": {
@@ -3540,13 +3822,46 @@
                 "bio": {
                     "type": "string"
                 },
+                "birth_date": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "display_name": {
                     "type": "string"
                 },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
                 "handle": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "privacy": {
+                    "$ref": "#/definitions/privacyResponse"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "street": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -3606,6 +3921,20 @@
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "relationshipAccessResponse": {
+            "type": "object",
+            "properties": {
+                "is_blocked": {
+                    "type": "boolean"
+                },
+                "is_friend": {
+                    "type": "boolean"
+                },
+                "is_friend_of_friend": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3688,7 +4017,37 @@
                 "bio": {
                     "type": "string"
                 },
+                "birth_date": {
+                    "type": "string"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
                 "display_name": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "street": {
                     "type": "string"
                 }
             }
