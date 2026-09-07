@@ -79,6 +79,17 @@ export async function apiRequest<T>(path: string, init?: ApiRequestInit): Promis
   return requestApi<T>(path, init);
 }
 
+/** Загружает приватное медиа с токеном в заголовке и обновлением истёкшей сессии. */
+export async function apiBlob(path: string, signal?: AbortSignal): Promise<Blob> {
+	let response = await sendRequest(path, { signal, cache: "no-store" });
+	if (response.status === 401) {
+		await refreshAccessToken();
+		response = await sendRequest(path, { signal, cache: "no-store" });
+	}
+	if (!response.ok) { await parseResponse(response); throw new Error("Не удалось загрузить фотографию"); }
+	return response.blob();
+}
+
 async function requestApi<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const gatewayPath = toGatewayPath(path, init?.method);
   const gatewayInit = adaptRequestInit(gatewayPath, init);

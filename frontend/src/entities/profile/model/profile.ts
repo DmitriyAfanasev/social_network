@@ -63,6 +63,9 @@ export type AvatarUploadResponse = {
 };
 
 export type ProfilePhoto = {
+	archived?: boolean;
+	latitude?: number | null;
+	longitude?: number | null;
   id: string | number | null;
   media_id?: string;
   album_id: string | number | null;
@@ -72,6 +75,9 @@ export type ProfilePhoto = {
 };
 
 export type ProfilePhotoAlbum = {
+	description?: string;
+	visibility?: "public" | "private";
+	comment_policy?: "public" | "private" | "nobody";
   id: string | number | null;
   title: string;
   kind: "avatars" | "custom";
