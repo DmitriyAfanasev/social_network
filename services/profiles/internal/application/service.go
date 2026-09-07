@@ -39,9 +39,8 @@ type ProfileService struct {
 
 // UpdateProfileInput содержит изменяемые поля профиля.
 type UpdateProfileInput struct {
-	DisplayName string
-	Bio         string
-	Details     domain.ProfileDetails
+	Bio     string
+	Details domain.ProfileDetails
 }
 
 // UpdatePrivacyInput содержит политики доступа профиля.
@@ -212,17 +211,17 @@ func (s *ProfileService) SetHandle(ctx context.Context, userID uuid.UUID, handle
 	return toProfileDTO(profile), nil
 }
 
-// UpdatePublicProfile изменяет отображаемое имя и описание профиля.
+// UpdatePublicProfile изменяет описание профиля.
 func (s *ProfileService) UpdatePublicProfile(ctx context.Context, userID uuid.UUID, input UpdateProfileInput) (ProfileDTO, error) {
-	displayName := strings.TrimSpace(input.DisplayName)
-	if len(displayName) > 80 || len(input.Bio) > 2000 {
+	bio := strings.TrimSpace(input.Bio)
+	if len([]rune(bio)) > 2000 {
 		return ProfileDTO{}, ErrValidation
 	}
 	previous, previousErr := s.profiles.FindByUserID(ctx, userID)
 	if previousErr != nil {
 		return ProfileDTO{}, previousErr
 	}
-	profile, err := s.profiles.UpdatePublicProfile(ctx, userID, displayName, input.Bio)
+	profile, err := s.profiles.UpdatePublicProfile(ctx, userID, bio)
 	if err != nil {
 		return ProfileDTO{}, err
 	}
@@ -232,18 +231,17 @@ func (s *ProfileService) UpdatePublicProfile(ctx context.Context, userID uuid.UU
 	return toProfileDTO(profile), nil
 }
 
-// UpdateProfile изменяет отображаемые данные и дополнительные сведения профиля.
+// UpdateProfile изменяет публичное описание и дополнительные сведения профиля.
 func (s *ProfileService) UpdateProfile(ctx context.Context, userID uuid.UUID, input UpdateProfileInput) (ProfileDTO, error) {
-	displayName := strings.TrimSpace(input.DisplayName)
 	bio := strings.TrimSpace(input.Bio)
-	if len([]rune(displayName)) > 80 || len([]rune(bio)) > 2000 || !validDetails(input.Details) {
+	if len([]rune(bio)) > 2000 || !validDetails(input.Details) {
 		return ProfileDTO{}, ErrValidation
 	}
 	previous, err := s.profiles.FindByUserID(ctx, userID)
 	if err != nil {
 		return ProfileDTO{}, err
 	}
-	profile, err := s.profiles.UpdatePublicProfile(ctx, userID, displayName, bio)
+	profile, err := s.profiles.UpdatePublicProfile(ctx, userID, bio)
 	if err != nil {
 		return ProfileDTO{}, err
 	}

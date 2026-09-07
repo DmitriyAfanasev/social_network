@@ -8,11 +8,12 @@ import type { AvatarHistoryResponse, AvatarUploadResponse } from "../../entities
 import type { FriendActionResponse } from "../../entities/user/model/user";
 import { getUserName } from "../../entities/user/model/user";
 import { UserAvatar } from "../../entities/user/ui/UserAvatar";
+import { CreatePostPanel } from "../../features/post/create/ui/CreatePostPanel";
 import { apiRequest, getAccessToken } from "../../shared/api/http";
 import { API_BASE_URL } from "../../shared/config/api";
 import { formatDate } from "../../shared/lib/date";
 import { navigate } from "../../shared/lib/navigation";
-import { MediaPlayer } from "../../shared/ui/MediaPlayer";
+import { MusicTrackControl } from "../../shared/ui/GlobalMusicPlayer";
 
 type ProfilePageProps = {
   id: string;
@@ -29,6 +30,11 @@ type RelationshipSnapshot = {
 type FriendRequestSnapshot = {
   incoming: Array<{ id: string; sender_id: string; recipient_id: string; status: string }>;
   outgoing: Array<{ id: string; sender_id: string; recipient_id: string; status: string }>;
+};
+
+type ProfileFriendsResponse = {
+  friends: string[];
+  visible?: boolean;
 };
 
 export function ProfilePage({ id }: ProfilePageProps) {
@@ -52,12 +58,17 @@ export function ProfilePage({ id }: ProfilePageProps) {
   const [statusError, setStatusError] = useState<string | null>(null);
   const [musicTracks, setMusicTracks] = useState<MusicTrack[]>([]);
   const [musicError, setMusicError] = useState<string | null>(null);
+  const [savingMusicID, setSavingMusicID] = useState<string | null>(null);
+  const [musicActionID, setMusicActionID] = useState<string | null>(null);
+  const [friendsVisible, setFriendsVisible] = useState(true);
+  const [presenceByID, setPresenceByID] = useState<Record<string, boolean>>({});
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadProfile() {
     try {
       const result = await apiRequest<ProfileResponse>(`/profile/${id}`);
       let nextProfile = result;
+      setFriendsVisible(true);
       setIncomingRequestId(null);
       setOutgoingRequestId(null);
       if (!result.is_own_profile && getAccessToken()) {
@@ -83,10 +94,33 @@ export function ProfilePage({ id }: ProfilePageProps) {
       }
       setProfile(nextProfile);
       setStatusDraft(nextProfile.user.profile?.status ?? "");
+      void loadFriends(nextProfile.user.id);
       void loadMusic(nextProfile.is_own_profile ? undefined : nextProfile.user.id);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось загрузить профиль");
+    }
+  }
+
+  async function loadFriends(ownerID: string) {
+    if (!getAccessToken()) {
+      setFriendsVisible(false);
+      return;
+    }
+    try {
+      const result = await apiRequest<ProfileFriendsResponse>(`/v1/social/relationships/${ownerID}/friends`);
+      const users = await Promise.all(result.friends.map(async (friendID) => {
+        try {
+          const friendProfile = await apiRequest<ProfileResponse>(`/profile/${friendID}`);
+          return friendProfile.user;
+        } catch {
+          return null;
+        }
+      }));
+      setProfile((current) => current && current.user.id === ownerID ? { ...current, friends: users.filter((user): user is ProfileResponse["user"] => user !== null) } : current);
+      setFriendsVisible(result.visible !== false);
+    } catch {
+      setFriendsVisible(false);
     }
   }
 
@@ -104,6 +138,33 @@ export function ProfilePage({ id }: ProfilePageProps) {
   useEffect(() => {
     void loadProfile();
   }, [id]);
+
+  const presenceIDsKey = profile ? [...new Set([profile.user.id, ...profile.friends.map((friend) => friend.id)])].join(",") : "";
+
+  useEffect(() => {
+    if (!presenceIDsKey) {
+      setPresenceByID({});
+      return;
+    }
+
+    let active = true;
+    const checkPresence = () => {
+      void apiRequest<PresenceBatchResponse>(`/v1/messaging/presence?user_ids=${presenceIDsKey}`)
+        .then((result) => {
+          if (active) setPresenceByID(Object.fromEntries(result.presence.map((item) => [item.user_id, item.online])));
+        })
+        .catch(() => {
+          if (active) setPresenceByID({});
+        });
+    };
+
+    checkPresence();
+    const timer = window.setInterval(checkPresence, 15_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [presenceIDsKey]);
 
   useEffect(() => {
     return () => {
@@ -269,6 +330,18 @@ export function ProfilePage({ id }: ProfilePageProps) {
     }
   }
 
+  async function saveMusic(trackId: string) {
+    setSavingMusicID(trackId);
+    try {
+      await apiRequest(`/music/${trackId}/save`, { method: "POST" });
+      setMusicTracks((current) => current.map((track) => track.id === trackId ? { ...track, is_saved: true } : track));
+    } catch (err) {
+      setMusicError(err instanceof Error ? err.message : "Не удалось добавить трек в плейлист");
+    } finally {
+      setSavingMusicID(null);
+    }
+  }
+
   async function saveStatus(event: FormEvent) {
     event.preventDefault();
     setStatusSaving(true);
@@ -333,7 +406,9 @@ export function ProfilePage({ id }: ProfilePageProps) {
     ["Улица", user.profile?.street],
     ["Телефон", user.profile?.phone_number],
   ].filter(([, value]) => value);
-  const onlineFriends = profile.friends.filter((friend) => isRecentlyOnline(friend.last_seen_at));
+  const onlineFriends = profile.friends.filter((friend) => presenceByID[friend.id] === true);
+  const friendsHidden = !profile.is_own_profile && !friendsVisible;
+  const profileOnline = presenceByID[user.id] === true;
 
   return (
     <section className="profile-page">
@@ -342,15 +417,10 @@ export function ProfilePage({ id }: ProfilePageProps) {
         <div className="profile-hero-body">
           <div className="profile-identity">
             {profile.is_own_profile ? (
-              <button
-                type="button"
-                className="avatar-manage-button"
-                onClick={() => void openAvatarManager()}
-                aria-label="Изменить фотографию профиля"
-              >
+              <div className="profile-avatar-control">
                 <UserAvatar user={user} size="lg" />
-                <span>Изменить</span>
-              </button>
+                <button type="button" className="avatar-manage-button" onClick={() => void openAvatarManager()} aria-label="Изменить фотографию профиля">✎</button>
+              </div>
             ) : (
               <UserAvatar user={user} size="lg" />
             )}
@@ -375,7 +445,10 @@ export function ProfilePage({ id }: ProfilePageProps) {
               ) : user.profile?.status ? (
                 <div className="profile-status-visible"><span className="presence-dot" />{user.profile.status}</div>
               ) : (
-                <div className="profile-presence"><span className="presence-dot" />Публичный профиль</div>
+                <div className={profileOnline ? "profile-presence online" : "profile-presence offline"}><span className="presence-dot" />{profileOnline ? "В сети" : "Не в сети"}</div>
+              )}
+              {!profile.is_own_profile && user.profile?.status && (
+                <div className={profileOnline ? "profile-presence online" : "profile-presence offline"}><span className="presence-dot" />{profileOnline ? "В сети" : "Не в сети"}</div>
               )}
               {statusError && profile.is_own_profile && <small className="profile-status-error">{statusError}</small>}
               <p className={hasLongBio && !bioExpanded ? "profile-bio profile-bio-collapsed" : "profile-bio"}>{bio || "Пользователь пока не заполнил описание."}</p>
@@ -413,6 +486,7 @@ export function ProfilePage({ id }: ProfilePageProps) {
           <button type="button" className="profile-tab" onClick={() => navigate(`/profile/${id}/videos`)}>Видео</button>
         </nav>
       </header>
+      {profile.is_own_profile && <CreatePostPanel onCreated={loadProfile} />}
       {avatarModalOpen && profile.is_own_profile && (
         <div className="mock-dialog" role="dialog" aria-modal="true">
           <div className="avatar-dialog-panel">
@@ -572,7 +646,7 @@ export function ProfilePage({ id }: ProfilePageProps) {
                   </button>
                 ))}
               </div>
-            ) : <p className="widget-empty">Сейчас никто не в сети</p>}
+            ) : <p className="widget-empty">{friendsHidden ? "Список друзей скрыт настройками приватности." : "Сейчас никто не в сети"}</p>}
           </section>
           <section className="panel profile-widget friends-widget">
             <header className="widget-header">
@@ -583,34 +657,51 @@ export function ProfilePage({ id }: ProfilePageProps) {
               <div className="friends-mini-grid">
                 {profile.friends.slice(0, 8).map((friend) => (
                   <button type="button" className="friend-widget-person" key={friend.id} onClick={() => navigate(`/profile/${friend.id}`)}>
-                    <span className="friend-avatar-wrap"><UserAvatar user={friend} size="md" />{isRecentlyOnline(friend.last_seen_at) && <span className="online-dot" />}</span>
+                    <span className="friend-avatar-wrap"><UserAvatar user={friend} size="md" />{presenceByID[friend.id] && <span className="online-dot" />}</span>
                     <strong>{getUserName(friend)}</strong>
                   </button>
                 ))}
               </div>
-            ) : <p className="widget-empty">Здесь появятся ваши друзья</p>}
+            ) : <p className="widget-empty">{friendsHidden ? "Список друзей скрыт настройками приватности." : "Здесь появятся друзья"}</p>}
           </section>
           <section className="panel profile-widget music-widget">
             <header className="widget-header">
               <div><span className="eyebrow">Аудиотека</span><h2>Музыка <span>{musicTracks.length}</span></h2></div>
-              {profile.is_own_profile && <div className="music-widget-actions"><button type="button" className="widget-link" onClick={() => navigate("/music/add")}>Добавить</button><button type="button" className="widget-link" onClick={() => navigate("/music")}>Открыть</button></div>}
+              {profile.is_own_profile && <div className="music-widget-actions"><button type="button" className="widget-link" onClick={() => navigate("/music")}>Открыть</button></div>}
             </header>
             {musicTracks.length > 0 ? (
               <div className="music-track-list">
                 {musicTracks.map((track) => (
                   <article className="music-track" key={track.id}>
-                    <div className="music-track-icon" aria-hidden="true">♫</div>
-                    <div className="music-track-copy">
-                      <strong>{track.title}</strong>
-                      <span>{track.artist || "Исполнитель не указан"}</span>
-                      <small>{formatDate(track.created_at)}</small>
+                    <div className="music-track-main">
+                      <MusicTrackControl track={track} queue={musicTracks} />
+                      <div className="music-track-icon" aria-hidden="true">♫</div>
+                      <div className="music-track-copy">
+                        <strong>{track.title}</strong>
+                        <span>{track.artist || "Исполнитель не указан"}</span>
+                        <small>{formatDate(track.created_at)}</small>
+                      </div>
+                      {profile.is_own_profile && (
+                        <div className="music-track-actions">
+                          <button type="button" className="music-actions-button" onClick={() => setMusicActionID((current) => current === track.id ? null : track.id)} aria-label={`Действия для ${track.title}`}>•••</button>
+                          {musicActionID === track.id && (
+                            <div className="music-actions-menu">
+                              <button type="button" onClick={() => { setMusicActionID(null); void deleteMusic(track.id); }}>Удалить трек</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!profile.is_own_profile && (
+                        <button
+                          type="button"
+                          className="music-save"
+                          disabled={track.is_saved || savingMusicID === track.id}
+                          onClick={() => void saveMusic(track.id)}
+                        >
+                          {track.is_saved ? "В плейлисте" : savingMusicID === track.id ? "Добавляем…" : "В плейлист"}
+                        </button>
+                      )}
                     </div>
-                    <MediaPlayer kind="audio" src={`${API_BASE_URL}/v1/media/${track.media_id}/content`} title={`${track.title} — ${track.artist || "трек"}`} preload="none" />
-                    {profile.is_own_profile && (
-                      <button type="button" className="music-delete" onClick={() => void deleteMusic(track.id)} aria-label={`Удалить ${track.title}`}>
-                        ×
-                      </button>
-                    )}
                   </article>
                 ))}
               </div>
@@ -625,8 +716,6 @@ export function ProfilePage({ id }: ProfilePageProps) {
   );
 }
 
-function isRecentlyOnline(lastSeenAt: string | null | undefined): boolean {
-  if (!lastSeenAt) return false;
-  const elapsed = Date.now() - new Date(lastSeenAt).getTime();
-  return elapsed >= 0 && elapsed <= 5 * 60 * 1000;
-}
+type PresenceBatchResponse = {
+  presence: Array<{ user_id: string; online: boolean }>;
+};

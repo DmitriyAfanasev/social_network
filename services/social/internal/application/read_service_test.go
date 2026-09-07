@@ -20,6 +20,18 @@ type graphFriendshipRepository struct {
 	listCallCount int
 }
 
+type fakeProfilePolicy struct {
+	friendsVisibility string
+}
+
+func (f fakeProfilePolicy) GetFriendRequestPolicy(_ context.Context, _ uuid.UUID) (string, error) {
+	return "everyone", nil
+}
+
+func (f fakeProfilePolicy) GetFriendsVisibility(_ context.Context, _ uuid.UUID) (string, error) {
+	return f.friendsVisibility, nil
+}
+
 func (r *graphFriendshipRepository) IsFriend(_ context.Context, userID uuid.UUID, friendID uuid.UUID) (bool, error) {
 	first, second := userID, friendID
 	if strings.Compare(second.String(), first.String()) < 0 {
@@ -143,6 +155,41 @@ func TestSocialServiceRecommendationsRankByCommonFriendsAndUseCache(t *testing.T
 	require.NoError(t, err)
 	require.Equal(t, candidate, result[0].UserID)
 	require.Equal(t, callCount, repository.listCallCount)
+}
+
+func TestSocialServicePublicFriendsUsesTargetOwnerAndPrivacy(t *testing.T) {
+	viewerID := uuid.New()
+	targetID := uuid.New()
+	targetFriendID := uuid.New()
+	viewerFriendID := uuid.New()
+	repository := &graphFriendshipRepository{
+		friends: map[uuid.UUID][]uuid.UUID{
+			targetID: {targetFriendID},
+			viewerID: {viewerFriendID},
+		},
+		subscribed: map[string]bool{},
+	}
+	service := NewSocialServiceWithOutbox(&fakeBlockRepository{}, repository, nil, fakeSocialOutbox{}, fakeProfilePolicy{friendsVisibility: "everyone"})
+
+	result, err := service.GetPublicFriends(context.Background(), viewerID, targetID)
+	require.NoError(t, err)
+	require.True(t, result.Visible)
+	require.Equal(t, []uuid.UUID{targetFriendID}, result.Friends)
+}
+
+func TestSocialServicePublicFriendsHidesRestrictedTargetList(t *testing.T) {
+	viewerID := uuid.New()
+	targetID := uuid.New()
+	repository := &graphFriendshipRepository{
+		friends:    map[uuid.UUID][]uuid.UUID{targetID: {uuid.New()}},
+		subscribed: map[string]bool{},
+	}
+	service := NewSocialServiceWithOutbox(&fakeBlockRepository{}, repository, nil, fakeSocialOutbox{}, fakeProfilePolicy{friendsVisibility: "friends"})
+
+	result, err := service.GetPublicFriends(context.Background(), viewerID, targetID)
+	require.NoError(t, err)
+	require.False(t, result.Visible)
+	require.Empty(t, result.Friends)
 }
 
 func TestSocialServiceInvalidatesRelationshipCacheAfterMutation(t *testing.T) {

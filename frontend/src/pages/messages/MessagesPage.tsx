@@ -3,7 +3,8 @@ import type { FormEvent, KeyboardEvent } from "react";
 
 import type { ProfileResponse } from "../../entities/post/model/post";
 import type { CallEvent, Conversation, ConversationView, Message, MessagePage } from "../../entities/message/model/message";
-import { getUserName } from "../../entities/user/model/user";
+import { getUserName, userFromPublicProfile } from "../../entities/user/model/user";
+import type { PublicProfileResponse, User } from "../../entities/user/model/user";
 import { UserAvatar } from "../../entities/user/ui/UserAvatar";
 import { apiRequest, getAccessToken } from "../../shared/api/http";
 import { API_BASE_URL } from "../../shared/config/api";
@@ -98,6 +99,16 @@ function formatConversationPreview(conversation: ConversationView, viewerId: str
   const preview = attachmentLabel ?? (message.text.trim() || "Сообщение");
   const shortened = preview.length > 56 ? `${preview.slice(0, 56).trimEnd()}…` : preview;
   return { prefix: message.sender_id === viewerId ? "Вы: " : "", text: shortened, attachment: Boolean(attachmentLabel) };
+}
+
+async function loadConversationUser(userID: string | number): Promise<User> {
+  try {
+    const profile = await apiRequest<PublicProfileResponse>(`/v1/profiles/${userID}`);
+    return userFromPublicProfile(profile);
+  } catch {
+    // Переписка не должна пропадать из-за временно недоступного профиля.
+    return { id: String(userID), username: String(userID).slice(0, 8), profile: null };
+  }
 }
 
 export function MessagesPage() {
@@ -420,9 +431,8 @@ export function MessagesPage() {
       const views = await Promise.all(
         result.map(async (conversation) => {
           const otherUserID = conversation.participant_ids.find((id) => String(id) !== currentUserID) ?? null;
-          return { ...conversation, other_user_id: otherUserID, otherUser: otherUserID ? {
-            id: String(otherUserID), username: String(otherUserID).slice(0, 8), profile: null,
-          } : null };
+          const otherUser = otherUserID ? await loadConversationUser(otherUserID) : null;
+          return { ...conversation, other_user_id: otherUserID, otherUser };
         }),
       );
       setConversations(views);
@@ -438,9 +448,11 @@ export function MessagesPage() {
           if (existing) {
             navigate(`/messages/${existing.id}`);
           } else {
-            const directView = { ...direct, other_user_id: targetId, otherUser: {
-              id: targetId, username: targetId.slice(0, 8), profile: null,
-            } };
+            const directView = {
+              ...direct,
+              other_user_id: targetId,
+              otherUser: await loadConversationUser(targetId),
+            };
             setConversations((current) => [directView, ...current]);
             navigate(`/messages/${direct.id}`);
           }

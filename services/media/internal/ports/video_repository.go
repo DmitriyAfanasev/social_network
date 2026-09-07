@@ -28,6 +28,7 @@ type VideoRepository interface {
 	MarkProcessing(ctx context.Context, videoID uuid.UUID) error
 	Complete(ctx context.Context, videoID uuid.UUID, status string, duration float64, renditions []domain.VideoRendition, updatedAt time.Time) error
 	RecordView(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID) (int, error)
+	RecordViewWithOutbox(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID, event OutboxEvent) (int, error)
 	ToggleLike(ctx context.Context, videoID uuid.UUID, userID uuid.UUID) (InteractionResult, error)
 	SetBookmark(ctx context.Context, videoID uuid.UUID, userID uuid.UUID, value bool) (bool, error)
 	SetFavorite(ctx context.Context, videoID uuid.UUID, userID uuid.UUID, value bool) (bool, error)

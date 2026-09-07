@@ -11,7 +11,10 @@ import (
 type MusicRepository interface {
 	Create(ctx context.Context, track domain.MusicTrack) (domain.MusicTrack, error)
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.MusicTrack, error)
+	ListByOwner(ctx context.Context, ownerID uuid.UUID, viewerID uuid.UUID) ([]domain.MusicTrack, error)
 	FindByID(ctx context.Context, trackID uuid.UUID) (domain.MusicTrack, error)
+	AddToLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error
+	RemoveFromLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error
 	Delete(ctx context.Context, trackID uuid.UUID) error
 }
 

@@ -363,8 +363,9 @@ export function PostItem({ post, canLike, currentUserId, onLike, onChanged }: Po
 
     try {
       const result = await apiRequest<CommentsPageResponse>(`/posts/${post.id}/comments?offset=${offset}&limit=3`);
-      setComments((current) => (offset === 0 ? result.comments : [...current, ...result.comments]));
-      setCommentsOffset(offset + result.comments.length);
+		const commentsWithAuthors = await attachCommentAuthors(result.comments);
+		setComments((current) => (offset === 0 ? commentsWithAuthors : [...current, ...commentsWithAuthors]));
+		setCommentsOffset(offset + commentsWithAuthors.length);
       setCommentsHasMore(result.has_more);
     } catch (err) {
       setCommentError(err instanceof Error ? err.message : "Не удалось загрузить комментарии");
@@ -695,6 +696,23 @@ export function PostItem({ post, canLike, currentUserId, onLike, onChanged }: Po
       )}
     </article>
   );
+}
+
+async function attachCommentAuthors(comments: Comment[]) {
+	const authorIDs = [...new Set(comments.map((comment) => String(comment.user_id)).filter(Boolean))];
+	const profiles = await Promise.all(authorIDs.map(async (authorID) => {
+		try {
+			return await apiRequest<PublicProfileResponse>(`/v1/profiles/${authorID}`);
+		} catch {
+			return null;
+		}
+	}));
+	const authors = new Map(
+		profiles
+			.filter((profile): profile is PublicProfileResponse => profile !== null)
+			.map((profile) => [profile.user_id, userFromPublicProfile(profile)]),
+	);
+	return comments.map((comment) => ({ ...comment, author: authors.get(String(comment.user_id)) ?? comment.author }));
 }
 
 function buildCommentTree(comments: Comment[]): CommentNode[] {

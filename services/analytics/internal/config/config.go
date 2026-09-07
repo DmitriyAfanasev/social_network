@@ -17,6 +17,10 @@ const (
 
 // Config содержит настройки запуска analytics worker-а.
 type Config struct {
+	// HTTPAddr — адрес HTTP-сервера аналитики.
+	HTTPAddr string
+	// JWTSecret — секрет проверки access-токенов identity.
+	JWTSecret     string
 	DatabaseURL   string
 	KafkaBrokers  string
 	EventsTopic   string
@@ -31,6 +35,8 @@ type Config struct {
 // Load загружает настройки из переменных окружения.
 func Load() Config {
 	return Config{
+		HTTPAddr:      platformconfig.Env("ANALYTICS_HTTP_ADDR", ":8108"),
+		JWTSecret:     platformconfig.Env("ANALYTICS_JWT_SECRET", "local-identity-secret"),
 		DatabaseURL:   platformconfig.Env("ANALYTICS_DATABASE_URL", "postgres://admin:password@localhost:5432/database?sslmode=disable"),
 		KafkaBrokers:  platformconfig.Env("ANALYTICS_KAFKA_BROKERS", "localhost:9092"),
 		EventsTopic:   platformconfig.Env("ANALYTICS_EVENTS_TOPIC", EventsTopic),

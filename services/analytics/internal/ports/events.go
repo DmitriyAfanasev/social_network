@@ -57,3 +57,14 @@ type EventHandler interface {
 type SummaryRepository interface {
 	GetSummary(ctx context.Context) (domain.Summary, error)
 }
+
+// ReadinessChecker проверяет доступность обязательных зависимостей сервиса.
+type ReadinessChecker interface {
+	Check(ctx context.Context) error
+}
+
+// VideoAnalyticsRepository читает агрегаты просмотра видео.
+type VideoAnalyticsRepository interface {
+	GetVideoStats(ctx context.Context, videoID uuid.UUID) (domain.VideoStats, error)
+	ListViewerVideoStats(ctx context.Context, userID uuid.UUID, limit int) ([]domain.ViewerVideoStats, error)
+}

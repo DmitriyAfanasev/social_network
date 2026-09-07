@@ -71,12 +71,11 @@ func (f *fakeProfileRepository) SetHandle(_ context.Context, userID uuid.UUID, h
 	return profile, nil
 }
 
-func (f *fakeProfileRepository) UpdatePublicProfile(_ context.Context, userID uuid.UUID, displayName string, bio string) (domain.Profile, error) {
+func (f *fakeProfileRepository) UpdatePublicProfile(_ context.Context, userID uuid.UUID, bio string) (domain.Profile, error) {
 	profile, ok := f.byUser[userID]
 	if !ok {
 		return domain.Profile{}, ports.ErrNotFound
 	}
-	profile.DisplayName = displayName
 	profile.Bio = bio
 	profile.UpdatedAt = time.Now()
 	f.byUser[userID] = profile
@@ -174,7 +173,7 @@ func TestProfileServiceGetByHandleUsesCache(t *testing.T) {
 
 	userID := uuid.New()
 	handle := "alice"
-	profile := ProfileDTO{UserID: userID, Handle: &handle, DisplayName: "Alice"}
+	profile := ProfileDTO{UserID: userID, Handle: &handle}
 	encoded, err := json.Marshal(profile)
 	require.NoError(t, err)
 
@@ -187,7 +186,7 @@ func TestProfileServiceGetByHandleUsesCache(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, profile.UserID, result.UserID)
-	require.Equal(t, profile.DisplayName, result.DisplayName)
+	require.Equal(t, profile.UserID, result.UserID)
 }
 
 func TestProfileServiceRejectsInvalidHandle(t *testing.T) {
@@ -252,12 +251,10 @@ func TestProfileServiceUpdatesPublicFieldsAndInvalidatesHandleCache(t *testing.T
 	service := NewProfileService(repository, profileCache)
 
 	result, err := service.UpdatePublicProfile(context.Background(), userID, UpdateProfileInput{
-		DisplayName: "Alice",
-		Bio:         "Открытое описание",
+		Bio: "Открытое описание",
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, "Alice", result.DisplayName)
 	require.Equal(t, "Открытое описание", result.Bio)
 	require.Nil(t, profileCache.values[profileCacheKey(handle)])
 }

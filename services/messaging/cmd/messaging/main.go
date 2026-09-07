@@ -153,6 +153,12 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "messaging:presence:read:" + httpx.ClientIP(r)
 		})).Get("/presence/{userID}", handler.GetPresence)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+			return "messaging:presence:heartbeat:" + httpx.ClientIP(r)
+		})).Post("/presence/heartbeat", handler.Heartbeat)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
+			return "messaging:presence:batch:" + httpx.ClientIP(r)
+		})).Get("/presence", handler.GetPresenceBatch)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "messaging:messages:write:" + httpx.ClientIP(r)
 		})).Post("/conversations/{conversationID}/messages", handler.SendMessage)

@@ -14,6 +14,7 @@ type MusicTrack struct {
 	Artist    string
 	Duration  *float64
 	CreatedAt time.Time
+	Saved     bool
 }
 
 // CanBeManagedBy проверяет, принадлежит ли трек указанному пользователю.

@@ -13,7 +13,6 @@ import (
 type profileResponse struct {
 	UserID      string          `json:"user_id"`
 	Handle      *string         `json:"handle,omitempty"`
-	DisplayName string          `json:"display_name"`
 	Bio         string          `json:"bio"`
 	AvatarURL   string          `json:"avatar_url"`
 	FirstName   string          `json:"first_name"`
@@ -59,7 +58,6 @@ func mapProfileResponse(profile application.ProfileDTO) profileResponse {
 	return profileResponse{
 		UserID:      profile.UserID.String(),
 		Handle:      profile.Handle,
-		DisplayName: profile.DisplayName,
 		Bio:         profile.Bio,
 		AvatarURL:   profile.AvatarURL,
 		FirstName:   profile.Details.FirstName,

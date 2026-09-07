@@ -66,7 +66,7 @@ func main() {
 			stop()
 		}
 	}()
-	commentService := application.NewCommentService(posts, comments)
+	commentService := application.NewCommentService(posts, comments, postCache)
 	likeService := application.NewLikeService(posts, likes)
 	verifier := auth.NewJWTVerifier(cfg.JWTSecret)
 	handler := httptransport.NewHandler(readiness, contentService, commentService, likeService)

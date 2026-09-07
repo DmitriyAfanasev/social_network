@@ -10,15 +10,14 @@ import (
 
 // ProfileDTO представляет безопасный результат application-сценария профиля.
 type ProfileDTO struct {
-	UserID      uuid.UUID
-	Handle      *string
-	DisplayName string
-	Bio         string
-	AvatarURL   string
-	Details     ProfileDetailsDTO
-	Privacy     ProfilePrivacyDTO
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	UserID    uuid.UUID
+	Handle    *string
+	Bio       string
+	AvatarURL string
+	Details   ProfileDetailsDTO
+	Privacy   ProfilePrivacyDTO
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // ProfileDetailsDTO представляет дополнительные сведения профиля на границе application-слоя.
@@ -52,11 +51,10 @@ type ProfilePrivacyDTO struct {
 
 func toProfileDTO(profile domain.Profile) ProfileDTO {
 	return ProfileDTO{
-		UserID:      profile.UserID,
-		Handle:      profile.Handle,
-		DisplayName: profile.DisplayName,
-		Bio:         profile.Bio,
-		AvatarURL:   profile.AvatarURL,
+		UserID:    profile.UserID,
+		Handle:    profile.Handle,
+		Bio:       profile.Bio,
+		AvatarURL: profile.AvatarURL,
 		Details: ProfileDetailsDTO{
 			FirstName: profile.Details.FirstName, LastName: profile.Details.LastName, MiddleName: profile.Details.MiddleName,
 			BirthDate: profile.Details.BirthDate, Gender: profile.Details.Gender, PhoneNumber: profile.Details.PhoneNumber,

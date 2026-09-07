@@ -118,3 +118,54 @@ func (h *Handler) DeleteMusic(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// AddMusicToLibrary добавляет доступный трек в личную аудиотеку пользователя.
+// @Summary Добавить трек в свою аудиотеку
+// @Tags media
+// @Produce json
+// @Param trackID path string true "UUID трека"
+// @Success 204
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 403 {object} httpx.ErrorResponse
+// @Failure 404 {object} httpx.ErrorResponse
+// @Router /v1/media/music/{trackID}/save [post]
+func (h *Handler) AddMusicToLibrary(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticatedUser(w, r)
+	if !ok {
+		return
+	}
+	trackID, err := uuid.Parse(chi.URLParam(r, "trackID"))
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_track_id", "некорректный UUID трека")
+		return
+	}
+	if err := h.music.AddToLibrary(r.Context(), userID, trackID); err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RemoveMusicFromLibrary удаляет чужой трек из личной аудиотеки пользователя.
+// @Summary Удалить трек из своей аудиотеки
+// @Tags media
+// @Param trackID path string true "UUID трека"
+// @Success 204
+// @Failure 401 {object} httpx.ErrorResponse
+// @Router /v1/media/music/{trackID}/save [delete]
+func (h *Handler) RemoveMusicFromLibrary(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticatedUser(w, r)
+	if !ok {
+		return
+	}
+	trackID, err := uuid.Parse(chi.URLParam(r, "trackID"))
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_track_id", "некорректный UUID трека")
+		return
+	}
+	if err := h.music.RemoveFromLibrary(r.Context(), userID, trackID); err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

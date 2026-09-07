@@ -6,6 +6,7 @@ export type MusicTrack = {
   artist: string;
   duration: number | null;
   created_at: string;
+  is_saved: boolean;
 };
 
 export type MusicResponse = {

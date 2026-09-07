@@ -3,6 +3,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 	"uuid"
@@ -163,11 +164,69 @@ func NewEventRecordHandler(pool *pgxpool.Pool) *EventRecordHandler {
 
 // Handle записывает событие, не создавая дубль при повторной доставке.
 func (h *EventRecordHandler) Handle(ctx context.Context, event domain.Event) error {
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	const query = `
 		INSERT INTO analytics.event_records (event_id, event_type, aggregate_id, payload, correlation_id, created_at)
 		VALUES ($1, $2, $3, $4::jsonb, $5, $6)
 		ON CONFLICT (event_id) DO NOTHING`
-	_, err := h.pool.Exec(ctx, query, event.ID, event.EventType, event.AggregateID, event.Payload, event.CorrelationID, event.CreatedAt)
+	result, err := tx.Exec(ctx, query, event.ID, event.EventType, event.AggregateID, event.Payload, event.CorrelationID, event.CreatedAt)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return nil
+	}
+	if isVideoEvent(event.EventType) {
+		if err := insertVideoEvent(ctx, tx, event); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+func isVideoEvent(eventType string) bool {
+	switch eventType {
+	case "media.video.viewed", "media.video.playback", "media.video.like.created",
+		"media.video.like.deleted", "media.video.bookmark.created", "media.video.bookmark.deleted",
+		"media.video.favorite.created", "media.video.favorite.deleted":
+		return true
+	default:
+		return false
+	}
+}
+
+type videoEventPayload struct {
+	VideoID         uuid.UUID  `json:"video_id"`
+	UserID          *uuid.UUID `json:"user_id,omitempty"`
+	SessionID       string     `json:"session_id,omitempty"`
+	WatchSeconds    float64    `json:"watch_seconds,omitempty"`
+	ProgressSeconds float64    `json:"progress_seconds,omitempty"`
+	DurationSeconds float64    `json:"duration_seconds,omitempty"`
+	Completed       bool       `json:"completed,omitempty"`
+}
+
+func insertVideoEvent(ctx context.Context, tx pgx.Tx, event domain.Event) error {
+	var payload videoEventPayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return err
+	}
+	if payload.VideoID == uuid.Nil() || payload.WatchSeconds < 0 || payload.ProgressSeconds < 0 || payload.DurationSeconds < 0 {
+		return errors.New("invalid video analytics payload")
+	}
+	const query = `
+		INSERT INTO analytics.video_events (
+			event_id, event_type, video_id, user_id, session_id,
+			watch_seconds, progress_seconds, duration_seconds, completed, occurred_at
+		)
+		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, $7, $8, $9, $10)
+		ON CONFLICT (event_id) DO NOTHING`
+	_, err := tx.Exec(ctx, query, event.ID, event.EventType, payload.VideoID, payload.UserID, payload.SessionID,
+		payload.WatchSeconds, payload.ProgressSeconds, payload.DurationSeconds, payload.Completed, event.CreatedAt)
 	return err
 }
 

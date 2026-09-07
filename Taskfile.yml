@@ -99,7 +99,8 @@ tasks:
   generate:swagger:
     desc: Generate the unified Swagger/OpenAPI document for gateway
     cmds:
-      - swag init --parseDependency --parseInternal --useStructName --dir services/gateway,services/identity,services/profiles,services/social,services/content,services/media,services/messaging --generalInfo cmd/gateway/main.go --output services/gateway/docs --outputTypes json,yaml
+      - swag init --parseDependency --parseInternal --useStructName --dir services/gateway,services/identity,services/profiles,services/social,services/content,services/media,services/messaging,services/analytics --generalInfo cmd/gateway/main.go --output services/gateway/docs --outputTypes json,yaml
+      - bash scripts/ensure-swagger-security.sh
 
   generate:proto:
     desc: Generate protobuf and gRPC code from api/proto

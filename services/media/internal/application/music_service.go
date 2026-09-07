@@ -30,6 +30,7 @@ type MusicDTO struct {
 	Artist    string
 	Duration  *float64
 	CreatedAt time.Time
+	IsSaved   bool
 }
 
 // MusicService реализует сценарии музыкальных треков.
@@ -94,7 +95,48 @@ func (s *MusicService) ListForViewer(ctx context.Context, ownerID uuid.UUID, vie
 			return nil, ErrForbidden
 		}
 	}
-	return s.list(ctx, ownerID)
+	if ownerID == viewerID {
+		return s.list(ctx, ownerID)
+	}
+	tracks, err := s.music.ListByOwner(ctx, ownerID, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	return mapMusicDTOs(tracks), nil
+}
+
+// AddToLibrary добавляет доступный пользователю трек в его личную аудиотеку.
+func (s *MusicService) AddToLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	track, err := s.music.FindByID(ctx, trackID)
+	if err != nil {
+		return err
+	}
+	if track.UserID == userID {
+		return nil
+	}
+	if s.visibility != nil {
+		allowed, visibilityErr := s.visibility.CanViewMusic(ctx, userID, track.UserID)
+		if visibilityErr != nil {
+			return visibilityErr
+		}
+		if !allowed {
+			return ErrForbidden
+		}
+	}
+	if err := s.music.AddToLibrary(ctx, userID, trackID); err != nil {
+		return err
+	}
+	s.invalidateUserCache(ctx, userID)
+	return nil
+}
+
+// RemoveFromLibrary удаляет сохранённый чужой трек из личной аудиотеки.
+func (s *MusicService) RemoveFromLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	if err := s.music.RemoveFromLibrary(ctx, userID, trackID); err != nil {
+		return err
+	}
+	s.invalidateUserCache(ctx, userID)
+	return nil
 }
 
 func (s *MusicService) list(ctx context.Context, userID uuid.UUID) ([]MusicDTO, error) {
@@ -112,9 +154,7 @@ func (s *MusicService) list(ctx context.Context, userID uuid.UUID) ([]MusicDTO, 
 		return nil, err
 	}
 	result := make([]MusicDTO, 0, len(tracks))
-	for _, track := range tracks {
-		result = append(result, toMusicDTO(track))
-	}
+	result = append(result, mapMusicDTOs(tracks)...)
 	if s.cache != nil {
 		if payload, marshalErr := json.Marshal(result); marshalErr == nil {
 			_ = s.cache.Set(ctx, cacheKey, payload, musicCacheTTL)
@@ -146,7 +186,15 @@ func (s *MusicService) Delete(ctx context.Context, userID uuid.UUID, trackID uui
 }
 
 func toMusicDTO(track domain.MusicTrack) MusicDTO {
-	return MusicDTO{ID: track.ID, MediaID: track.MediaID, UserID: track.UserID, Title: track.Title, Artist: track.Artist, Duration: track.Duration, CreatedAt: track.CreatedAt}
+	return MusicDTO{ID: track.ID, MediaID: track.MediaID, UserID: track.UserID, Title: track.Title, Artist: track.Artist, Duration: track.Duration, CreatedAt: track.CreatedAt, IsSaved: track.Saved}
+}
+
+func mapMusicDTOs(tracks []domain.MusicTrack) []MusicDTO {
+	result := make([]MusicDTO, 0, len(tracks))
+	for _, track := range tracks {
+		result = append(result, toMusicDTO(track))
+	}
+	return result
 }
 
 func musicCacheKey(userID uuid.UUID) string {

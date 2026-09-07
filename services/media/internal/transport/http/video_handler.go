@@ -1,6 +1,9 @@
 package httptransport
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -177,12 +180,32 @@ func (h *Handler) RecordView(w http.ResponseWriter, r *http.Request) {
 	if current, ok := auth.UserIDFromContext(r.Context()); ok {
 		userID = &current
 	}
-	count, err := h.video.RecordView(r.Context(), videoID, userID)
+	var request recordViewRequest
+	if err := decodeJSON(r, &request); err != nil && !errors.Is(err, io.EOF) {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело телеметрии просмотра")
+		return
+	}
+	count, err := h.video.RecordViewWithMetrics(r.Context(), videoID, userID, application.RecordViewInput{
+		SessionID: request.SessionID, WatchSeconds: request.WatchSeconds, ProgressSeconds: request.ProgressSeconds,
+		DurationSeconds: request.DurationSeconds, Completed: request.Completed,
+	})
 	if err != nil {
 		writeMediaError(w, err)
 		return
 	}
 	writeVideoView(w, http.StatusOK, count)
+}
+
+type recordViewRequest struct {
+	SessionID       string  `json:"session_id,omitempty"`
+	WatchSeconds    float64 `json:"watch_seconds,omitempty"`
+	ProgressSeconds float64 `json:"progress_seconds,omitempty"`
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
+	Completed       bool    `json:"completed,omitempty"`
+}
+
+func decodeJSON(r *http.Request, target any) error {
+	return json.NewDecoder(r.Body).Decode(target)
 }
 
 // ToggleLike переключает like текущего пользователя.

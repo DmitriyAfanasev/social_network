@@ -20,7 +20,7 @@ type ProfileRepository struct {
 	pool *pgxpool.Pool
 }
 
-const profileColumns = `user_id, handle, display_name, bio, avatar_url, profile_details, profile_privacy, created_at, updated_at`
+const profileColumns = `user_id, handle, bio, avatar_url, profile_details, profile_privacy, created_at, updated_at`
 
 // NewProfileRepository создаёт PostgreSQL-адаптер профилей.
 func NewProfileRepository(pool *pgxpool.Pool) *ProfileRepository {
@@ -96,13 +96,12 @@ func (r *ProfileRepository) SetHandle(ctx context.Context, userID uuid.UUID, han
 	return profile, nil
 }
 
-// UpdatePublicProfile обновляет отображаемое имя и описание существующего профиля.
-func (r *ProfileRepository) UpdatePublicProfile(ctx context.Context, userID uuid.UUID, displayName string, bio string) (domain.Profile, error) {
+// UpdatePublicProfile обновляет описание существующего профиля.
+func (r *ProfileRepository) UpdatePublicProfile(ctx context.Context, userID uuid.UUID, bio string) (domain.Profile, error) {
 	profile, err := r.FindByUserID(ctx, userID)
 	if err != nil {
 		return domain.Profile{}, err
 	}
-	profile.DisplayName = displayName
 	profile.Bio = bio
 	return r.update(ctx, userID, profile)
 }
@@ -163,7 +162,6 @@ func scanProfileRow(row rowScanner, profile *domain.Profile) error {
 	err := row.Scan(
 		&profile.UserID,
 		&profile.Handle,
-		&profile.DisplayName,
 		&profile.Bio,
 		&profile.AvatarURL,
 		&detailsJSON,
@@ -199,11 +197,11 @@ func (r *ProfileRepository) update(ctx context.Context, userID uuid.UUID, profil
 	}
 	const query = `
 		UPDATE profiles.profiles
-		SET display_name = $2, bio = $3, avatar_url = $4, profile_details = $5::jsonb, profile_privacy = $6::jsonb,
-		    message_policy = $7, updated_at = now()
+		SET bio = $2, avatar_url = $3, profile_details = $4::jsonb, profile_privacy = $5::jsonb,
+		    message_policy = $6, updated_at = now()
 		WHERE user_id = $1
 		RETURNING ` + profileColumns
-	return r.scanProfile(ctx, query, userID, profile.DisplayName, profile.Bio, profile.AvatarURL, detailsJSON, privacyJSON, profile.Privacy.MessagePolicy)
+	return r.scanProfile(ctx, query, userID, profile.Bio, profile.AvatarURL, detailsJSON, privacyJSON, profile.Privacy.MessagePolicy)
 }
 
 func setPrivacyDefaults(privacy *domain.ProfilePrivacy) {

@@ -45,6 +45,7 @@ type PostDTO struct {
 	AuthorID      uuid.UUID
 	Body          string
 	MediaIDs      []uuid.UUID
+	CommentsCount int
 	LikesCount    int
 	LikedByViewer bool
 	LikedUserIDs  []uuid.UUID
@@ -264,7 +265,7 @@ func (s *ContentService) validateMedia(ctx context.Context, userID uuid.UUID, me
 }
 
 func toPostDTO(post domain.Post) PostDTO {
-	return PostDTO{ID: post.ID, AuthorID: post.AuthorID, Body: post.Body, MediaIDs: append([]uuid.UUID(nil), post.MediaIDs...), CreatedAt: post.CreatedAt, UpdatedAt: post.UpdatedAt}
+	return PostDTO{ID: post.ID, AuthorID: post.AuthorID, Body: post.Body, MediaIDs: append([]uuid.UUID(nil), post.MediaIDs...), CommentsCount: post.CommentsCount, CreatedAt: post.CreatedAt, UpdatedAt: post.UpdatedAt}
 }
 
 func firstViewer(viewerIDs []uuid.UUID) uuid.UUID {
@@ -306,11 +307,11 @@ func (s *ContentService) enrichLikeStats(ctx context.Context, post *PostDTO, vie
 }
 
 func postCacheKey(postID uuid.UUID) string {
-	return fmt.Sprintf("content:v1:post:%s", postID)
+	return fmt.Sprintf("content:v2:post:%s", postID)
 }
 
 func feedCacheKey(limit int) string {
-	return fmt.Sprintf("content:v1:feed:%d", limit)
+	return fmt.Sprintf("content:v2:feed:%d", limit)
 }
 
 func (s *ContentService) cachePost(ctx context.Context, key string, dto PostDTO) {

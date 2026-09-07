@@ -25,7 +25,7 @@ type ProfileRepository interface {
 	FindByUserID(ctx context.Context, userID uuid.UUID) (domain.Profile, error)
 	EnsureByUserID(ctx context.Context, userID uuid.UUID) (domain.Profile, error)
 	SetHandle(ctx context.Context, userID uuid.UUID, handle string) (domain.Profile, error)
-	UpdatePublicProfile(ctx context.Context, userID uuid.UUID, displayName string, bio string) (domain.Profile, error)
+	UpdatePublicProfile(ctx context.Context, userID uuid.UUID, bio string) (domain.Profile, error)
 	UpdateProfileDetails(ctx context.Context, userID uuid.UUID, details domain.ProfileDetails) (domain.Profile, error)
 	UpdateProfilePrivacy(ctx context.Context, userID uuid.UUID, privacy domain.ProfilePrivacy) (domain.Profile, error)
 	UpdateAvatar(ctx context.Context, userID uuid.UUID, avatarURL string) (domain.Profile, error)

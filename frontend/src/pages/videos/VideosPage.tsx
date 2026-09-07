@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiRequest } from "../../shared/api/http";
 import { API_BASE_URL } from "../../shared/config/api";
@@ -59,6 +59,9 @@ export function VideosPage({ profileId }: VideosPageProps) {
   const [busyAlbum, setBusyAlbum] = useState<string | number | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const videoSessionID = useRef<string | null>(null);
+  const reportedProgress = useRef(0);
+  const playbackRef = useRef({ currentTime: 0, duration: 0 });
 
   const isOwner = viewerId !== null && (!profileId || profileId === "me" || String(profileId) === String(viewerId));
   const videos = albums.flatMap((album) => album.videos);
@@ -156,13 +159,48 @@ export function VideosPage({ profileId }: VideosPageProps) {
   }
 
   async function recordView(video: Video) {
+    if (selectedVideo && selectedVideo.video_id !== video.video_id) {
+      reportVideoProgress(playbackRef.current.currentTime, playbackRef.current.duration, false, true);
+    }
     setSelectedVideo(video);
+    videoSessionID.current = createSessionID();
+    reportedProgress.current = 0;
+    playbackRef.current = { currentTime: 0, duration: 0 };
     try {
-      const result = await apiRequest<{ views_count: number }>(`/videos/${video.video_id}/view`, { method: "POST" });
+      const result = await apiRequest<{ views_count: number }>(`/videos/${video.video_id}/view`, {
+        method: "POST",
+        body: JSON.stringify({ session_id: videoSessionID.current }),
+      });
       updateVideo(video.video_id, { views_count: result.views_count });
     } catch {
       // Просмотр не должен блокировать открытие плеера.
     }
+  }
+
+  function reportVideoProgress(currentTime: number, duration: number, completed = false, force = false) {
+    if (!selectedVideo || !videoSessionID.current || !Number.isFinite(currentTime) || currentTime < 0) return;
+    playbackRef.current = { currentTime, duration };
+    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    const delta = Math.max(0, currentTime - reportedProgress.current);
+    if (!completed && !force && delta < 10) return;
+    reportedProgress.current = Math.max(reportedProgress.current, currentTime);
+    void apiRequest(`/videos/${selectedVideo.video_id}/view`, {
+      method: "POST",
+      body: JSON.stringify({
+        session_id: videoSessionID.current,
+        watch_seconds: delta,
+        progress_seconds: currentTime,
+        duration_seconds: safeDuration,
+        completed,
+      }),
+    }).catch(() => {
+      // Телеметрия не должна прерывать воспроизведение.
+    });
+  }
+
+  function closeVideo() {
+    reportVideoProgress(playbackRef.current.currentTime, playbackRef.current.duration, false, true);
+    setSelectedVideo(null);
   }
 
   async function toggleLike() {
@@ -279,11 +317,20 @@ export function VideosPage({ profileId }: VideosPageProps) {
       </div>
 
       {selectedVideo && (
-        <div className="video-modal-backdrop" role="presentation" onClick={() => setSelectedVideo(null)}>
+        <div className="video-modal-backdrop" role="presentation" onClick={closeVideo}>
           <div className="video-modal panel" role="dialog" aria-modal="true" aria-label={selectedVideo.title} onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="video-modal-close secondary" onClick={() => setSelectedVideo(null)} aria-label="Закрыть">×</button>
+            <button type="button" className="video-modal-close secondary" onClick={closeVideo} aria-label="Закрыть">×</button>
             <div className="video-modal-main">
-              <MediaPlayer kind="video" className="video-player" src={`${API_BASE_URL}/v1/media/${selectedVideo.media_id}/content`} title={selectedVideo.title} autoPlay />
+              <MediaPlayer
+                kind="video"
+                className="video-player"
+                src={`${API_BASE_URL}/v1/media/${selectedVideo.media_id}/content`}
+                title={selectedVideo.title}
+                autoPlay
+                onProgress={reportVideoProgress}
+                onPause={(currentTime, duration) => reportVideoProgress(currentTime, duration, false, true)}
+                onComplete={(currentTime, duration) => reportVideoProgress(currentTime, duration, true)}
+              />
               <div className="video-modal-info">
                 <span className="eyebrow">{selectedVideo.owner_name}</span>
                 <h2>{selectedVideo.title || selectedVideo.original_filename}</h2>
@@ -302,4 +349,9 @@ export function VideosPage({ profileId }: VideosPageProps) {
       )}
     </section>
   );
+}
+
+function createSessionID() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `video-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }

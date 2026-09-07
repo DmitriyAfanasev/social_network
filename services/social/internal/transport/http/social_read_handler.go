@@ -7,6 +7,8 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/go-chi/chi/v5"
+
 	"general-project/social/internal/application"
 )
 
@@ -28,6 +30,33 @@ func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, mapRelationshipsResponse(result))
+}
+
+// GetPublicFriends возвращает друзей указанного профиля с учётом приватности.
+// @Summary Получить друзей профиля
+// @Tags social
+// @Produce json
+// @Param targetID path string true "UUID владельца профиля"
+// @Success 200 {object} publicFriendsResponse
+// @Failure 401 {object} httpx.ErrorResponse
+// @Failure 422 {object} httpx.ErrorResponse
+// @Router /v1/social/relationships/{targetID}/friends [get]
+func (h *Handler) GetPublicFriends(w http.ResponseWriter, r *http.Request) {
+	viewerID, ok := authenticatedUser(w, r)
+	if !ok {
+		return
+	}
+	targetID, err := uuid.Parse(chi.URLParam(r, "targetID"))
+	if err != nil {
+		writeSocialError(w, application.ErrValidation)
+		return
+	}
+	friends, err := h.social.GetPublicFriends(r.Context(), viewerID, targetID)
+	if err != nil {
+		writeSocialError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, publicFriendsResponse{Friends: mapUUIDs(friends.Friends), Visible: friends.Visible})
 }
 
 // GetRecommendations возвращает кандидатов в друзья, отсортированных по числу общих друзей.
@@ -65,6 +94,11 @@ type relationshipsResponse struct {
 	Friends       []string `json:"friends"`
 	Subscribers   []string `json:"subscribers"`
 	Subscriptions []string `json:"subscriptions"`
+}
+
+type publicFriendsResponse struct {
+	Friends []string `json:"friends"`
+	Visible bool     `json:"visible"`
 }
 
 type recommendationsResponse struct {

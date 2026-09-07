@@ -16,6 +16,7 @@ type postResponse struct {
 	AuthorID      string   `json:"author_id"`
 	Body          string   `json:"body"`
 	MediaIDs      []string `json:"media_ids,omitempty"`
+	CommentsCount int      `json:"comments_count"`
 	LikesCount    int      `json:"likes_count"`
 	LikedByViewer bool     `json:"is_liked_by_current"`
 	LikedUserIDs  []string `json:"liked_user_ids,omitempty"`
@@ -29,11 +30,12 @@ type postsResponse struct {
 
 func mapPostResponse(post application.PostDTO) postResponse {
 	return postResponse{
-		ID:         post.ID.String(),
-		AuthorID:   post.AuthorID.String(),
-		Body:       post.Body,
-		MediaIDs:   mediaIDStrings(post.MediaIDs),
-		LikesCount: post.LikesCount, LikedByViewer: post.LikedByViewer,
+		ID:            post.ID.String(),
+		AuthorID:      post.AuthorID.String(),
+		Body:          post.Body,
+		MediaIDs:      mediaIDStrings(post.MediaIDs),
+		CommentsCount: post.CommentsCount,
+		LikesCount:    post.LikesCount, LikedByViewer: post.LikedByViewer,
 		LikedUserIDs: userIDStrings(post.LikedUserIDs),
 		CreatedAt:    post.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
 		UpdatedAt:    post.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),

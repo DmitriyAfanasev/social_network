@@ -88,6 +88,11 @@ type ProfilePolicyReader interface {
 	GetFriendRequestPolicy(ctx context.Context, targetID uuid.UUID) (string, error)
 }
 
+// FriendsVisibilityReader читает политику видимости списка друзей профиля.
+type FriendsVisibilityReader interface {
+	GetFriendsVisibility(ctx context.Context, targetID uuid.UUID) (string, error)
+}
+
 // ReadinessChecker проверяет готовность social-сервиса принимать трафик.
 type ReadinessChecker interface {
 	Check(ctx context.Context) error

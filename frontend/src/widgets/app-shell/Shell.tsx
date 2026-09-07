@@ -7,6 +7,7 @@ import { UserAvatar } from "../../entities/user/ui/UserAvatar";
 import { apiRequest, clearAuthTokens, getAccessToken, getRefreshToken } from "../../shared/api/http";
 import { API_BASE_URL } from "../../shared/config/api";
 import { navigate } from "../../shared/lib/navigation";
+import { GlobalMusicPlayer, MusicPlayerProvider } from "../../shared/ui/GlobalMusicPlayer";
 import { SidebarLink } from "./SidebarLink";
 
 type ShellProps = {
@@ -38,6 +39,7 @@ export function Shell({ children, path }: ShellProps) {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [profileSetupRequired, setProfileSetupRequired] = useState(false);
   const [searchDraft, setSearchDraft] = useState(() => new URLSearchParams(window.location.search).get("q") ?? "");
 
   useEffect(() => {
@@ -72,15 +74,29 @@ export function Shell({ children, path }: ShellProps) {
   useEffect(() => {
     let ignore = false;
 
+    if (!getAccessToken()) {
+      setViewer(null);
+      setProfileSetupRequired(false);
+      return () => {
+        ignore = true;
+      };
+    }
+
     apiRequest<ProfileDTO>("/v1/profiles/me")
       .then((result) => {
         if (!ignore) {
+			const needsSetup = !result.first_name?.trim() || !result.last_name?.trim();
+          setProfileSetupRequired(needsSetup);
           setViewer(profileToUser(result));
+          if (needsSetup && path !== "/profile/setup") {
+            navigate("/profile/setup");
+          }
         }
       })
       .catch(() => {
         if (!ignore) {
           setViewer(null);
+          setProfileSetupRequired(false);
         }
       });
 
@@ -88,6 +104,17 @@ export function Shell({ children, path }: ShellProps) {
       ignore = true;
     };
   }, [path]);
+
+  useEffect(() => {
+    if (!viewer?.id) return;
+
+    const sendHeartbeat = () => {
+      void apiRequest<void>("/v1/messaging/presence/heartbeat", { method: "POST" }).catch(() => undefined);
+    };
+    sendHeartbeat();
+    const timer = window.setInterval(sendHeartbeat, 10_000);
+    return () => window.clearInterval(timer);
+  }, [viewer?.id]);
 
   useEffect(() => {
     if (!viewer) return;
@@ -158,7 +185,8 @@ export function Shell({ children, path }: ShellProps) {
   const profileHref = viewer ? "/profile/me" : "/login";
 
   return (
-    <div className="app-shell">
+    <MusicPlayerProvider>
+      <div className="app-shell">
       <header className="topbar">
         <button className="brand-button topbar-brand" onClick={() => navigate("/")}>
           <span className="brand-mark">G</span>
@@ -169,6 +197,7 @@ export function Shell({ children, path }: ShellProps) {
           <input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Люди, посты, видео" />
         </form>
         <div className="topbar-actions">
+          <GlobalMusicPlayer />
           {viewer ? (
             <button className="user-chip" onClick={() => navigate(profileHref)}>
               <UserAvatar user={viewer} size="sm" />
@@ -193,7 +222,7 @@ export function Shell({ children, path }: ShellProps) {
           </button>
           <nav className="side-nav">
             <SidebarLink href="/" label="Лента" path={path} />
-            {viewer && (
+            {viewer && !profileSetupRequired && (
               <>
                 <SidebarLink href={profileHref} label="Профиль" path={path} />
                 <SidebarLink href="/friends" label="Мои друзья" path={path} />
@@ -240,14 +269,16 @@ export function Shell({ children, path }: ShellProps) {
           <span className="message-notification-close" onClick={(event) => { event.stopPropagation(); setToast(null); }} aria-hidden="true">×</span>
         </button>
       )}
-    </div>
+      </div>
+    </MusicPlayerProvider>
   );
 }
 
 type ProfileDTO = {
   user_id: string;
   handle?: string | null;
-  display_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   bio: string;
   avatar_url: string;
   created_at: string;
@@ -255,6 +286,7 @@ type ProfileDTO = {
 };
 
 function profileToUser(profile: ProfileDTO): User {
+  const detailsName = [profile.first_name, profile.last_name].filter((part): part is string => Boolean(part?.trim())).join(" ");
   return {
     id: profile.user_id,
     username: profile.handle ?? "",
@@ -262,7 +294,7 @@ function profileToUser(profile: ProfileDTO): User {
       first_name: null,
       last_name: null,
       middle_name: null,
-      full_name: profile.display_name || profile.handle || null,
+      full_name: detailsName || profile.handle || null,
       birth_date: null,
       gender: null,
       phone_number: null,

@@ -36,6 +36,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, limiter *ratelimit.RedisF
 		{name: "media", base: cfg.MediaURL},
 		{name: "messaging", base: cfg.MessagingURL},
 		{name: "call-signaling", base: cfg.CallsURL},
+		{name: "analytics", base: cfg.AnalyticsURL},
 	}
 
 	proxies := make(map[string]http.Handler, len(backends))
@@ -100,6 +101,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, limiter *ratelimit.RedisF
 	router.Mount("/v1/media", edge(proxies["media"]))
 	router.Mount("/v1/messaging", edge(proxies["messaging"]))
 	router.Mount("/v1/notifications", edge(proxies["messaging"]))
+	router.Mount("/v1/analytics", edge(proxies["analytics"]))
 
 	return router, nil
 }

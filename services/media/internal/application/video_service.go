@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strings"
 	"time"
 	"uuid"
 
+	"general-project/libs/platform/correlation"
 	"general-project/media/internal/domain"
 	"general-project/media/internal/ports"
 )
@@ -42,6 +44,15 @@ type VideoDTO struct {
 	Renditions         []RenditionDTO
 }
 
+// RecordViewInput содержит телеметрию текущего просмотра видео.
+type RecordViewInput struct {
+	SessionID       string
+	WatchSeconds    float64
+	ProgressSeconds float64
+	DurationSeconds float64
+	Completed       bool
+}
+
 // RenditionDTO представляет готовое видео конкретного разрешения.
 type RenditionDTO struct {
 	ID          uuid.UUID
@@ -58,11 +69,16 @@ type VideoService struct {
 	videos    ports.VideoRepository
 	publisher ports.TranscodePublisher
 	cache     ports.MediaCache
+	outbox    ports.OutboxRepository
 }
 
 // NewVideoService создаёт application-сервис видео.
-func NewVideoService(media *MediaService, videos ports.VideoRepository, publisher ports.TranscodePublisher, cache ports.MediaCache) *VideoService {
-	return &VideoService{media: media, videos: videos, publisher: publisher, cache: cache}
+func NewVideoService(media *MediaService, videos ports.VideoRepository, publisher ports.TranscodePublisher, cache ports.MediaCache, outboxes ...ports.OutboxRepository) *VideoService {
+	var outbox ports.OutboxRepository
+	if len(outboxes) > 0 {
+		outbox = outboxes[0]
+	}
+	return &VideoService{media: media, videos: videos, publisher: publisher, cache: cache, outbox: outbox}
 }
 
 // Create загружает исходное видео, создаёт video-метаданные и ставит задачу worker.
@@ -180,11 +196,63 @@ func (s *VideoService) DeleteAlbum(ctx context.Context, userID uuid.UUID, albumI
 
 // RecordView фиксирует просмотр видео и возвращает новый счётчик.
 func (s *VideoService) RecordView(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID) (int, error) {
-	count, err := s.videos.RecordView(ctx, videoID, userID)
+	return s.RecordViewWithMetrics(ctx, videoID, userID, RecordViewInput{})
+}
+
+// RecordViewWithMetrics фиксирует просмотр и отправляет телеметрию в analytics.
+func (s *VideoService) RecordViewWithMetrics(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID, input RecordViewInput) (int, error) {
+	if !validRecordViewInput(input) {
+		return 0, ErrValidation
+	}
+	var event *ports.OutboxEvent
+	if s.outbox != nil {
+		payload, marshalErr := json.Marshal(map[string]any{
+			"video_id":         videoID,
+			"user_id":          userID,
+			"session_id":       strings.TrimSpace(input.SessionID),
+			"watch_seconds":    input.WatchSeconds,
+			"progress_seconds": input.ProgressSeconds,
+			"duration_seconds": input.DurationSeconds,
+			"completed":        input.Completed,
+		})
+		if marshalErr != nil {
+			return 0, marshalErr
+		}
+		now := time.Now().UTC()
+		eventType := "media.video.viewed"
+		if input.WatchSeconds > 0 || input.ProgressSeconds > 0 || input.Completed {
+			eventType = "media.video.playback"
+		}
+		eventValue := ports.OutboxEvent{
+			ID: uuid.New(), EventType: eventType, AggregateID: &videoID,
+			Payload: payload, CorrelationID: correlation.ID(ctx), AvailableAt: now, CreatedAt: now,
+		}
+		event = &eventValue
+	}
+
+	var count int
+	var err error
+	if event == nil {
+		count, err = s.videos.RecordView(ctx, videoID, userID)
+	} else {
+		count, err = s.videos.RecordViewWithOutbox(ctx, videoID, userID, *event)
+	}
 	if err == nil {
 		s.invalidateCache(ctx, videoID)
 	}
 	return count, err
+}
+
+func validRecordViewInput(input RecordViewInput) bool {
+	if len([]rune(input.SessionID)) > 128 {
+		return false
+	}
+	for _, value := range []float64{input.WatchSeconds, input.ProgressSeconds, input.DurationSeconds} {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 24*60*60 {
+			return false
+		}
+	}
+	return true
 }
 
 // ToggleLike переключает like видео.

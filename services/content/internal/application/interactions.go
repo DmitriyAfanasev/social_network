@@ -39,11 +39,16 @@ type LikeDTO struct {
 type CommentService struct {
 	posts    ports.PostRepository
 	comments ports.CommentRepository
+	cache    ports.PostCache
 }
 
 // NewCommentService создаёт application-сервис комментариев.
-func NewCommentService(posts ports.PostRepository, comments ports.CommentRepository) *CommentService {
-	return &CommentService{posts: posts, comments: comments}
+func NewCommentService(posts ports.PostRepository, comments ports.CommentRepository, caches ...ports.PostCache) *CommentService {
+	var cache ports.PostCache
+	if len(caches) > 0 {
+		cache = caches[0]
+	}
+	return &CommentService{posts: posts, comments: comments, cache: cache}
 }
 
 // CreateComment создаёт комментарий текущего пользователя к существующему посту.
@@ -66,6 +71,7 @@ func (s *CommentService) CreateComment(ctx context.Context, authorID uuid.UUID, 
 	if err != nil {
 		return CommentDTO{}, err
 	}
+	s.invalidatePostCaches(ctx, postID)
 	return toCommentDTO(comment), nil
 }
 
@@ -102,7 +108,18 @@ func (s *CommentService) DeleteComment(ctx context.Context, actorID uuid.UUID, c
 	if !comment.CanBeManagedBy(actorID) {
 		return ErrForbidden
 	}
-	return s.comments.Delete(ctx, commentID)
+	if err := s.comments.Delete(ctx, commentID); err != nil {
+		return err
+	}
+	s.invalidatePostCaches(ctx, comment.PostID)
+	return nil
+}
+
+func (s *CommentService) invalidatePostCaches(ctx context.Context, postID uuid.UUID) {
+	if s.cache == nil {
+		return
+	}
+	_ = s.cache.Delete(ctx, postCacheKey(postID), feedCacheKey(10), feedCacheKey(20), feedCacheKey(50))
 }
 
 // LikePost добавляет лайк текущего пользователя к существующему посту.

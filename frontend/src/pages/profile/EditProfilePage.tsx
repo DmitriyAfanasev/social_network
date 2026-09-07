@@ -6,7 +6,7 @@ import { emptyStringsToNull } from "../../entities/profile/model/profile";
 import { apiRequest } from "../../shared/api/http";
 import { navigate } from "../../shared/lib/navigation";
 
-type ProfileDTO = { handle?: string | null; display_name: string; bio: string } & Partial<ProfileForm>;
+type ProfileDTO = { handle?: string | null; bio: string } & Partial<ProfileForm>;
 type EditProfilePageProps = { id: string };
 
 const emptyForm: ProfileForm = {
@@ -17,7 +17,6 @@ const emptyForm: ProfileForm = {
 /** Форма редактирования полей, которые поддерживает новый profiles API. */
 export function EditProfilePage({ id }: EditProfilePageProps) {
   const [handle, setHandle] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +26,6 @@ export function EditProfilePage({ id }: EditProfilePageProps) {
     apiRequest<ProfileDTO>("/v1/profiles/me")
       .then((profile) => {
         setHandle(profile.handle ?? "");
-        setDisplayName(profile.display_name);
         setForm({
           first_name: profile.first_name ?? "", last_name: profile.last_name ?? "", middle_name: profile.middle_name ?? "",
           birth_date: profile.birth_date ?? "", gender: profile.gender ?? "", phone_number: profile.phone_number ?? "",
@@ -46,7 +44,7 @@ export function EditProfilePage({ id }: EditProfilePageProps) {
     try {
       await apiRequest("/v1/profiles/me", {
         method: "PATCH",
-        body: JSON.stringify({ display_name: displayName.trim(), ...emptyStringsToNull(form) }),
+        body: JSON.stringify(emptyStringsToNull(form)),
       });
       if (handle.trim()) {
         await apiRequest("/v1/profiles/me/handle", {
@@ -77,7 +75,6 @@ export function EditProfilePage({ id }: EditProfilePageProps) {
       <form className="profile-form" onSubmit={submit}>
         <div className="form-section-heading"><strong>Основное</strong><span>Эти данные можно скрыть настройками приватности.</span></div>
         <label>Handle<input value={handle} onChange={(event) => setHandle(event.target.value)} placeholder="например, alex" pattern="[a-z0-9_]{3,32}" /></label>
-        <label>Отображаемое имя<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} /></label>
         <label>Имя<input value={form.first_name} onChange={(event) => updateField("first_name", event.target.value)} maxLength={80} /></label>
         <label>Фамилия<input value={form.last_name} onChange={(event) => updateField("last_name", event.target.value)} maxLength={80} /></label>
         <label>Отчество<input value={form.middle_name} onChange={(event) => updateField("middle_name", event.target.value)} maxLength={80} /></label>

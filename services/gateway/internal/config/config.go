@@ -27,6 +27,8 @@ type Config struct {
 	MessagingURL string
 	// CallsURL — адрес call-signaling-сервиса.
 	CallsURL string
+	// AnalyticsURL — адрес analytics-сервиса.
+	AnalyticsURL string
 	// RedisAddr — адрес Redis для edge rate limit.
 	RedisAddr string
 	// AllowedOrigins — список origin, которым разрешены browser-запросы.
@@ -52,6 +54,7 @@ func Load() Config {
 		MediaURL:         platformconfig.Env("GATEWAY_MEDIA_URL", "http://localhost:8105"),
 		MessagingURL:     platformconfig.Env("GATEWAY_MESSAGING_URL", "http://localhost:8106"),
 		CallsURL:         platformconfig.Env("GATEWAY_CALLS_URL", "http://localhost:8001"),
+		AnalyticsURL:     platformconfig.Env("GATEWAY_ANALYTICS_URL", "http://localhost:8108"),
 		RedisAddr:        platformconfig.Env("GATEWAY_REDIS_ADDR", "localhost:6379"),
 		AllowedOrigins:   split(platformconfig.Env("GATEWAY_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
 		RateLimit:        platformconfig.PositiveInt(platformconfig.Env("GATEWAY_RATE_LIMIT", "600"), 600),

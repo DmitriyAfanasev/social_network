@@ -57,6 +57,7 @@ export function LoginPage() {
             placeholder="Введите пароль"
           />
         </label>
+        <button type="button" className="auth-forgot-link" onClick={() => navigate("/password-reset")}>Забыли пароль?</button>
         {error && <p className="error">{error}</p>}
         <button disabled={loading}>{loading ? "Входим..." : "Войти"}</button>
       </form>

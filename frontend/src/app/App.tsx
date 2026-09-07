@@ -1,6 +1,7 @@
 import { ConfirmRegistrationPage } from "../pages/auth/ConfirmRegistrationPage";
 import { AdminPage } from "../pages/admin/AdminPage";
 import { LoginPage } from "../pages/auth/LoginPage";
+import { PasswordResetPage } from "../pages/auth/PasswordResetPage";
 import { MessagesPage } from "../pages/messages/MessagesPage";
 import { MusicPage } from "../pages/music/MusicPage";
 import { AddMusicPage } from "../pages/music/AddMusicPage";
@@ -13,6 +14,7 @@ import { PhotosPage } from "../pages/photos/PhotosPage";
 import { VideosPage } from "../pages/videos/VideosPage";
 import { EditProfilePage } from "../pages/profile/EditProfilePage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
+import { ProfileSetupPage } from "../pages/profile/ProfileSetupPage";
 import { NotFoundPage } from "../pages/system/NotFoundPage";
 import { PlaceholderPage } from "../pages/system/PlaceholderPage";
 import { usePath } from "../shared/lib/navigation";
@@ -29,6 +31,7 @@ export function App() {
   const matched =
     cleanPath === "/" ||
     cleanPath === "/login" ||
+    cleanPath === "/password-reset" ||
     cleanPath === "/register" ||
     cleanPath === "/confirm-registration" ||
     cleanPath === "/confirm" ||
@@ -42,6 +45,7 @@ export function App() {
     Boolean(conversationMatch?.groups?.id) ||
     cleanPath === "/notifications" ||
     cleanPath === "/settings" ||
+    cleanPath === "/profile/setup" ||
     cleanPath === "/admin" ||
     Boolean(profileMatch?.groups?.id) ||
     Boolean(profileEditMatch?.groups?.id) ||
@@ -52,6 +56,7 @@ export function App() {
     <Shell path={cleanPath}>
       {cleanPath === "/" && <FeedPage />}
       {cleanPath === "/login" && <LoginPage />}
+      {cleanPath === "/password-reset" && <PasswordResetPage />}
       {cleanPath === "/register" && <RegisterPage />}
       {(cleanPath === "/confirm-registration" || cleanPath === "/confirm") && <ConfirmRegistrationPage />}
       {cleanPath === "/friends" && <FriendsPage />}
@@ -70,6 +75,7 @@ export function App() {
       {cleanPath === "/settings" && (
         <SettingsPage />
       )}
+      {cleanPath === "/profile/setup" && <ProfileSetupPage />}
       {cleanPath === "/admin" && <AdminPage />}
       {profileEditMatch?.groups?.id && <EditProfilePage id={profileEditMatch.groups.id} />}
       {profilePhotosMatch?.groups?.id && <PhotosPage profileId={profilePhotosMatch.groups.id} />}

@@ -8,6 +8,86 @@
     },
     "basePath": "/",
     "paths": {
+        "/v1/analytics/me/videos": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Получить историю просмотров видео",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество видео, от 1 до 100",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/viewerVideoStatsListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/analytics/videos/{videoID}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Получить аналитику видео",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID видео",
+                        "name": "videoID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/videoStatsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/confirm-registration": {
             "post": {
                 "consumes": [
@@ -953,6 +1033,75 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/media/music/{trackID}/save": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "media"
+                ],
+                "summary": "Добавить трек в свою аудиотеку",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID трека",
+                        "name": "trackID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "media"
+                ],
+                "summary": "Удалить трек из своей аудиотеки",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID трека",
+                        "name": "trackID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -2068,6 +2217,77 @@
                 }
             }
         },
+        "/v1/messaging/presence": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messaging"
+                ],
+                "summary": "Проверить presence списка пользователей",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID пользователей через запятую",
+                        "name": "user_ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenceListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/messaging/presence/heartbeat": {
+            "post": {
+                "tags": [
+                    "messaging"
+                ],
+                "summary": "Обновить presence текущего пользователя",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/messaging/presence/{userID}": {
             "get": {
                 "produces": [
@@ -3103,6 +3323,46 @@
                 }
             }
         },
+        "/v1/social/relationships/{targetID}/friends": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "social"
+                ],
+                "summary": "Получить друзей профиля",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID владельца профиля",
+                        "name": "targetID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/publicFriendsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/social/subscriptions/{targetID}": {
             "put": {
                 "produces": [
@@ -3496,28 +3756,7 @@
         "messageResponse": {
             "type": "object",
             "properties": {
-                "body": {
-                    "type": "string"
-                },
-                "conversation_id": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted": {
-                    "type": "boolean"
-                },
-                "edited_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "media_id": {
-                    "type": "string"
-                },
-                "sender_id": {
+                "message": {
                     "type": "string"
                 }
             }
@@ -3561,6 +3800,9 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "is_saved": {
+                    "type": "boolean"
                 },
                 "media_id": {
                     "type": "string"
@@ -3669,6 +3911,9 @@
                 "body": {
                     "type": "string"
                 },
+                "comments_count": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -3705,6 +3950,17 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/postResponse"
+                    }
+                }
+            }
+        },
+        "presenceListResponse": {
+            "type": "object",
+            "properties": {
+                "presence": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/presenceResponse"
                     }
                 }
             }
@@ -3834,9 +4090,6 @@
                 "created_at": {
                     "type": "string"
                 },
-                "display_name": {
-                    "type": "string"
-                },
                 "first_name": {
                     "type": "string"
                 },
@@ -3880,6 +4133,20 @@
                     "items": {
                         "$ref": "#/definitions/profileResponse"
                     }
+                }
+            }
+        },
+        "publicFriendsResponse": {
+            "type": "object",
+            "properties": {
+                "friends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "visible": {
+                    "type": "boolean"
                 }
             }
         },
@@ -4024,9 +4291,6 @@
                     "type": "string"
                 },
                 "country": {
-                    "type": "string"
-                },
-                "display_name": {
                     "type": "string"
                 },
                 "first_name": {
@@ -4192,6 +4456,32 @@
                 }
             }
         },
+        "videoStatsResponse": {
+            "type": "object",
+            "properties": {
+                "average_watch_seconds": {
+                    "type": "number"
+                },
+                "completed_views": {
+                    "type": "integer"
+                },
+                "last_viewed_at": {
+                    "type": "string"
+                },
+                "total_watch_seconds": {
+                    "type": "number"
+                },
+                "unique_viewers": {
+                    "type": "integer"
+                },
+                "video_id": {
+                    "type": "string"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
         "videoViewResponse": {
             "type": "object",
             "properties": {
@@ -4199,6 +4489,50 @@
                     "type": "integer"
                 }
             }
+        },
+        "viewerVideoStatsListResponse": {
+            "type": "object",
+            "properties": {
+                "videos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/viewerVideoStatsResponse"
+                    }
+                }
+            }
+        },
+        "viewerVideoStatsResponse": {
+            "type": "object",
+            "properties": {
+                "average_watch_seconds": {
+                    "type": "number"
+                },
+                "last_viewed_at": {
+                    "type": "string"
+                },
+                "video_id": {
+                    "type": "string"
+                },
+                "views": {
+                    "type": "integer"
+                },
+                "watch_seconds": {
+                    "type": "number"
+                }
+            }
         }
-    }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Access token в формате `Bearer \u003ctoken\u003e`.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ]
 }

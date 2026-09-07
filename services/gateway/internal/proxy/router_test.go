@@ -107,6 +107,7 @@ func testConfig(backendURL string) config.Config {
 		MediaURL:         backendURL,
 		MessagingURL:     backendURL,
 		CallsURL:         backendURL,
+		AnalyticsURL:     backendURL,
 		AllowedOrigins:   []string{"http://localhost:5173"},
 		RateLimit:        600,
 		RateLimitWindow:  time.Minute,

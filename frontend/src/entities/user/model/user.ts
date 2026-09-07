@@ -12,7 +12,7 @@ export type User = {
 export type PublicProfileResponse = {
   user_id: string;
   handle?: string | null;
-  display_name?: string | null;
+  full_name?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   middle_name?: string | null;
@@ -35,7 +35,7 @@ export function userFromPublicProfile(profile: PublicProfileResponse): User {
       first_name: profile.first_name ?? null,
       last_name: profile.last_name ?? null,
       middle_name: profile.middle_name ?? null,
-      full_name: profile.display_name?.trim() || null,
+      full_name: profile.full_name?.trim() || [profile.first_name, profile.last_name].filter((part) => Boolean(part?.trim())).join(" ") || null,
       birth_date: profile.birth_date ?? null,
       gender: profile.gender ?? null,
       phone_number: profile.phone_number ?? null,
@@ -113,7 +113,6 @@ export function getUserName(user: User | null | undefined) {
   const detailsName = [
     user?.profile?.first_name,
     user?.profile?.last_name,
-    user?.profile?.middle_name,
   ]
     .map((part) => part?.trim())
     .filter(Boolean)
@@ -122,7 +121,7 @@ export function getUserName(user: User | null | undefined) {
     return detailsName;
   }
 
-  return user?.username || user?.email || "Пользователь";
+  return user?.username || "Без имени";
 }
 
 export function getInitials(user: User | null | undefined) {

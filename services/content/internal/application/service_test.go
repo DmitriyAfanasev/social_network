@@ -313,13 +313,19 @@ func TestCommentServiceCreatesCommentForExistingPost(t *testing.T) {
 	posts := &fakePostRepository{posts: map[uuid.UUID]domain.Post{
 		postID: {ID: postID, AuthorID: uuid.New(), Body: "пост"},
 	}}
-	service := NewCommentService(posts, &fakeCommentRepository{comments: map[uuid.UUID]domain.Comment{}})
+	postCache := &fakePostCache{values: map[string][]byte{
+		postCacheKey(postID): []byte("stale"),
+		feedCacheKey(20):     []byte("stale"),
+	}}
+	service := NewCommentService(posts, &fakeCommentRepository{comments: map[uuid.UUID]domain.Comment{}}, postCache)
 
 	comment, err := service.CreateComment(context.Background(), uuid.New(), postID, CreateCommentInput{Body: "  комментарий  "})
 
 	require.NoError(t, err)
 	require.Equal(t, "комментарий", comment.Body)
 	require.Equal(t, postID, comment.PostID)
+	require.Nil(t, postCache.values[postCacheKey(postID)])
+	require.Nil(t, postCache.values[feedCacheKey(20)])
 }
 
 func TestCommentServiceRejectsMissingPost(t *testing.T) {

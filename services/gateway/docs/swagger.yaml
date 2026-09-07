@@ -198,21 +198,7 @@ definitions:
     type: object
   messageResponse:
     properties:
-      body:
-        type: string
-      conversation_id:
-        type: string
-      created_at:
-        type: string
-      deleted:
-        type: boolean
-      edited_at:
-        type: string
-      id:
-        type: string
-      media_id:
-        type: string
-      sender_id:
+      message:
         type: string
     type: object
   messagesResponse:
@@ -241,6 +227,8 @@ definitions:
         type: number
       id:
         type: string
+      is_saved:
+        type: boolean
       media_id:
         type: string
       title:
@@ -310,6 +298,8 @@ definitions:
         type: string
       body:
         type: string
+      comments_count:
+        type: integer
       created_at:
         type: string
       id:
@@ -334,6 +324,13 @@ definitions:
       posts:
         items:
           $ref: '#/definitions/postResponse'
+        type: array
+    type: object
+  presenceListResponse:
+    properties:
+      presence:
+        items:
+          $ref: '#/definitions/presenceResponse'
         type: array
     type: object
   presenceResponse:
@@ -418,8 +415,6 @@ definitions:
         type: string
       created_at:
         type: string
-      display_name:
-        type: string
       first_name:
         type: string
       gender:
@@ -449,6 +444,15 @@ definitions:
         items:
           $ref: '#/definitions/profileResponse'
         type: array
+    type: object
+  publicFriendsResponse:
+    properties:
+      friends:
+        items:
+          type: string
+        type: array
+      visible:
+        type: boolean
     type: object
   recommendationResponse:
     properties:
@@ -541,8 +545,6 @@ definitions:
       city:
         type: string
       country:
-        type: string
-      display_name:
         type: string
       first_name:
         type: string
@@ -650,10 +652,47 @@ definitions:
       views_count:
         type: integer
     type: object
+  videoStatsResponse:
+    properties:
+      average_watch_seconds:
+        type: number
+      completed_views:
+        type: integer
+      last_viewed_at:
+        type: string
+      total_watch_seconds:
+        type: number
+      unique_viewers:
+        type: integer
+      video_id:
+        type: string
+      views:
+        type: integer
+    type: object
   videoViewResponse:
     properties:
       views_count:
         type: integer
+    type: object
+  viewerVideoStatsListResponse:
+    properties:
+      videos:
+        items:
+          $ref: '#/definitions/viewerVideoStatsResponse'
+        type: array
+    type: object
+  viewerVideoStatsResponse:
+    properties:
+      average_watch_seconds:
+        type: number
+      last_viewed_at:
+        type: string
+      video_id:
+        type: string
+      views:
+        type: integer
+      watch_seconds:
+        type: number
     type: object
 info:
   contact: {}
@@ -661,6 +700,58 @@ info:
   title: General Project API
   version: "1.0"
 paths:
+  /v1/analytics/me/videos:
+    get:
+      parameters:
+      - default: 20
+        description: Количество видео, от 1 до 100
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/viewerVideoStatsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить историю просмотров видео
+      tags:
+      - analytics
+  /v1/analytics/videos/{videoID}:
+    get:
+      parameters:
+      - description: UUID видео
+        in: path
+        name: videoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/videoStatsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить аналитику видео
+      tags:
+      - analytics
   /v1/auth/confirm-registration:
     post:
       consumes:
@@ -1348,6 +1439,51 @@ paths:
       summary: Удалить музыкальный трек
       tags:
       - media
+  /v1/media/music/{trackID}/save:
+    delete:
+      parameters:
+      - description: UUID трека
+        in: path
+        name: trackID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Удалить трек из своей аудиотеки
+      tags:
+      - media
+    post:
+      parameters:
+      - description: UUID трека
+        in: path
+        name: trackID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Добавить трек в свою аудиотеку
+      tags:
+      - media
   /v1/media/videos:
     get:
       parameters:
@@ -1999,6 +2135,36 @@ paths:
       summary: Изменить сообщение
       tags:
       - messaging
+  /v1/messaging/presence:
+    get:
+      parameters:
+      - description: UUID пользователей через запятую
+        in: query
+        name: user_ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenceListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Проверить presence списка пользователей
+      tags:
+      - messaging
   /v1/messaging/presence/{userID}:
     get:
       parameters:
@@ -2027,6 +2193,22 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Проверить presence пользователя
+      tags:
+      - messaging
+  /v1/messaging/presence/heartbeat:
+    post:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Обновить presence текущего пользователя
       tags:
       - messaging
   /v1/notifications/stream:
@@ -2670,6 +2852,32 @@ paths:
       summary: Проверить социальную близость
       tags:
       - social
+  /v1/social/relationships/{targetID}/friends:
+    get:
+      parameters:
+      - description: UUID владельца профиля
+        in: path
+        name: targetID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/publicFriendsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Получить друзей профиля
+      tags:
+      - social
   /v1/social/subscriptions/{targetID}:
     delete:
       parameters:
@@ -2725,4 +2933,12 @@ paths:
       summary: Подписаться на пользователя
       tags:
       - subscriptions
+security:
+- BearerAuth: []
+securityDefinitions:
+  BearerAuth:
+    description: Access token в формате `Bearer <token>`.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

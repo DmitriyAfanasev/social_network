@@ -27,9 +27,10 @@ func NewPostRepository(pool *pgxpool.Pool) *PostRepository {
 // Create сохраняет новый пост и возвращает его версию из базы данных.
 func (r *PostRepository) Create(ctx context.Context, post domain.Post) (domain.Post, error) {
 	const query = `
-		INSERT INTO content.posts (id, author_id, body)
+		INSERT INTO content.posts AS post (id, author_id, body)
 		VALUES ($1, $2, $3)
-		RETURNING id, author_id, body, created_at, updated_at`
+		RETURNING id, author_id, body, created_at, updated_at,
+			(SELECT COUNT(*) FROM content.comments WHERE post_id = post.id)`
 	created, err := r.scanOne(ctx, query, post.ID, post.AuthorID, post.Body)
 	if err != nil {
 		return domain.Post{}, err
@@ -50,12 +51,13 @@ func (r *PostRepository) CreateWithOutbox(ctx context.Context, post domain.Post,
 	}
 	defer tx.Rollback(ctx)
 	const query = `
-		INSERT INTO content.posts (id, author_id, body)
+		INSERT INTO content.posts AS post (id, author_id, body)
 		VALUES ($1, $2, $3)
-		RETURNING id, author_id, body, created_at, updated_at`
+		RETURNING id, author_id, body, created_at, updated_at,
+			(SELECT COUNT(*) FROM content.comments WHERE post_id = post.id)`
 	var created domain.Post
 	if err := tx.QueryRow(ctx, query, post.ID, post.AuthorID, post.Body).Scan(
-		&created.ID, &created.AuthorID, &created.Body, &created.CreatedAt, &created.UpdatedAt,
+		&created.ID, &created.AuthorID, &created.Body, &created.CreatedAt, &created.UpdatedAt, &created.CommentsCount,
 	); err != nil {
 		return domain.Post{}, err
 	}
@@ -78,8 +80,9 @@ func (r *PostRepository) CreateWithOutbox(ctx context.Context, post domain.Post,
 // FindByID загружает пост по UUID.
 func (r *PostRepository) FindByID(ctx context.Context, postID uuid.UUID) (domain.Post, error) {
 	const query = `
-		SELECT id, author_id, body, created_at, updated_at
-		FROM content.posts
+		SELECT id, author_id, body, created_at, updated_at,
+			(SELECT COUNT(*) FROM content.comments WHERE post_id = post.id)
+		FROM content.posts AS post
 		WHERE id = $1`
 	post, err := r.scanOne(ctx, query, postID)
 	if err != nil {
@@ -92,8 +95,9 @@ func (r *PostRepository) FindByID(ctx context.Context, postID uuid.UUID) (domain
 // ListRecent возвращает последние посты в стабильном порядке.
 func (r *PostRepository) ListRecent(ctx context.Context, limit int) ([]domain.Post, error) {
 	const query = `
-		SELECT id, author_id, body, created_at, updated_at
-		FROM content.posts
+		SELECT id, author_id, body, created_at, updated_at,
+			(SELECT COUNT(*) FROM content.comments WHERE post_id = post.id)
+		FROM content.posts AS post
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
 
@@ -124,10 +128,11 @@ func (r *PostRepository) ListRecent(ctx context.Context, limit int) ([]domain.Po
 // Update изменяет текст поста и обновляет время изменения.
 func (r *PostRepository) Update(ctx context.Context, postID uuid.UUID, body string, mediaIDs []uuid.UUID) (domain.Post, error) {
 	const query = `
-		UPDATE content.posts
+		UPDATE content.posts AS post
 		SET body = $2, updated_at = now()
 		WHERE id = $1
-		RETURNING id, author_id, body, created_at, updated_at`
+		RETURNING id, author_id, body, created_at, updated_at,
+			(SELECT COUNT(*) FROM content.comments WHERE post_id = post.id)`
 	post, err := r.scanOne(ctx, query, postID, body)
 	if err != nil {
 		return domain.Post{}, err
@@ -160,6 +165,7 @@ func (r *PostRepository) scanOne(ctx context.Context, query string, args ...any)
 		&post.Body,
 		&post.CreatedAt,
 		&post.UpdatedAt,
+		&post.CommentsCount,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Post{}, ports.ErrNotFound
@@ -182,6 +188,7 @@ func scanPost(row rowScanner) (domain.Post, error) {
 		&post.Body,
 		&post.CreatedAt,
 		&post.UpdatedAt,
+		&post.CommentsCount,
 	)
 	return post, err
 }

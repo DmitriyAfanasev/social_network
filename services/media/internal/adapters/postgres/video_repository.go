@@ -296,6 +296,15 @@ func (r *VideoRepository) Complete(ctx context.Context, videoID uuid.UUID, statu
 
 // RecordView фиксирует просмотр один раз для авторизованного пользователя и возвращает счётчик.
 func (r *VideoRepository) RecordView(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID) (int, error) {
+	return r.recordView(ctx, videoID, userID, nil)
+}
+
+// RecordViewWithOutbox фиксирует просмотр и событие analytics одной транзакцией.
+func (r *VideoRepository) RecordViewWithOutbox(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID, event ports.OutboxEvent) (int, error) {
+	return r.recordView(ctx, videoID, userID, &event)
+}
+
+func (r *VideoRepository) recordView(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID, event *ports.OutboxEvent) (int, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return 0, err
@@ -326,6 +335,14 @@ func (r *VideoRepository) RecordView(ctx context.Context, videoID uuid.UUID, use
 	var count int
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM media.video_views WHERE video_id = $1`, videoID).Scan(&count); err != nil {
 		return 0, err
+	}
+	if event != nil {
+		const eventQuery = `
+			INSERT INTO media.outbox_events (id, event_type, aggregate_id, payload, correlation_id, available_at, created_at)
+			VALUES ($1, $2, $3, $4::jsonb, $5, COALESCE($6, now()), COALESCE($7, now()))`
+		if _, err := tx.Exec(ctx, eventQuery, event.ID, event.EventType, event.AggregateID, event.Payload, event.CorrelationID, event.AvailableAt, event.CreatedAt); err != nil {
+			return 0, err
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return 0, err

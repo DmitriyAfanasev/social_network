@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AuthResponse, AuthUser } from "../../entities/user/model/user";
 import { apiRequest, saveAuthTokens } from "../../shared/api/http";
@@ -10,6 +10,7 @@ export function ConfirmRegistrationPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("Подтверждаем email...");
   const [user, setUser] = useState<AuthUser | null>(null);
+  const submittedToken = useRef<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -17,6 +18,8 @@ export function ConfirmRegistrationPage() {
       setMessage("В ссылке нет token");
       return;
     }
+    if (submittedToken.current === token) return;
+    submittedToken.current = token;
 
     apiRequest<AuthResponse>("/registration-confirmations/confirm", {
       method: "POST",
@@ -27,8 +30,10 @@ export function ConfirmRegistrationPage() {
         setUser(result.user);
         setStatus("success");
         setMessage("Email подтвержден");
+        navigate("/profile/setup");
       })
       .catch((err) => {
+        submittedToken.current = null;
         setStatus("error");
         setMessage(err instanceof Error ? err.message : "Не удалось подтвердить email");
       });

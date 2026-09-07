@@ -9,12 +9,14 @@ import (
 
 // Post описывает текстовый пост без инфраструктурных зависимостей.
 type Post struct {
-	ID        uuid.UUID
-	AuthorID  uuid.UUID
-	Body      string
-	MediaIDs  []uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID       uuid.UUID
+	AuthorID uuid.UUID
+	Body     string
+	MediaIDs []uuid.UUID
+	// CommentsCount — число комментариев, связанных с постом.
+	CommentsCount int
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // CanBeManagedBy проверяет, принадлежит ли пост указанному пользователю.

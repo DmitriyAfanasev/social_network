@@ -203,6 +203,10 @@ function toGatewayPath(path: string, method = "GET") {
 	if (pathname === "/profile/photos/albums") return `/v1/profiles/me/photo-albums${suffix}`;
 	match = pathname.match(/^\/profile\/photos\/([^/]+)$/);
 	if (match) return `/v1/profiles/me/photos/${match[1]}${suffix}`;
+	match = pathname.match(/^\/music\/([^/]+)\/save$/);
+	if (match) return `/v1/media/music/${match[1]}/save${suffix}`;
+	match = pathname.match(/^\/music\/([^/]+)$/);
+	if (match) return `/v1/media/music/${match[1]}${suffix}`;
 	if (pathname.endsWith("/music")) return `/v1/media/music${suffix}`;
 	match = pathname.match(/^\/messages\/conversations\/([^/]+)\/messages(?:\/([^/]+))?$/);
 	if (match) return `/v1/messaging/conversations/${match[1]}/messages${match[2] ? `/${match[2]}` : ""}${suffix}`;
@@ -291,7 +295,7 @@ function adaptResponse<T>(path: string, data: unknown): T {
 				return {
 					id: item.user_id,
 					username: item.handle ?? "",
-					full_name: item.display_name ?? item.handle ?? "Пользователь",
+					full_name: [item.first_name, item.last_name].filter((part) => typeof part === "string" && part.trim()).join(" ") || item.handle || "Пользователь",
 					avatar: item.avatar_url ?? null,
 				};
 			}),
@@ -380,9 +384,9 @@ function adaptComment(comment: unknown) {
 	const value = comment as Record<string, unknown>;
 	return {
 		...value,
-		user_id: value.user_id ?? value.author_id ?? "",
+		user_id: String(value.user_id ?? value.author_id ?? ""),
 		text: value.text ?? value.body ?? "",
-		parent_id: value.parent_id ?? null,
+		parent_id: value.parent_id == null ? null : String(value.parent_id),
 		likes_count: value.likes_count ?? 0,
 		is_liked_by_current: value.is_liked_by_current ?? false,
 	};
@@ -428,7 +432,7 @@ function userFromProfile(profile: Record<string, string | null>) {
 		email: undefined,
 		profile: {
 			first_name: profile.first_name ?? null, last_name: profile.last_name ?? null, middle_name: profile.middle_name ?? null,
-			full_name: profile.display_name ?? null, birth_date: profile.birth_date ?? null, gender: profile.gender ?? null,
+			full_name: [profile.first_name, profile.last_name].filter((part) => typeof part === "string" && part.trim()).join(" ") || null, birth_date: profile.birth_date ?? null, gender: profile.gender ?? null,
 			phone_number: profile.phone_number ?? null, country: profile.country ?? null, city: profile.city ?? null, street: profile.street ?? null,
 			avatar: profile.avatar_url ?? null, bio: profile.bio ?? null, status: profile.status ?? null,
 		},

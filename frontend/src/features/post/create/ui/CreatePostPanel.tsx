@@ -14,6 +14,7 @@ export function CreatePostPanel({ onCreated }: CreatePostPanelProps) {
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDetailsElement | null>(null);
@@ -48,6 +49,7 @@ export function CreatePostPanel({ onCreated }: CreatePostPanelProps) {
     const file = event.target.files?.[0] ?? null;
     setError(null);
     setAttachment(file);
+    setExpanded(true);
     setVideoStatus(null);
     if (attachmentMenuRef.current) {
       attachmentMenuRef.current.open = false;
@@ -109,6 +111,7 @@ export function CreatePostPanel({ onCreated }: CreatePostPanelProps) {
       });
       setContent("");
       clearAttachment();
+      setExpanded(false);
       setVideoStatus(null);
       await onCreated();
     } catch (err) {
@@ -120,14 +123,19 @@ export function CreatePostPanel({ onCreated }: CreatePostPanelProps) {
   }
 
   return (
-    <section className="panel composer">
+    <section className={expanded || attachment ? "panel composer composer-expanded" : "panel composer composer-collapsed"}>
       <form onSubmit={submit}>
-        <textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          placeholder="Что нового?"
-          rows={3}
-        />
+        {expanded || content || attachment ? (
+          <textarea
+            autoFocus={expanded && !content}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Что у вас нового?"
+            rows={3}
+          />
+        ) : (
+          <button type="button" className="composer-placeholder" onClick={() => setExpanded(true)}>Что у вас нового?</button>
+        )}
         {attachment && (
           <div className="attachment-preview compact">
             {attachment?.type.startsWith("video/") ? (
@@ -176,9 +184,9 @@ export function CreatePostPanel({ onCreated }: CreatePostPanelProps) {
               </span>
             )}
           </div>
-          <button disabled={loading || videoUploading || (!content.trim() && !attachment)}>
+          {expanded && <button disabled={loading || videoUploading || (!content.trim() && !attachment)}>
             {loading ? (attachment?.type.startsWith("video/") ? "Загружаем видео..." : "Публикуем...") : "Опубликовать"}
-          </button>
+          </button>}
         </div>
         {videoStatus && <p className="muted">{videoStatus}</p>}
         {error && <p className="error">{error}</p>}

@@ -40,7 +40,7 @@ func (h *Handler) SetHandle(w http.ResponseWriter, r *http.Request) {
 	writeProfile(w, http.StatusOK, profile)
 }
 
-// UpdatePublicProfile изменяет отображаемое имя и описание текущего профиля.
+// UpdatePublicProfile изменяет описание и данные текущего профиля.
 // @Summary Обновить публичный профиль
 // @Tags profiles
 // @Accept json
@@ -65,8 +65,7 @@ func (h *Handler) UpdatePublicProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profile, err := h.profiles.UpdateProfile(r.Context(), userID, application.UpdateProfileInput{
-		DisplayName: request.DisplayName,
-		Bio:         request.Bio,
+		Bio: request.Bio,
 		Details: domain.ProfileDetails{
 			FirstName: request.FirstName, LastName: request.LastName, MiddleName: request.MiddleName,
 			BirthDate: request.BirthDate, Gender: request.Gender, PhoneNumber: request.PhoneNumber,
@@ -142,7 +141,6 @@ type setHandleRequest struct {
 }
 
 type updateProfileRequest struct {
-	DisplayName string `json:"display_name"`
 	Bio         string `json:"bio"`
 	FirstName   string `json:"first_name"`
 	LastName    string `json:"last_name"`

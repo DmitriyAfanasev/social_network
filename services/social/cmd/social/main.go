@@ -112,6 +112,9 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "social:relationship:read:" + httpx.ClientIP(r)
 		})).Get("/relationships/{targetID}", handler.GetRelationship)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
+			return "social:friends:read:" + httpx.ClientIP(r)
+		})).Get("/relationships/{targetID}/friends", handler.GetPublicFriends)
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
 			return "social:recommendations:read:" + httpx.ClientIP(r)
 		})).Get("/recommendations", handler.GetRecommendations)

@@ -35,12 +35,32 @@ func (r *MusicRepository) Create(ctx context.Context, track domain.MusicTrack) (
 func (r *MusicRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]domain.MusicTrack, error) {
 	const query = `
 		SELECT track.id, track.media_id, track.user_id, track.title, track.artist,
-			media.duration, track.created_at
+			media.duration, track.created_at,
+			(track.user_id <> $1 AND library.track_id IS NOT NULL) AS is_saved
 		FROM media.music_tracks AS track
 		JOIN media.media AS media ON media.id = track.media_id AND media.deleted_at IS NULL
+		LEFT JOIN media.music_library AS library ON library.track_id = track.id AND library.user_id = $1
+		WHERE track.user_id = $1 OR library.user_id = $1
+		ORDER BY COALESCE(library.added_at, track.created_at) DESC, track.id DESC`
+	return r.list(ctx, query, userID)
+}
+
+// ListByOwner возвращает треки владельца и отмечает сохранённые viewer-ом.
+func (r *MusicRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, viewerID uuid.UUID) ([]domain.MusicTrack, error) {
+	const query = `
+		SELECT track.id, track.media_id, track.user_id, track.title, track.artist,
+			media.duration, track.created_at,
+			(track.user_id <> $2 AND library.track_id IS NOT NULL) AS is_saved
+		FROM media.music_tracks AS track
+		JOIN media.media AS media ON media.id = track.media_id AND media.deleted_at IS NULL
+		LEFT JOIN media.music_library AS library ON library.track_id = track.id AND library.user_id = $2
 		WHERE track.user_id = $1
 		ORDER BY track.created_at DESC, track.id DESC`
-	rows, err := r.pool.Query(ctx, query, userID)
+	return r.list(ctx, query, ownerID, viewerID)
+}
+
+func (r *MusicRepository) list(ctx context.Context, query string, args ...any) ([]domain.MusicTrack, error) {
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +69,7 @@ func (r *MusicRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]d
 	tracks := make([]domain.MusicTrack, 0)
 	for rows.Next() {
 		var track domain.MusicTrack
-		if err := rows.Scan(&track.ID, &track.MediaID, &track.UserID, &track.Title, &track.Artist, &track.Duration, &track.CreatedAt); err != nil {
+		if err := rows.Scan(&track.ID, &track.MediaID, &track.UserID, &track.Title, &track.Artist, &track.Duration, &track.CreatedAt, &track.Saved); err != nil {
 			return nil, err
 		}
 		tracks = append(tracks, track)
@@ -69,6 +89,26 @@ func (r *MusicRepository) FindByID(ctx context.Context, trackID uuid.UUID) (doma
 		JOIN media.media AS media ON media.id = track.media_id AND media.deleted_at IS NULL
 		WHERE track.id = $1`
 	return r.scanOne(ctx, query, trackID)
+}
+
+// AddToLibrary сохраняет ссылку на трек в личной аудиотеке пользователя.
+func (r *MusicRepository) AddToLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	const query = `
+		INSERT INTO media.music_library (user_id, track_id)
+		SELECT $1, track.id
+		FROM media.music_tracks AS track
+		JOIN media.media AS media ON media.id = track.media_id AND media.deleted_at IS NULL
+		WHERE track.id = $2
+		ON CONFLICT (user_id, track_id) DO NOTHING`
+	_, err := r.pool.Exec(ctx, query, userID, trackID)
+	return err
+}
+
+// RemoveFromLibrary удаляет ссылку на трек из личной аудиотеки пользователя.
+func (r *MusicRepository) RemoveFromLibrary(ctx context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	const query = `DELETE FROM media.music_library WHERE user_id = $1 AND track_id = $2`
+	_, err := r.pool.Exec(ctx, query, userID, trackID)
+	return err
 }
 
 // Delete удаляет метаданные музыкального трека.

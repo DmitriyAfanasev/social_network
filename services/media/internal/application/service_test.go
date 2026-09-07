@@ -92,12 +92,13 @@ func (fakeMediaOutbox) MarkPublished(context.Context, uuid.UUID, time.Time) erro
 func (fakeMediaOutbox) MarkFailed(context.Context, uuid.UUID, time.Time, string) error { return nil }
 
 type fakeVideoRepository struct {
-	videos     map[uuid.UUID]domain.VideoAsset
-	renditions []domain.VideoRendition
-	completed  bool
-	deleted    bool
-	albumOwner bool
-	listTab    string
+	videos      map[uuid.UUID]domain.VideoAsset
+	renditions  []domain.VideoRendition
+	completed   bool
+	deleted     bool
+	albumOwner  bool
+	listTab     string
+	outboxEvent *ports.OutboxEvent
 }
 
 func (f *fakeVideoRepository) Create(_ context.Context, video domain.VideoAsset) (domain.VideoAsset, error) {
@@ -175,6 +176,11 @@ func (f *fakeVideoRepository) RecordView(context.Context, uuid.UUID, *uuid.UUID)
 	return 0, nil
 }
 
+func (f *fakeVideoRepository) RecordViewWithOutbox(ctx context.Context, videoID uuid.UUID, userID *uuid.UUID, event ports.OutboxEvent) (int, error) {
+	f.outboxEvent = &event
+	return f.RecordView(ctx, videoID, userID)
+}
+
 func (f *fakeVideoRepository) ToggleLike(context.Context, uuid.UUID, uuid.UUID) (ports.InteractionResult, error) {
 	return ports.InteractionResult{}, nil
 }
@@ -193,6 +199,7 @@ type fakeTranscodePublisher struct {
 
 type fakeMusicRepository struct {
 	tracks map[uuid.UUID]domain.MusicTrack
+	saved  map[uuid.UUID]map[uuid.UUID]bool
 }
 
 func (f *fakeMusicRepository) Create(_ context.Context, track domain.MusicTrack) (domain.MusicTrack, error) {
@@ -206,7 +213,24 @@ func (f *fakeMusicRepository) ListByUser(_ context.Context, userID uuid.UUID) ([
 	for _, track := range f.tracks {
 		if track.UserID == userID {
 			tracks = append(tracks, track)
+			continue
 		}
+		if f.saved[userID][track.ID] {
+			track.Saved = true
+			tracks = append(tracks, track)
+		}
+	}
+	return tracks, nil
+}
+
+func (f *fakeMusicRepository) ListByOwner(_ context.Context, ownerID uuid.UUID, viewerID uuid.UUID) ([]domain.MusicTrack, error) {
+	tracks := make([]domain.MusicTrack, 0)
+	for _, track := range f.tracks {
+		if track.UserID != ownerID {
+			continue
+		}
+		track.Saved = f.saved[viewerID][track.ID]
+		tracks = append(tracks, track)
 	}
 	return tracks, nil
 }
@@ -217,6 +241,19 @@ func (f *fakeMusicRepository) FindByID(_ context.Context, trackID uuid.UUID) (do
 		return domain.MusicTrack{}, ports.ErrNotFound
 	}
 	return track, nil
+}
+
+func (f *fakeMusicRepository) AddToLibrary(_ context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	if f.saved[userID] == nil {
+		f.saved[userID] = make(map[uuid.UUID]bool)
+	}
+	f.saved[userID][trackID] = true
+	return nil
+}
+
+func (f *fakeMusicRepository) RemoveFromLibrary(_ context.Context, userID uuid.UUID, trackID uuid.UUID) error {
+	delete(f.saved[userID], trackID)
+	return nil
 }
 
 func (f *fakeMusicRepository) Delete(_ context.Context, trackID uuid.UUID) error {
@@ -498,6 +535,23 @@ func TestVideoServiceGetByIDUsesCache(t *testing.T) {
 	require.Equal(t, cached.Title, result.Title)
 }
 
+func TestVideoServiceUsesPlaybackEventForProgressTelemetry(t *testing.T) {
+	t.Parallel()
+
+	videoRepository := &fakeVideoRepository{videos: map[uuid.UUID]domain.VideoAsset{}}
+	service := NewVideoService(nil, videoRepository, nil, nil, fakeMediaOutbox{})
+	videoID := uuid.New()
+	userID := uuid.New()
+
+	_, err := service.RecordViewWithMetrics(context.Background(), videoID, &userID, RecordViewInput{
+		SessionID: "session-1", WatchSeconds: 12, ProgressSeconds: 12, DurationSeconds: 24,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, videoRepository.outboxEvent)
+	require.Equal(t, "media.video.playback", videoRepository.outboxEvent.EventType)
+}
+
 func TestMusicServiceRejectsNonAudioUpload(t *testing.T) {
 	t.Parallel()
 
@@ -525,4 +579,31 @@ func TestMusicServiceCreatesTrackAndInvalidatesUserCache(t *testing.T) {
 	require.Equal(t, "Автор", track.Artist)
 	require.Equal(t, userID, track.UserID)
 	require.Nil(t, mediaCache.values[musicCacheKey(userID)])
+}
+
+func TestMusicServiceAddsVisibleTrackToLibrary(t *testing.T) {
+	t.Parallel()
+
+	ownerID := uuid.New()
+	viewerID := uuid.New()
+	trackID := uuid.New()
+	musicRepository := &fakeMusicRepository{
+		tracks: map[uuid.UUID]domain.MusicTrack{
+			trackID: {ID: trackID, UserID: ownerID, Title: "Чужой трек"},
+		},
+		saved: make(map[uuid.UUID]map[uuid.UUID]bool),
+	}
+	mediaCache := &fakeMediaCache{values: map[string][]byte{musicCacheKey(viewerID): []byte(`stale`)}}
+	service := NewMusicService(nil, musicRepository, mediaCache)
+
+	err := service.AddToLibrary(context.Background(), viewerID, trackID)
+
+	require.NoError(t, err)
+	require.True(t, musicRepository.saved[viewerID][trackID])
+	require.Nil(t, mediaCache.values[musicCacheKey(viewerID)])
+
+	tracks, err := service.ListMine(context.Background(), viewerID)
+	require.NoError(t, err)
+	require.Len(t, tracks, 1)
+	require.True(t, tracks[0].IsSaved)
 }

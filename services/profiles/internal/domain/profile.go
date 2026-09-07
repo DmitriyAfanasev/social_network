@@ -9,15 +9,14 @@ import (
 
 // Profile описывает публичные данные профиля пользователя.
 type Profile struct {
-	UserID      uuid.UUID
-	Handle      *string
-	DisplayName string
-	Bio         string
-	AvatarURL   string
-	Details     ProfileDetails
-	Privacy     ProfilePrivacy
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	UserID    uuid.UUID
+	Handle    *string
+	Bio       string
+	AvatarURL string
+	Details   ProfileDetails
+	Privacy   ProfilePrivacy
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // ProfileDetails содержит дополнительные сведения, которые пользователь указывает в профиле.

@@ -4,6 +4,11 @@
 // @version 1.0
 // @description Единый публичный HTTP-контракт Go-бэкенда.
 // @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Access token в формате `Bearer <token>`.
+// @security BearerAuth
 package main
 
 import (

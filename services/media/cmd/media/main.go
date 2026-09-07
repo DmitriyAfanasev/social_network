@@ -76,7 +76,7 @@ func main() {
 	videoRepository := postgresadapter.NewVideoRepository(pool)
 	videoPublisher := eventsadapter.NewKafkaPublisher(cfg.KafkaBrokers, config.VideoTranscodeRequestedTopic)
 	defer videoPublisher.Close()
-	videoService := application.NewVideoService(mediaService, videoRepository, videoPublisher, mediaCache)
+	videoService := application.NewVideoService(mediaService, videoRepository, videoPublisher, mediaCache, outbox)
 	musicRepository := postgresadapter.NewMusicRepository(pool)
 	musicAccess := accessadapter.NewClient(cfg.ProfilesURL, cfg.SocialURL)
 	musicService := application.NewMusicService(mediaService, musicRepository, mediaCache, musicAccess)
@@ -155,6 +155,12 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {
 			return "media:music:delete:" + httpx.ClientIP(r)
 		})).Delete("/music/{trackID}", handler.DeleteMusic)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
+			return "media:music:library:" + httpx.ClientIP(r)
+		})).Post("/music/{trackID}/save", handler.AddMusicToLibrary)
+		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
+			return "media:music:library:" + httpx.ClientIP(r)
+		})).Delete("/music/{trackID}/save", handler.RemoveMusicFromLibrary)
 	})
 
 	server := &http.Server{

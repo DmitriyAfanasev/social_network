@@ -16,6 +16,7 @@ commit → CI → image → GHCR → deploy → rollout → metrics/logs → rol
 - [Локальный Kubernetes/Minikube](./kubernetes-local.md)
 - [Релизы, rollout и rollback](./release-strategy.md)
 - [Эксплуатация, наблюдаемость и больные места](./operations.md)
+- [ClickHouse и аналитика](../clickhouse-analytics.md)
 - [DevOps ADR и компромиссы](./decisions.md)
 
 ## Что считается production-like
