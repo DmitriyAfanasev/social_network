@@ -198,7 +198,21 @@ definitions:
     type: object
   messageResponse:
     properties:
-      message:
+      body:
+        type: string
+      conversation_id:
+        type: string
+      created_at:
+        type: string
+      deleted:
+        type: boolean
+      edited_at:
+        type: string
+      id:
+        type: string
+      media_id:
+        type: string
+      sender_id:
         type: string
     type: object
   messagesResponse:
@@ -245,7 +259,11 @@ definitions:
     type: object
   photoAlbumPayload:
     properties:
+      comment_policy:
+        type: string
       created_at:
+        type: string
+      description:
         type: string
       id:
         type: string
@@ -257,10 +275,18 @@ definitions:
         type: array
       title:
         type: string
+      visibility:
+        type: string
     type: object
   photoAlbumRequest:
     properties:
+      comment_policy:
+        type: string
+      description:
+        type: string
       title:
+        type: string
+      visibility:
         type: string
     type: object
   photoAlbumResponse:
@@ -268,16 +294,52 @@ definitions:
       album:
         $ref: '#/definitions/photoAlbumPayload'
     type: object
+  photoCommentPayload:
+    properties:
+      author_name:
+        type: string
+      body:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  photoCommentRequest:
+    properties:
+      body:
+        type: string
+    type: object
+  photoCommentsResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/photoCommentPayload'
+        type: array
+    type: object
+  photoMediaVisibilityResponse:
+    properties:
+      allowed:
+        type: boolean
+    type: object
   photoPayload:
     properties:
       album_id:
         type: string
+      archived:
+        type: boolean
       caption:
         type: string
       created_at:
         type: string
       id:
         type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
       media_id:
         type: string
       photo_url:
@@ -535,6 +597,17 @@ definitions:
     properties:
       token:
         type: string
+    type: object
+  updatePhotoRequest:
+    properties:
+      archived:
+        type: boolean
+      caption:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
     type: object
   updateProfileRequest:
     properties:
@@ -2443,6 +2516,32 @@ paths:
       summary: Создать фотоальбом
       tags:
       - profiles
+  /v1/profiles/me/photo-albums/{albumID}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID альбома
+        in: path
+        name: albumID
+        required: true
+        type: string
+      - description: Настройки альбома
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/photoAlbumRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/photoAlbumResponse'
+      summary: Изменить фотоальбом
+      tags:
+      - profiles
   /v1/profiles/me/photo-albums/{albumID}/photos:
     post:
       consumes:
@@ -2481,6 +2580,27 @@ paths:
         "204":
           description: No Content
       summary: Удалить фото профиля
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID фотографии
+        in: path
+        name: photoID
+        required: true
+        type: string
+      - description: Полное состояние фотографии
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/updatePhotoRequest'
+      responses:
+        "204":
+          description: No Content
+      summary: Изменить фотографию
       tags:
       - profiles
   /v1/profiles/me/privacy:
@@ -2525,6 +2645,63 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Обновить настройки приватности
+      tags:
+      - profiles
+  /v1/profiles/photo-media/{mediaID}/visibility:
+    get:
+      parameters:
+      - description: UUID медиа
+        in: path
+        name: mediaID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/photoMediaVisibilityResponse'
+      summary: Проверить доступ к файлу фотографии
+      tags:
+      - profiles
+  /v1/profiles/photos/{photoID}/comments:
+    get:
+      parameters:
+      - description: UUID фотографии
+        in: path
+        name: photoID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/photoCommentsResponse'
+      summary: Получить комментарии фотографии
+      tags:
+      - profiles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: UUID фотографии
+        in: path
+        name: photoID
+        required: true
+        type: string
+      - description: Текст комментария
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/photoCommentRequest'
+      responses:
+        "204":
+          description: No Content
+      summary: Добавить комментарий фотографии
       tags:
       - profiles
   /v1/profiles/search:

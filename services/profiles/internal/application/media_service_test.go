@@ -13,7 +13,65 @@ import (
 )
 
 type fakePhotoRepository struct {
-	albums map[uuid.UUID]domain.ProfilePhotoAlbum
+	albums   map[uuid.UUID]domain.ProfilePhotoAlbum
+	comments []domain.PhotoComment
+}
+
+func (f *fakePhotoRepository) CanViewMedia(_ context.Context, viewerID, mediaID uuid.UUID) (bool, error) {
+	for _, album := range f.albums {
+		for _, photo := range album.Photos {
+			if photo.MediaID == mediaID && album.UserID != viewerID && (album.Visibility == "private" || photo.Archived) {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
+func (f *fakePhotoRepository) UpdateAlbum(_ context.Context, album domain.ProfilePhotoAlbum) (domain.ProfilePhotoAlbum, error) {
+	existing := f.albums[album.ID]
+	album.Photos, album.CreatedAt = existing.Photos, existing.CreatedAt
+	f.albums[album.ID] = album
+	return album, nil
+}
+
+func (f *fakePhotoRepository) FindPhoto(_ context.Context, id uuid.UUID) (domain.ProfilePhoto, error) {
+	for _, album := range f.albums {
+		for _, photo := range album.Photos {
+			if photo.ID == id {
+				return photo, nil
+			}
+		}
+	}
+	return domain.ProfilePhoto{}, ports.ErrNotFound
+}
+
+func (f *fakePhotoRepository) UpdatePhoto(_ context.Context, photo domain.ProfilePhoto) error {
+	album := f.albums[photo.AlbumID]
+	for i := range album.Photos {
+		if album.Photos[i].ID == photo.ID {
+			album.Photos[i] = photo
+			f.albums[album.ID] = album
+			return nil
+		}
+	}
+	return ports.ErrNotFound
+}
+
+func (f *fakePhotoRepository) ListComments(_ context.Context, id uuid.UUID) ([]domain.PhotoComment, error) {
+	result := []domain.PhotoComment{}
+	for _, c := range f.comments {
+		if c.PhotoID == id {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
+func (f *fakePhotoRepository) AddComment(_ context.Context, c domain.PhotoComment) (domain.PhotoComment, error) {
+	c.CreatedAt = time.Now()
+	f.comments = append(f.comments, c)
+	return c, nil
 }
 
 func (f *fakePhotoRepository) ListAlbums(_ context.Context, userID uuid.UUID) ([]domain.ProfilePhotoAlbum, error) {

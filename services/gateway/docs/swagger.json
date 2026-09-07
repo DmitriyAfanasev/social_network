@@ -2627,6 +2627,46 @@
                 }
             }
         },
+        "/v1/profiles/me/photo-albums/{albumID}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Изменить фотоальбом",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID альбома",
+                        "name": "albumID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Настройки альбома",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/photoAlbumRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/photoAlbumResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/profiles/me/photo-albums/{albumID}/photos": {
             "post": {
                 "consumes": [
@@ -2668,6 +2708,38 @@
             }
         },
         "/v1/profiles/me/photos/{photoID}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Изменить фотографию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID фотографии",
+                        "name": "photoID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Полное состояние фотографии",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/updatePhotoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            },
             "delete": {
                 "tags": [
                     "profiles"
@@ -2753,6 +2825,94 @@
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
+                    }
+                }
+            }
+        },
+        "/v1/profiles/photo-media/{mediaID}/visibility": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Проверить доступ к файлу фотографии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID медиа",
+                        "name": "mediaID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/photoMediaVisibilityResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/profiles/photos/{photoID}/comments": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Получить комментарии фотографии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID фотографии",
+                        "name": "photoID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/photoCommentsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Добавить комментарий фотографии",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "UUID фотографии",
+                        "name": "photoID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Текст комментария",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/photoCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
@@ -3756,7 +3916,28 @@
         "messageResponse": {
             "type": "object",
             "properties": {
-                "message": {
+                "body": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "edited_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "media_id": {
+                    "type": "string"
+                },
+                "sender_id": {
                     "type": "string"
                 }
             }
@@ -3829,7 +4010,13 @@
         "photoAlbumPayload": {
             "type": "object",
             "properties": {
+                "comment_policy": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "id": {
@@ -3846,13 +4033,25 @@
                 },
                 "title": {
                     "type": "string"
+                },
+                "visibility": {
+                    "type": "string"
                 }
             }
         },
         "photoAlbumRequest": {
             "type": "object",
             "properties": {
+                "comment_policy": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
                 "title": {
+                    "type": "string"
+                },
+                "visibility": {
                     "type": "string"
                 }
             }
@@ -3865,11 +4064,61 @@
                 }
             }
         },
+        "photoCommentPayload": {
+            "type": "object",
+            "properties": {
+                "author_name": {
+                    "type": "string"
+                },
+                "body": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "photoCommentRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                }
+            }
+        },
+        "photoCommentsResponse": {
+            "type": "object",
+            "properties": {
+                "comments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/photoCommentPayload"
+                    }
+                }
+            }
+        },
+        "photoMediaVisibilityResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "boolean"
+                }
+            }
+        },
         "photoPayload": {
             "type": "object",
             "properties": {
                 "album_id": {
                     "type": "string"
+                },
+                "archived": {
+                    "type": "boolean"
                 },
                 "caption": {
                     "type": "string"
@@ -3879,6 +4128,12 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
                 },
                 "media_id": {
                     "type": "string"
@@ -4275,6 +4530,23 @@
             "properties": {
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "updatePhotoRequest": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
                 }
             }
         },

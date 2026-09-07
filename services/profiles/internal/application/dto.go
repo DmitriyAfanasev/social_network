@@ -75,6 +75,9 @@ func toProfileDTO(profile domain.Profile) ProfileDTO {
 
 // ProfilePhotoDTO представляет фотографию в application-ответе.
 type ProfilePhotoDTO struct {
+	Archived  bool
+	Latitude  *float64
+	Longitude *float64
 	ID        uuid.UUID
 	AlbumID   *uuid.UUID
 	MediaID   uuid.UUID
@@ -85,11 +88,14 @@ type ProfilePhotoDTO struct {
 
 // ProfilePhotoAlbumDTO представляет фотоальбом в application-ответе.
 type ProfilePhotoAlbumDTO struct {
-	ID        *uuid.UUID
-	Title     string
-	Kind      string
-	CreatedAt time.Time
-	Photos    []ProfilePhotoDTO
+	Description   string
+	Visibility    string
+	CommentPolicy string
+	ID            *uuid.UUID
+	Title         string
+	Kind          string
+	CreatedAt     time.Time
+	Photos        []ProfilePhotoDTO
 }
 
 // ProfilePhotosDTO представляет публичную модель фотоальбомов профиля.

@@ -132,6 +132,7 @@ services:
       PROFILES_EVENTS_TOPIC: application.events
       PROFILES_KAFKA_GROUP_ID: profiles
       PROFILES_SOCIAL_URL: http://social:8103
+      PROFILES_MEDIA_URL: http://media:8105
 
   social:
     build:

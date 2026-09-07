@@ -33,11 +33,22 @@ type ProfileRepository interface {
 
 // PhotoRepository предоставляет application-слою операции с фотоальбомами.
 type PhotoRepository interface {
+	CanViewMedia(ctx context.Context, viewerID, mediaID uuid.UUID) (bool, error)
+	UpdateAlbum(ctx context.Context, album domain.ProfilePhotoAlbum) (domain.ProfilePhotoAlbum, error)
+	FindPhoto(ctx context.Context, photoID uuid.UUID) (domain.ProfilePhoto, error)
+	UpdatePhoto(ctx context.Context, photo domain.ProfilePhoto) error
+	ListComments(ctx context.Context, photoID uuid.UUID) ([]domain.PhotoComment, error)
+	AddComment(ctx context.Context, comment domain.PhotoComment) (domain.PhotoComment, error)
 	ListAlbums(ctx context.Context, userID uuid.UUID) ([]domain.ProfilePhotoAlbum, error)
 	CreateAlbum(ctx context.Context, album domain.ProfilePhotoAlbum) (domain.ProfilePhotoAlbum, error)
 	FindAlbum(ctx context.Context, albumID uuid.UUID) (domain.ProfilePhotoAlbum, error)
 	AddPhoto(ctx context.Context, photo domain.ProfilePhoto) (domain.ProfilePhotoAlbum, error)
 	DeletePhoto(ctx context.Context, userID uuid.UUID, photoID uuid.UUID) error
+}
+
+// PhotoMediaReader проверяет тип и владельца файла через контракт media-сервиса.
+type PhotoMediaReader interface {
+	CanAttachPhoto(ctx context.Context, userID, mediaID uuid.UUID) (bool, error)
 }
 
 // AvatarRepository предоставляет application-слою операции с историей аватаров.

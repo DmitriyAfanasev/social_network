@@ -50,16 +50,22 @@ type ProfilePrivacy struct {
 
 // ProfilePhotoAlbum описывает принадлежащий пользователю фотоальбом.
 type ProfilePhotoAlbum struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	Title     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Photos    []ProfilePhoto
+	Description   string
+	Visibility    string
+	CommentPolicy string
+	ID            uuid.UUID
+	UserID        uuid.UUID
+	Title         string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Photos        []ProfilePhoto
 }
 
 // ProfilePhoto описывает фотографию, связанную с медиаобъектом.
 type ProfilePhoto struct {
+	Archived  bool
+	Latitude  *float64
+	Longitude *float64
 	ID        uuid.UUID
 	AlbumID   uuid.UUID
 	UserID    uuid.UUID

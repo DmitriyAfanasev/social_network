@@ -50,7 +50,7 @@ func mediaErrorStatus(err error) (int, string, string) {
 	case errors.Is(err, application.ErrValidation):
 		return http.StatusUnprocessableEntity, "validation_error", "файл не соответствует требованиям"
 	case errors.Is(err, application.ErrForbidden), errors.Is(err, ports.ErrForbidden):
-		return http.StatusForbidden, "forbidden", "медиаобъект может удалить только его владелец"
+		return http.StatusForbidden, "forbidden", "нет доступа к медиаобъекту"
 	case errors.Is(err, ports.ErrNotFound):
 		return http.StatusNotFound, "media_not_found", "медиаобъект не найден"
 	case errors.Is(err, ports.ErrAlreadyExists):

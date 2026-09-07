@@ -28,6 +28,7 @@ import (
 	"general-project/libs/platform/postgres"
 	"general-project/libs/platform/ratelimit"
 	eventsadapter "general-project/profiles/internal/adapters/events"
+	mediaadapter "general-project/profiles/internal/adapters/media"
 	postgresadapter "general-project/profiles/internal/adapters/postgres"
 	socialadapter "general-project/profiles/internal/adapters/social"
 	"general-project/profiles/internal/application"
@@ -83,7 +84,7 @@ func main() {
 			stop()
 		}
 	}()
-	profileMediaService := application.NewProfileMediaService(profiles, profileMediaRepository, profileMediaRepository, profileCache)
+	profileMediaService := application.NewGalleryService(profiles, profileMediaRepository, profileMediaRepository, profileCache, mediaadapter.NewClient(cfg.MediaURL))
 	verifier := auth.NewJWTVerifier(cfg.JWTSecret)
 	handler := httptransport.NewHandler(readiness, profileService, profileMediaService)
 
@@ -94,6 +95,7 @@ func main() {
 	router.Get("/healthz", handler.Health)
 	router.Get("/readyz", handler.Ready)
 	router.Route("/v1/profiles", func(router chi.Router) {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(ratelimit.NewRedisFixedWindow(redisClient), 300, time.Minute, func(r *http.Request) string { return "profiles:photo:visibility:" + httpx.ClientIP(r) })).Get("/photo-media/{mediaID}/visibility", handler.PhotoMediaVisibility)
 		limiter := ratelimit.NewRedisFixedWindow(redisClient)
 		router.With(ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string {
 			return "profiles:search:" + httpx.ClientIP(r)
@@ -122,6 +124,13 @@ func main() {
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 20, time.Minute, func(r *http.Request) string {
 			return "profiles:album:create:" + httpx.ClientIP(r)
 		})).Post("/me/photo-albums", handler.CreatePhotoAlbum)
+		router.Group(func(g chi.Router) {
+			g.Use(auth.Middleware(verifier), ratelimit.Middleware(limiter, 60, time.Minute, func(r *http.Request) string { return "profiles:gallery:" + httpx.ClientIP(r) }))
+			g.Put("/me/photo-albums/{albumID}", handler.UpdatePhotoAlbum)
+			g.Put("/me/photos/{photoID}", handler.UpdatePhoto)
+			g.Get("/photos/{photoID}/comments", handler.ListPhotoComments)
+			g.Post("/photos/{photoID}/comments", handler.AddPhotoComment)
+		})
 		router.With(auth.Middleware(verifier), ratelimit.Middleware(limiter, 30, time.Minute, func(r *http.Request) string {
 			return "profiles:photo:add:" + httpx.ClientIP(r)
 		})).Post("/me/photo-albums/{albumID}/photos", handler.AddPhoto)

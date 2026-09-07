@@ -15,10 +15,18 @@ const defaultAvatarURL = "/media/default-avatar"
 
 // ProfileMediaService реализует сценарии фотоальбомов и аватаров профиля.
 type ProfileMediaService struct {
-	profiles ports.ProfileRepository
-	photos   ports.PhotoRepository
-	avatars  ports.AvatarRepository
-	cache    ports.ProfileCache
+	mediaReader ports.PhotoMediaReader
+	profiles    ports.ProfileRepository
+	photos      ports.PhotoRepository
+	avatars     ports.AvatarRepository
+	cache       ports.ProfileCache
+}
+
+// NewGalleryService создаёт сервис галереи с проверкой владельца загружаемых файлов.
+func NewGalleryService(profiles ports.ProfileRepository, photos ports.PhotoRepository, avatars ports.AvatarRepository, cache ports.ProfileCache, mediaReader ports.PhotoMediaReader) *ProfileMediaService {
+	service := NewProfileMediaService(profiles, photos, avatars, cache)
+	service.mediaReader = mediaReader
+	return service
 }
 
 // NewProfileMediaService создаёт application-сервис медиа профиля.
@@ -34,7 +42,7 @@ func (s *ProfileMediaService) ListPhotos(ctx context.Context, ownerID uuid.UUID,
 			var cached ProfilePhotosDTO
 			if json.Unmarshal(payload, &cached) == nil {
 				cached.IsOwnProfile = ownerID == viewerID
-				return cached, nil
+				return visiblePhotos(cached), nil
 			}
 		}
 	}
@@ -68,16 +76,53 @@ func (s *ProfileMediaService) ListPhotos(ctx context.Context, ownerID uuid.UUID,
 		result.Albums = append(result.Albums, toPhotoAlbumDTO(album))
 	}
 	s.cacheJSON(ctx, cacheKey, result)
-	return result, nil
+	return visiblePhotos(result), nil
 }
 
 // CreateAlbum создаёт пользовательский фотоальбом.
 func (s *ProfileMediaService) CreateAlbum(ctx context.Context, userID uuid.UUID, title string) (ProfilePhotoAlbumDTO, error) {
-	title = strings.TrimSpace(title)
-	if title == "" || len([]rune(title)) > 80 {
+	return s.SaveAlbum(ctx, userID, uuid.Nil(), AlbumInput{Title: title})
+}
+
+// AlbumInput содержит редактируемые настройки альбома.
+type AlbumInput struct {
+	Title         string
+	Description   string
+	Visibility    string
+	CommentPolicy string
+}
+
+// SaveAlbum создаёт альбом или изменяет настройки альбома владельца.
+func (s *ProfileMediaService) SaveAlbum(ctx context.Context, userID, albumID uuid.UUID, input AlbumInput) (ProfilePhotoAlbumDTO, error) {
+	input.Title = strings.TrimSpace(input.Title)
+	input.Description = strings.TrimSpace(input.Description)
+	if input.Visibility == "" {
+		input.Visibility = "public"
+	}
+	if input.CommentPolicy == "" {
+		input.CommentPolicy = "public"
+	}
+	if input.Title == "" || len([]rune(input.Title)) > 128 || len([]rune(input.Description)) > 512 ||
+		(input.Visibility != "public" && input.Visibility != "private") ||
+		(input.CommentPolicy != "public" && input.CommentPolicy != "private" && input.CommentPolicy != "nobody") {
 		return ProfilePhotoAlbumDTO{}, ErrValidation
 	}
-	album, err := s.photos.CreateAlbum(ctx, domain.ProfilePhotoAlbum{ID: uuid.New(), UserID: userID, Title: title})
+	album := domain.ProfilePhotoAlbum{ID: albumID, UserID: userID, Title: input.Title, Description: input.Description, Visibility: input.Visibility, CommentPolicy: input.CommentPolicy}
+	var err error
+	if albumID == uuid.Nil() {
+		album.ID = uuid.New()
+		album, err = s.photos.CreateAlbum(ctx, album)
+	} else {
+		var existing domain.ProfilePhotoAlbum
+		existing, err = s.photos.FindAlbum(ctx, albumID)
+		if err != nil {
+			return ProfilePhotoAlbumDTO{}, err
+		}
+		if existing.UserID != userID {
+			return ProfilePhotoAlbumDTO{}, ErrForbidden
+		}
+		album, err = s.photos.UpdateAlbum(ctx, album)
+	}
 	if err != nil {
 		return ProfilePhotoAlbumDTO{}, err
 	}
@@ -96,6 +141,15 @@ func (s *ProfileMediaService) AddPhoto(ctx context.Context, userID uuid.UUID, al
 	}
 	if album.UserID != userID {
 		return ProfilePhotoAlbumDTO{}, ErrForbidden
+	}
+	if s.mediaReader != nil {
+		allowed, err := s.mediaReader.CanAttachPhoto(ctx, userID, mediaID)
+		if err != nil {
+			return ProfilePhotoAlbumDTO{}, err
+		}
+		if !allowed {
+			return ProfilePhotoAlbumDTO{}, ErrValidation
+		}
 	}
 	caption = strings.TrimSpace(caption)
 	if len([]rune(caption)) > 2000 {
@@ -190,10 +244,10 @@ func (s *ProfileMediaService) AvatarHistory(ctx context.Context, userID uuid.UUI
 
 func toPhotoAlbumDTO(album domain.ProfilePhotoAlbum) ProfilePhotoAlbumDTO {
 	id := album.ID
-	result := ProfilePhotoAlbumDTO{ID: &id, Title: album.Title, Kind: "custom", CreatedAt: album.CreatedAt, Photos: make([]ProfilePhotoDTO, 0, len(album.Photos))}
+	result := ProfilePhotoAlbumDTO{ID: &id, Title: album.Title, Description: album.Description, Visibility: album.Visibility, CommentPolicy: album.CommentPolicy, Kind: "custom", CreatedAt: album.CreatedAt, Photos: make([]ProfilePhotoDTO, 0, len(album.Photos))}
 	for _, photo := range album.Photos {
 		albumID := photo.AlbumID
-		result.Photos = append(result.Photos, ProfilePhotoDTO{ID: photo.ID, AlbumID: &albumID, MediaID: photo.MediaID, URL: mediaURL(photo.MediaID), Caption: photo.Caption, CreatedAt: photo.CreatedAt})
+		result.Photos = append(result.Photos, ProfilePhotoDTO{ID: photo.ID, AlbumID: &albumID, MediaID: photo.MediaID, URL: mediaURL(photo.MediaID), Caption: photo.Caption, CreatedAt: photo.CreatedAt, Archived: photo.Archived, Latitude: photo.Latitude, Longitude: photo.Longitude})
 	}
 	return result
 }
@@ -203,7 +257,31 @@ func mediaURL(mediaID uuid.UUID) string {
 }
 
 func profileMediaCacheKey(userID uuid.UUID) string {
-	return "profiles:v1:media:" + userID.String()
+	return "profiles:v2:media:" + userID.String()
+}
+
+// visiblePhotos применяет приватность после чтения общей модели из кэша.
+// Фильтрация не меняет срезы исходной модели и не кэширует решение о доступе.
+func visiblePhotos(result ProfilePhotosDTO) ProfilePhotosDTO {
+	if result.IsOwnProfile {
+		return result
+	}
+	albums := make([]ProfilePhotoAlbumDTO, 0, len(result.Albums))
+	for _, album := range result.Albums {
+		if album.Visibility == "private" {
+			continue
+		}
+		photos := make([]ProfilePhotoDTO, 0, len(album.Photos))
+		for _, photo := range album.Photos {
+			if !photo.Archived {
+				photos = append(photos, photo)
+			}
+		}
+		album.Photos = photos
+		albums = append(albums, album)
+	}
+	result.Albums = albums
+	return result
 }
 
 func (s *ProfileMediaService) cacheJSON(ctx context.Context, key string, value any) {

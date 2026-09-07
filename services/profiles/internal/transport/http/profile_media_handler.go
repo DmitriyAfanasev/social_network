@@ -63,7 +63,7 @@ func (h *Handler) CreatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
 	}
-	album, err := h.media.CreateAlbum(r.Context(), userID, request.Title)
+	album, err := h.media.SaveAlbum(r.Context(), userID, uuid.Nil(), application.AlbumInput{Title: request.Title, Description: request.Description, Visibility: request.Visibility, CommentPolicy: request.CommentPolicy})
 	if err != nil {
 		writeProfileError(w, err)
 		return
@@ -207,7 +207,10 @@ func (h *Handler) AvatarHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 type photoAlbumRequest struct {
-	Title string `json:"title"`
+	Description   string `json:"description"`
+	Visibility    string `json:"visibility"`
+	CommentPolicy string `json:"comment_policy"`
+	Title         string `json:"title"`
 }
 
 type addPhotoRequest struct {
@@ -224,20 +227,26 @@ type photoAlbumResponse struct {
 }
 
 type photoAlbumPayload struct {
-	ID        *string        `json:"id,omitempty"`
-	Title     string         `json:"title"`
-	Kind      string         `json:"kind"`
-	CreatedAt string         `json:"created_at"`
-	Photos    []photoPayload `json:"photos"`
+	Description   string         `json:"description"`
+	Visibility    string         `json:"visibility"`
+	CommentPolicy string         `json:"comment_policy"`
+	ID            *string        `json:"id,omitempty"`
+	Title         string         `json:"title"`
+	Kind          string         `json:"kind"`
+	CreatedAt     string         `json:"created_at"`
+	Photos        []photoPayload `json:"photos"`
 }
 
 type photoPayload struct {
-	ID        string  `json:"id"`
-	AlbumID   *string `json:"album_id,omitempty"`
-	MediaID   string  `json:"media_id"`
-	URL       string  `json:"photo_url"`
-	Caption   *string `json:"caption,omitempty"`
-	CreatedAt string  `json:"created_at"`
+	Archived  bool     `json:"archived"`
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+	ID        string   `json:"id"`
+	AlbumID   *string  `json:"album_id,omitempty"`
+	MediaID   string   `json:"media_id"`
+	URL       string   `json:"photo_url"`
+	Caption   *string  `json:"caption,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 type profilePhotosResponse struct {
@@ -306,14 +315,14 @@ func mapPhotoAlbumResponse(album application.ProfilePhotoAlbumDTO) photoAlbumPay
 		value := album.ID.String()
 		id = &value
 	}
-	result := photoAlbumPayload{ID: id, Title: album.Title, Kind: album.Kind, CreatedAt: album.CreatedAt.UTC().Format(timeFormat), Photos: make([]photoPayload, 0, len(album.Photos))}
+	result := photoAlbumPayload{ID: id, Title: album.Title, Description: album.Description, Visibility: album.Visibility, CommentPolicy: album.CommentPolicy, Kind: album.Kind, CreatedAt: album.CreatedAt.UTC().Format(timeFormat), Photos: make([]photoPayload, 0, len(album.Photos))}
 	for _, photo := range album.Photos {
 		var albumID *string
 		if photo.AlbumID != nil {
 			value := photo.AlbumID.String()
 			albumID = &value
 		}
-		result.Photos = append(result.Photos, photoPayload{ID: photo.ID.String(), AlbumID: albumID, MediaID: photo.MediaID.String(), URL: photo.URL, Caption: photo.Caption, CreatedAt: photo.CreatedAt.UTC().Format(timeFormat)})
+		result.Photos = append(result.Photos, photoPayload{ID: photo.ID.String(), AlbumID: albumID, MediaID: photo.MediaID.String(), URL: photo.URL, Caption: photo.Caption, CreatedAt: photo.CreatedAt.UTC().Format(timeFormat), Archived: photo.Archived, Latitude: photo.Latitude, Longitude: photo.Longitude})
 	}
 	return result
 }

@@ -28,6 +28,11 @@ func (h *Handler) StreamContent(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_media_id", "некорректный UUID медиаобъекта")
 		return
 	}
+	if err := h.media.AuthorizeContent(r.Context(), mediaID); err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
 	if rangeValue := r.Header.Get("Range"); rangeValue != "" {
 		media, getErr := h.media.GetByID(r.Context(), mediaID)
 		if getErr != nil {

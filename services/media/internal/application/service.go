@@ -51,11 +51,41 @@ type MediaDTO struct {
 
 // MediaService реализует сценарии загрузки и управления метаданными медиа.
 type MediaService struct {
-	media   ports.MediaRepository
-	cache   ports.MediaCache
-	storage ports.ObjectStorage
-	bucket  string
-	outbox  ports.OutboxRepository
+	photoAccess ports.PhotoVisibilityReader
+	media       ports.MediaRepository
+	cache       ports.MediaCache
+	storage     ports.ObjectStorage
+	bucket      string
+	outbox      ports.OutboxRepository
+}
+
+// NewProtectedMediaService создаёт сервис с проверкой приватности фотографий.
+func NewProtectedMediaService(media ports.MediaRepository, cache ports.MediaCache, storage ports.ObjectStorage, bucket string, photoAccess ports.PhotoVisibilityReader, outbox ports.OutboxRepository) *MediaService {
+	service := NewMediaService(media, cache, storage, bucket, outbox)
+	service.photoAccess = photoAccess
+	return service
+}
+
+// AuthorizeContent проверяет актуальные ограничения фотографий перед выдачей файла или диапазона.
+func (s *MediaService) AuthorizeContent(ctx context.Context, mediaID uuid.UUID) error {
+	metadata, err := s.media.FindByID(ctx, mediaID)
+	if err != nil {
+		return err
+	}
+	if metadata.MediaType != "image" {
+		return nil
+	}
+	if s.photoAccess == nil {
+		return ErrForbidden
+	}
+	allowed, err := s.photoAccess.CanViewPhoto(ctx, mediaID)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return ErrForbidden
+	}
+	return nil
 }
 
 // NewMediaService создаёт application-сервис медиа.

@@ -116,3 +116,29 @@ type relationshipResponse struct {
 }
 
 var _ ports.MusicVisibilityReader = (*Client)(nil)
+
+// CanViewPhoto проверяет ограничения файла фотографии, передавая проверенный токен зрителя.
+func (c *Client) CanViewPhoto(ctx context.Context, mediaID uuid.UUID) (bool, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.profilesURL+"/v1/profiles/photo-media/"+mediaID.String()+"/visibility", nil)
+	if err != nil {
+		return false, err
+	}
+	if token, ok := auth.AccessTokenFromContext(ctx); ok {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+	response, err := c.client.Do(request)
+	if err != nil {
+		return false, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("photo visibility status %d", response.StatusCode)
+	}
+	var payload struct {
+		Allowed bool `json:"allowed"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return false, err
+	}
+	return payload.Allowed, nil
+}

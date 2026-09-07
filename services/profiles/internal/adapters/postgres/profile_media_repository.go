@@ -26,7 +26,7 @@ func NewProfileMediaRepository(pool *pgxpool.Pool) *ProfileMediaRepository {
 // ListAlbums возвращает альбомы пользователя вместе с фотографиями.
 func (r *ProfileMediaRepository) ListAlbums(ctx context.Context, userID uuid.UUID) ([]domain.ProfilePhotoAlbum, error) {
 	const query = `
-		SELECT id, user_id, title, created_at, updated_at
+		SELECT id, user_id, title, created_at, updated_at, description, visibility, comment_policy
 		FROM profiles.profile_photo_albums
 		WHERE user_id = $1
 		ORDER BY created_at DESC, id DESC`
@@ -39,11 +39,7 @@ func (r *ProfileMediaRepository) ListAlbums(ctx context.Context, userID uuid.UUI
 	albums := make([]domain.ProfilePhotoAlbum, 0)
 	for rows.Next() {
 		var album domain.ProfilePhotoAlbum
-		if err := rows.Scan(&album.ID, &album.UserID, &album.Title, &album.CreatedAt, &album.UpdatedAt); err != nil {
-			return nil, err
-		}
-		album.Photos, err = r.listPhotos(ctx, album.ID)
-		if err != nil {
+		if err := rows.Scan(&album.ID, &album.UserID, &album.Title, &album.CreatedAt, &album.UpdatedAt, &album.Description, &album.Visibility, &album.CommentPolicy); err != nil {
 			return nil, err
 		}
 		albums = append(albums, album)
@@ -51,18 +47,26 @@ func (r *ProfileMediaRepository) ListAlbums(ctx context.Context, userID uuid.UUI
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	// Освобождаем соединение до вложенных запросов, в том числе при MaxConns=1.
+	rows.Close()
+	for i := range albums {
+		albums[i].Photos, err = r.listPhotos(ctx, albums[i].ID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return albums, nil
 }
 
 // CreateAlbum создаёт фотоальбом пользователя.
 func (r *ProfileMediaRepository) CreateAlbum(ctx context.Context, album domain.ProfilePhotoAlbum) (domain.ProfilePhotoAlbum, error) {
 	const query = `
-		INSERT INTO profiles.profile_photo_albums (id, user_id, title)
-		VALUES ($1, $2, $3)
-		RETURNING id, user_id, title, created_at, updated_at`
+		INSERT INTO profiles.profile_photo_albums (id, user_id, title, description, visibility, comment_policy)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, user_id, title, created_at, updated_at, description, visibility, comment_policy`
 	var result domain.ProfilePhotoAlbum
-	err := r.pool.QueryRow(ctx, query, album.ID, album.UserID, album.Title).Scan(
-		&result.ID, &result.UserID, &result.Title, &result.CreatedAt, &result.UpdatedAt,
+	err := r.pool.QueryRow(ctx, query, album.ID, album.UserID, album.Title, album.Description, album.Visibility, album.CommentPolicy).Scan(
+		&result.ID, &result.UserID, &result.Title, &result.CreatedAt, &result.UpdatedAt, &result.Description, &result.Visibility, &result.CommentPolicy,
 	)
 	if err != nil {
 		return domain.ProfilePhotoAlbum{}, err
@@ -74,12 +78,12 @@ func (r *ProfileMediaRepository) CreateAlbum(ctx context.Context, album domain.P
 // FindAlbum возвращает альбом с фотографиями.
 func (r *ProfileMediaRepository) FindAlbum(ctx context.Context, albumID uuid.UUID) (domain.ProfilePhotoAlbum, error) {
 	const query = `
-		SELECT id, user_id, title, created_at, updated_at
+		SELECT id, user_id, title, created_at, updated_at, description, visibility, comment_policy
 		FROM profiles.profile_photo_albums
 		WHERE id = $1`
 	var album domain.ProfilePhotoAlbum
 	err := r.pool.QueryRow(ctx, query, albumID).Scan(
-		&album.ID, &album.UserID, &album.Title, &album.CreatedAt, &album.UpdatedAt,
+		&album.ID, &album.UserID, &album.Title, &album.CreatedAt, &album.UpdatedAt, &album.Description, &album.Visibility, &album.CommentPolicy,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.ProfilePhotoAlbum{}, ports.ErrNotFound
@@ -110,12 +114,19 @@ func (r *ProfileMediaRepository) AddPhoto(ctx context.Context, photo domain.Prof
 
 // DeletePhoto удаляет фотографию только у указанного владельца.
 func (r *ProfileMediaRepository) DeletePhoto(ctx context.Context, userID uuid.UUID, photoID uuid.UUID) error {
-	const query = `DELETE FROM profiles.profile_photos WHERE id = $1 AND user_id = $2`
-	result, err := r.pool.Exec(ctx, query, photoID, userID)
+	// Метаданные сохраняют запрет доступа к удалённому приватному файлу по старой ссылке.
+	const query = `WITH removed AS (
+		UPDATE profiles.profile_photos SET deleted_at=now()
+		WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL RETURNING id
+	), comments AS (
+		DELETE FROM profiles.photo_comments WHERE photo_id IN (SELECT id FROM removed)
+	) SELECT count(*) FROM removed`
+	var affected int
+	err := r.pool.QueryRow(ctx, query, photoID, userID).Scan(&affected)
 	if err != nil {
 		return err
 	}
-	if result.RowsAffected() == 0 {
+	if affected == 0 {
 		return ports.ErrNotFound
 	}
 	return nil
@@ -170,9 +181,9 @@ func (r *ProfileMediaRepository) HasMedia(ctx context.Context, userID uuid.UUID,
 
 func (r *ProfileMediaRepository) listPhotos(ctx context.Context, albumID uuid.UUID) ([]domain.ProfilePhoto, error) {
 	const query = `
-		SELECT id, album_id, user_id, media_id, caption, created_at
+		SELECT id, album_id, user_id, media_id, caption, created_at, archived, latitude, longitude
 		FROM profiles.profile_photos
-		WHERE album_id = $1
+		WHERE album_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at ASC, id ASC`
 	rows, err := r.pool.Query(ctx, query, albumID)
 	if err != nil {
@@ -182,7 +193,7 @@ func (r *ProfileMediaRepository) listPhotos(ctx context.Context, albumID uuid.UU
 	photos := make([]domain.ProfilePhoto, 0)
 	for rows.Next() {
 		var photo domain.ProfilePhoto
-		if err := rows.Scan(&photo.ID, &photo.AlbumID, &photo.UserID, &photo.MediaID, &photo.Caption, &photo.CreatedAt); err != nil {
+		if err := rows.Scan(&photo.ID, &photo.AlbumID, &photo.UserID, &photo.MediaID, &photo.Caption, &photo.CreatedAt, &photo.Archived, &photo.Latitude, &photo.Longitude); err != nil {
 			return nil, err
 		}
 		photos = append(photos, photo)

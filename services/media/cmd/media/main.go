@@ -63,7 +63,7 @@ func main() {
 	mediaRepository := postgresadapter.NewMediaRepository(pool)
 	outbox := postgresadapter.NewOutboxRepository(pool)
 	mediaCache := cache.NewRedis(redisClient)
-	mediaService := application.NewMediaService(mediaRepository, mediaCache, storage, cfg.S3Bucket, outbox)
+	mediaService := application.NewProtectedMediaService(mediaRepository, mediaCache, storage, cfg.S3Bucket, accessadapter.NewClient(cfg.ProfilesURL, cfg.SocialURL), outbox)
 	eventPublisher := eventsadapter.NewEventPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
 	defer eventPublisher.Close()
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
@@ -98,7 +98,7 @@ func main() {
 	router.Get("/readyz", handler.Ready)
 	router.Route("/v1/media", func(router chi.Router) {
 		limiter := ratelimit.NewRedisFixedWindow(redisClient)
-		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
+		router.With(auth.OptionalMiddleware(verifier), ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {
 			return "media:content:" + httpx.ClientIP(r)
 		})).Get("/{mediaID}/content", handler.StreamContent)
 		router.With(ratelimit.Middleware(limiter, 120, time.Minute, func(r *http.Request) string {

@@ -143,6 +143,11 @@ tasks:
     cmds:
       - bash scripts/goose-smoke-check.sh
 
+  test:integration:gallery:
+    desc: Verify photo gallery repositories and the latest profiles migration in isolated PostgreSQL
+    cmds:
+      - bash scripts/gallery-smoke-check.sh
+
   db:migrate:all:
     desc: Apply all currently available service migrations
     deps:

@@ -10,6 +10,11 @@ import (
 	"general-project/media/internal/domain"
 )
 
+// PhotoVisibilityReader получает актуальное решение о доступе к файлу фотографии.
+type PhotoVisibilityReader interface {
+	CanViewPhoto(ctx context.Context, mediaID uuid.UUID) (bool, error)
+}
+
 var (
 	// ErrNotFound означает, что медиаобъект отсутствует.
 	ErrNotFound = errors.New("media not found")
