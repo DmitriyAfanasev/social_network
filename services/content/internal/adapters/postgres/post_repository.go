@@ -36,7 +36,9 @@ func (r *PostRepository) Create(ctx context.Context, post domain.Post) (domain.P
 		return domain.Post{}, err
 	}
 	if err := r.replaceMedia(ctx, created.ID, post.MediaIDs); err != nil {
-		_ = r.Delete(ctx, created.ID)
+		if cleanupErr := r.Delete(ctx, created.ID); cleanupErr != nil {
+			return domain.Post{}, errors.Join(err, cleanupErr)
+		}
 		return domain.Post{}, err
 	}
 	created.MediaIDs = append([]uuid.UUID(nil), post.MediaIDs...)
@@ -49,7 +51,11 @@ func (r *PostRepository) CreateWithOutbox(ctx context.Context, post domain.Post,
 	if err != nil {
 		return domain.Post{}, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			return
+		}
+	}()
 	const query = `
 		INSERT INTO content.posts AS post (id, author_id, body)
 		VALUES ($1, $2, $3)

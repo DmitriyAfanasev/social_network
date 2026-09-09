@@ -172,7 +172,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			return
+		}
+	}()
 	readLimit := h.maxMessageSize
 	if readLimit <= 0 {
 		readLimit = maxSignalBytes
@@ -186,7 +190,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if err := h.handle(r.Context(), item, input, rooms); err != nil {
-			_ = item.send(Event{Type: "error", Message: publicError(err)})
+			if sendErr := item.send(Event{Type: "error", Message: publicError(err)}); sendErr != nil {
+				break
+			}
 		}
 	}
 	for conversationID := range rooms {
@@ -202,14 +208,18 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ready"}` + "\n"))
+	if _, err := w.Write([]byte(`{"status":"ready"}` + "\n")); err != nil {
+		return
+	}
 }
 
 // Health возвращает liveness-состояние процесса.
 func Health(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}` + "\n"))
+	if _, err := w.Write([]byte(`{"status":"ok"}` + "\n")); err != nil {
+		return
+	}
 }
 
 func (h *Handler) handle(ctx context.Context, item *client, input ClientEvent, rooms map[uuid.UUID]struct{}) error {

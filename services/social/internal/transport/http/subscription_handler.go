@@ -7,15 +7,6 @@ import (
 )
 
 // Subscribe создаёт подписку текущего пользователя на целевого.
-
-
-
-
-
-
-
-
-
 func (h *Handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -35,14 +26,6 @@ func (h *Handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 }
 
 // Unsubscribe отменяет подписку текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

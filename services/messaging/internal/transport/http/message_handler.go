@@ -7,22 +7,13 @@ import (
 
 	"general-project/libs/platform/httpx"
 	"general-project/messaging/internal/application"
+
 	"github.com/go-chi/chi/v5"
 )
 
 type messageRequest = MessageRequest
 
 // ListMessages возвращает страницу сообщений участника диалога.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) ListMessages(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -45,17 +36,6 @@ func (h *Handler) ListMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 // SendMessage отправляет сообщение участником диалога.
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -79,16 +59,6 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdateMessage изменяет сообщение его автором.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) UpdateMessage(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -112,13 +82,6 @@ func (h *Handler) UpdateMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteMessage помечает сообщение удалённым.
-
-
-
-
-
-
-
 func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -136,14 +99,6 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveMessageMedia удаляет ссылку на media из сообщения его автора.
-
-
-
-
-
-
-
-
 func (h *Handler) RemoveMessageMedia(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -166,15 +121,6 @@ func (h *Handler) RemoveMessageMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 // MarkRead отмечает сообщение прочитанным.
-
-
-
-
-
-
-
-
-
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -194,7 +140,6 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func decodeMessageRequest(r *http.Request) (application.SendMessageInput, error) {
 	var request messageRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -210,7 +155,6 @@ func decodeMessageRequest(r *http.Request) (application.SendMessageInput, error)
 	}
 	return application.SendMessageInput{Body: request.Body, MediaID: mediaID}, nil
 }
-
 func parseUUIDParam(w http.ResponseWriter, r *http.Request, parameter string, resource string) (uuid.UUID, bool) {
 	value, err := uuid.Parse(chi.URLParam(r, parameter))
 	if err != nil {
@@ -219,7 +163,6 @@ func parseUUIDParam(w http.ResponseWriter, r *http.Request, parameter string, re
 	}
 	return value, true
 }
-
 func pagination(w http.ResponseWriter, r *http.Request) (int, int, bool) {
 	offset, limit := 0, 50
 	var err error

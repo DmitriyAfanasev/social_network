@@ -38,9 +38,13 @@ func (b *Broker) Publish(ctx context.Context, event ports.SignalingEvent) error 
 }
 
 // Subscribe читает события от всех экземпляров call-signaling.
-func (b *Broker) Subscribe(ctx context.Context, handle func(ports.SignalingEvent) error) error {
+func (b *Broker) Subscribe(ctx context.Context, handle func(ports.SignalingEvent) error) (runErr error) {
 	subscriber := b.client.Subscribe(ctx, eventsChannel)
-	defer subscriber.Close()
+	defer func() {
+		if err := subscriber.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+	}()
 	for message := range subscriber.Channel() {
 		var value envelope
 		if err := json.Unmarshal([]byte(message.Payload), &value); err != nil {

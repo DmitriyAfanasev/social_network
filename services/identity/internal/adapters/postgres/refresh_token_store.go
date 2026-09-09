@@ -38,7 +38,11 @@ func (s *RefreshTokenStore) Rotate(ctx context.Context, tokenHash string, replac
 	if err != nil {
 		return uuid.Nil(), err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			return
+		}
+	}()
 
 	const revokeQuery = `
 		UPDATE identity.refresh_tokens

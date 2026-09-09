@@ -37,8 +37,12 @@ func TestMiddlewarePutsUserIDInContext(t *testing.T) {
 	wanted := uuid.New()
 	handler := Middleware(fakeVerifier{userID: wanted})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := UserIDFromContext(r.Context())
-		require.True(t, ok)
-		require.Equal(t, wanted, userID)
+		if !ok {
+			t.Error("user ID is missing from context")
+		}
+		if userID != wanted {
+			t.Errorf("user ID = %s, want %s", userID, wanted)
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
 

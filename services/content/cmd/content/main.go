@@ -37,7 +37,6 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	pool, err := platformpostgres.Open(ctx, cfg.DatabaseURL, 10)
 	if err != nil {
@@ -47,7 +46,11 @@ func main() {
 	defer pool.Close()
 
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			logger.Error("content Redis close failed", "error", err)
+		}
+	}()
 
 	readiness := postgres.NewHealthChecker(pool)
 	posts := postgres.NewPostRepository(pool)
@@ -58,7 +61,11 @@ func main() {
 	mediaChecker := mediahttpadapter.NewClient(cfg.MediaAddr)
 	contentService := application.NewContentServiceWithLikes(posts, postCache, mediaChecker, outbox, likes)
 	eventPublisher := eventsadapter.NewPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
-	defer eventPublisher.Close()
+	defer func() {
+		if err := eventPublisher.Close(); err != nil {
+			logger.Error("content event publisher close failed", "error", err)
+		}
+	}()
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
 	go func() {
 		if publishErr := outboxPublisher.Run(ctx, time.Second); publishErr != nil && ctx.Err() == nil {
@@ -127,5 +134,8 @@ func main() {
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = server.Shutdown(shutdownCtx)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("content HTTP server shutdown failed", "error", err)
+	}
+	stop()
 }

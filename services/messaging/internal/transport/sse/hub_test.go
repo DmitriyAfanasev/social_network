@@ -21,7 +21,7 @@ func TestHubPublishesOnlyToRecipients(t *testing.T) {
 
 	hub.Publish(ports.RealtimeEvent{RecipientIDs: []uuid.UUID{recipient}, Payload: []byte(`{"type":"message.new"}`)})
 
-	require.Equal(t, []byte(`{"type":"message.new"}`), <-channel)
+	require.JSONEq(t, `{"type":"message.new"}`, string(<-channel))
 	select {
 	case <-otherChannel:
 		t.Fatal("event was published to a non-recipient")

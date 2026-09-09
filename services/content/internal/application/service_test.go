@@ -65,8 +65,8 @@ func (f *fakePostRepository) ListRecent(_ context.Context, limit int) ([]domain.
 	return result, nil
 }
 
-func (f *fakePostRepository) Update(_ context.Context, postID uuid.UUID, body string, mediaIDs []uuid.UUID) (domain.Post, error) {
-	post, err := f.FindByID(context.Background(), postID)
+func (f *fakePostRepository) Update(ctx context.Context, postID uuid.UUID, body string, mediaIDs []uuid.UUID) (domain.Post, error) {
+	post, err := f.FindByID(ctx, postID)
 	if err != nil {
 		return domain.Post{}, err
 	}

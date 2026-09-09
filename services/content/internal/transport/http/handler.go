@@ -35,13 +35,13 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	}
 	writeStatus(w, http.StatusOK, "ready")
 }
-
 func writeStatus(w http.ResponseWriter, status int, value string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": value})
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": value}); err != nil {
+		return
+	}
 }
-
 func decodeJSON(r *http.Request, target any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()

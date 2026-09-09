@@ -11,16 +11,6 @@ import (
 )
 
 // Register принимает данные нового пользователя и отправляет confirmation-ссылку.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -39,14 +29,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequestRegistrationConfirmation повторно отправляет confirmation-ссылку.
-
-
-
-
-
-
-
-
 func (h *Handler) RequestRegistrationConfirmation(w http.ResponseWriter, r *http.Request) {
 	var request EmailRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -62,14 +44,6 @@ func (h *Handler) RequestRegistrationConfirmation(w http.ResponseWriter, r *http
 }
 
 // ConfirmRegistration активирует пользователя по одноразовому токену.
-
-
-
-
-
-
-
-
 func (h *Handler) ConfirmRegistration(w http.ResponseWriter, r *http.Request) {
 	var request TokenRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -85,14 +59,6 @@ func (h *Handler) ConfirmRegistration(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequestPasswordReset отправляет одноразовую ссылку для сброса пароля.
-
-
-
-
-
-
-
-
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var request EmailRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -108,14 +74,6 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 }
 
 // ResetPassword меняет пароль по одноразовому reset-токену и выдаёт новую сессию.
-
-
-
-
-
-
-
-
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var request ResetPasswordRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -131,12 +89,6 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // Permissions возвращает permissions текущего пользователя.
-
-
-
-
-
-
 func (h *Handler) Permissions(w http.ResponseWriter, r *http.Request) {
 	userID, ok := platformauth.UserIDFromContext(r.Context())
 	if !ok {
@@ -150,19 +102,12 @@ func (h *Handler) Permissions(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(PermissionsResponse{Permissions: permissions})
+	if err := json.NewEncoder(w).Encode(PermissionsResponse{Permissions: permissions}); err != nil {
+		return
+	}
 }
 
 // Login проверяет credentials и выдает access-токен.
-
-
-
-
-
-
-
-
-
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var request LoginRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -181,15 +126,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // Refresh ротирует refresh-токен и возвращает новую пару токенов.
-
-
-
-
-
-
-
-
-
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var request RefreshRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -205,13 +141,6 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout отзывает refresh-токен и завершает сессию пользователя.
-
-
-
-
-
-
-
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var request RefreshRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -224,14 +153,12 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func decodeJSON(r *http.Request, target any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(target)
 }
-
-func writeAuth(w http.ResponseWriter, status int, result application.AuthDTO) {
+func writeAuth(w http.ResponseWriter, status int, result application.AuthDTO) { //nolint:unparam // status is part of the response helper contract.
 	response := AuthResponse{
 		User: UserResponse{
 			Id:         result.User.ID.String(),
@@ -249,19 +176,20 @@ func writeAuth(w http.ResponseWriter, status int, result application.AuthDTO) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil { //nolint:gosec // access token is the intended response payload.
+		return
+	}
 }
-
 func writeRegistration(w http.ResponseWriter, status int, result application.RegistrationDTO) {
 	writeMessage(w, status, application.MessageDTO{Message: result.Message})
 }
-
 func writeMessage(w http.ResponseWriter, status int, result application.MessageDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(MessageResponse{Message: result.Message})
+	if err := json.NewEncoder(w).Encode(MessageResponse{Message: result.Message}); err != nil {
+		return
+	}
 }
-
 func writeApplicationError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, application.ErrValidation):

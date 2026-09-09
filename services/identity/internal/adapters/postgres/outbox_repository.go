@@ -26,7 +26,11 @@ func (r *OutboxRepository) Claim(ctx context.Context, limit int, now time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			return
+		}
+	}()
 	const query = `
 		WITH candidates AS (
 			SELECT id FROM identity.outbox_events

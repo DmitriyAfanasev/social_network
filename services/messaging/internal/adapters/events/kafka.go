@@ -33,8 +33,12 @@ func NewConsumer(broker string, topic string, groupID string, maxBytes int) *Con
 }
 
 // Run читает события и подтверждает их только после успешной обработки.
-func (c *Consumer) Run(ctx context.Context, handle func(context.Context, ports.IntegrationEvent) error) error {
-	defer c.reader.Close()
+func (c *Consumer) Run(ctx context.Context, handle func(context.Context, ports.IntegrationEvent) error) (runErr error) {
+	defer func() {
+		if err := c.reader.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+	}()
 	for {
 		message, err := c.reader.FetchMessage(ctx)
 		if err != nil {
@@ -46,7 +50,9 @@ func (c *Consumer) Run(ctx context.Context, handle func(context.Context, ports.I
 		event, err := decodeEvent(message.Value)
 		if err != nil {
 			// Повреждённый envelope не должен блокировать последующие события.
-			_ = c.reader.CommitMessages(ctx, message)
+			if err := c.reader.CommitMessages(ctx, message); err != nil {
+				return err
+			}
 			continue
 		}
 		if err := handle(ctx, event); err != nil {

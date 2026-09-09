@@ -10,14 +10,6 @@ import (
 )
 
 // GetRelationship возвращает социальную близость текущего пользователя к цели.
-
-
-
-
-
-
-
-
 func (h *Handler) GetRelationship(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

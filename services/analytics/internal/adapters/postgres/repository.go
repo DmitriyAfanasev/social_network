@@ -31,7 +31,11 @@ func (r *OutboxRepository) Claim(ctx context.Context, limit int, now time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return
+		}
+	}()
 	const query = `
 		WITH candidates AS (
 			SELECT id
@@ -168,7 +172,11 @@ func (h *EventRecordHandler) Handle(ctx context.Context, event domain.Event) err
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			return
+		}
+	}()
 
 	const query = `
 		INSERT INTO analytics.event_records (event_id, event_type, aggregate_id, payload, correlation_id, created_at)

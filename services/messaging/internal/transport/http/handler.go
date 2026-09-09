@@ -40,19 +40,16 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 	}
 	writeStatus(w, http.StatusOK, "ready")
 }
-
 func writeStatus(w http.ResponseWriter, status int, value string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": value})
 }
-
 func decodeJSON(r *http.Request, target any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(target)
 }
-
 func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -61,12 +58,10 @@ func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uui
 	}
 	return userID, true
 }
-
 func writeMessagingError(w http.ResponseWriter, err error) {
 	status, code, message := messagingErrorStatus(err)
 	httpx.WriteError(w, status, code, message)
 }
-
 func messagingErrorStatus(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, application.ErrValidation):

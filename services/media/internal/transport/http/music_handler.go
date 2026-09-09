@@ -5,22 +5,16 @@ import (
 	"strings"
 	"uuid"
 
+	"github.com/go-chi/chi/v5"
+
 	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
 	"general-project/media/internal/application"
-	"github.com/go-chi/chi/v5"
 )
 
 const maxMusicUploadSize int64 = 15 * 1024 * 1024
 
 // ListMusic возвращает музыкальные треки владельца с учётом приватности.
-
-
-
-
-
-
-
 func (h *Handler) ListMusic(w http.ResponseWriter, r *http.Request) {
 	viewerID, _ := auth.UserIDFromContext(r.Context())
 	ownerID := viewerID
@@ -45,24 +39,13 @@ func (h *Handler) ListMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateMusic загружает аудиофайл и создаёт музыкальный трек.
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) CreateMusic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
 		return
 	}
 	limitMultipartBody(w, r, maxMusicUploadSize)
-	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
+	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil { //nolint:gosec // maxMultipartMemory is an explicit bounded limit.
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_multipart", "некорректная multipart-форма")
 		return
 	}
@@ -94,14 +77,6 @@ func (h *Handler) CreateMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteMusic удаляет музыкальный трек текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) DeleteMusic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -120,15 +95,6 @@ func (h *Handler) DeleteMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddMusicToLibrary добавляет доступный трек в личную аудиотеку пользователя.
-
-
-
-
-
-
-
-
-
 func (h *Handler) AddMusicToLibrary(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -147,12 +113,6 @@ func (h *Handler) AddMusicToLibrary(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveMusicFromLibrary удаляет чужой трек из личной аудиотеки пользователя.
-
-
-
-
-
-
 func (h *Handler) RemoveMusicFromLibrary(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

@@ -9,34 +9,23 @@ import (
 	"strings"
 	"uuid"
 
+	"github.com/go-chi/chi/v5"
+
 	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
 	"general-project/media/internal/application"
-	"github.com/go-chi/chi/v5"
 )
 
 const maxVideoUploadSize int64 = 50 * 1024 * 1024
 
 // CreateVideo загружает видео и ставит задачу транскодирования в Kafka.
-
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
 		return
 	}
 	limitMultipartBody(w, r, maxVideoUploadSize)
-	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
+	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil { //nolint:gosec // maxMultipartMemory is an explicit bounded limit.
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_multipart", "некорректная multipart-форма")
 		return
 	}
@@ -79,15 +68,6 @@ func (h *Handler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListVideos возвращает видео текущего владельца, сгруппированные по альбомам.
-
-
-
-
-
-
-
-
-
 func (h *Handler) ListVideos(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -111,15 +91,6 @@ func (h *Handler) ListVideos(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateAlbum создаёт альбом видео текущего пользователя.
-
-
-
-
-
-
-
-
-
 func (h *Handler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -138,14 +109,6 @@ func (h *Handler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAlbum удаляет альбом и видео текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -164,12 +127,6 @@ func (h *Handler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // RecordView фиксирует просмотр видео, допускается анонимный просмотр.
-
-
-
-
-
-
 func (h *Handler) RecordView(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -209,13 +166,6 @@ func decodeJSON(r *http.Request, target any) error {
 }
 
 // ToggleLike переключает like текущего пользователя.
-
-
-
-
-
-
-
 func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -235,31 +185,14 @@ func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetBookmark изменяет состояние закладки видео.
-
-
-
-
-
-
-
-
 func (h *Handler) SetBookmark(w http.ResponseWriter, r *http.Request) {
 	h.setVideoFlag(w, r, true)
 }
 
 // SetFavorite изменяет состояние избранного видео.
-
-
-
-
-
-
-
-
 func (h *Handler) SetFavorite(w http.ResponseWriter, r *http.Request) {
 	h.setVideoFlag(w, r, false)
 }
-
 func (h *Handler) setVideoFlag(w http.ResponseWriter, r *http.Request, bookmark bool) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -289,13 +222,6 @@ func (h *Handler) setVideoFlag(w http.ResponseWriter, r *http.Request, bookmark 
 }
 
 // GetVideo возвращает состояние видео и готовые варианты.
-
-
-
-
-
-
-
 func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -315,14 +241,6 @@ func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteVideo удаляет видео текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -339,7 +257,6 @@ func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func parseHeights(value string) ([]int, error) {
 	if strings.TrimSpace(value) == "" {
 		return []int{360, 720}, nil

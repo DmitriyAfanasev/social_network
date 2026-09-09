@@ -1,3 +1,4 @@
+// Package application содержит сценарии обработки медиафайлов.
 package application
 
 import (
@@ -7,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
+	_ "image/gif"  // Регистрация декодера GIF.
+	_ "image/jpeg" // Регистрация декодера JPEG.
+	_ "image/png"  // Регистрация декодера PNG.
 	"io"
 	"math"
 	"os"
@@ -98,7 +99,7 @@ func (p *ImageProcessor) Process(ctx context.Context, mediaID uuid.UUID) error {
 	}
 	config, format, err := image.DecodeConfig(inputFile)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrImageRejected, err)
+		return fmt.Errorf("%w: %w", ErrImageRejected, err)
 	}
 	// image.Decode обрабатывает только первый GIF-кадр; не заменяем анимацию статичным файлом.
 	if format == "gif" {
@@ -112,7 +113,7 @@ func (p *ImageProcessor) Process(ctx context.Context, mediaID uuid.UUID) error {
 	}
 	decoded, _, err := image.Decode(inputFile)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrImageRejected, err)
+		return fmt.Errorf("%w: %w", ErrImageRejected, err)
 	}
 
 	outputFile, err := os.CreateTemp("", "media-image-output-*.webp")
@@ -176,7 +177,7 @@ func (p *ImageProcessor) validateImageConfig(config image.Config) error {
 	}
 	var memory runtime.MemStats
 	runtime.ReadMemStats(&memory)
-	if memory.HeapAlloc > uint64(p.limits.MemoryBudgetBytes-estimated) {
+	if p.limits.MemoryBudgetBytes > estimated && memory.HeapAlloc > uint64(p.limits.MemoryBudgetBytes-estimated) { //nolint:gosec // guarded by the positive bound above.
 		return ErrImageMemoryBudgetExceeded
 	}
 	return nil

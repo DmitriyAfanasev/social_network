@@ -1,3 +1,4 @@
+// Package application содержит сценарии и DTO profiles-сервиса.
 package application
 
 import (

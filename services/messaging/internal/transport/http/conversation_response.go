@@ -30,13 +30,11 @@ func mapConversationResponse(conversation application.ConversationDTO) conversat
 	}
 	return response
 }
-
 func writeConversation(w http.ResponseWriter, status int, conversation application.ConversationDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(mapConversationResponse(conversation))
 }
-
 func writeConversations(w http.ResponseWriter, status int, conversations []application.ConversationDTO) {
 	response := conversationsResponse{Conversations: make([]conversationResponse, 0, len(conversations))}
 	for _, conversation := range conversations {

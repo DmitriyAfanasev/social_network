@@ -3,11 +3,12 @@ package application
 import (
 	"context"
 	"general-project/profiles/internal/domain"
-	"github.com/stretchr/testify/require"
 	"math"
 	"strings"
 	"testing"
 	"uuid"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestGalleryPrivacyAndArchiveAreAppliedAfterCache(t *testing.T) {

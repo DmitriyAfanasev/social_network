@@ -38,7 +38,6 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	pool, err := postgres.Open(ctx, cfg.DatabaseURL, 10)
 	if err != nil {
@@ -47,7 +46,6 @@ func main() {
 	}
 	defer pool.Close()
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
-	defer redisClient.Close()
 
 	readiness := postgresadapter.NewHealthChecker(pool)
 	users := postgresadapter.NewUserRepository(pool)
@@ -55,7 +53,6 @@ func main() {
 	verificationTokens := postgresadapter.NewVerificationTokenStore(pool)
 	outbox := postgresadapter.NewOutboxRepository(pool)
 	eventPublisher := eventsadapter.NewPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
-	defer eventPublisher.Close()
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
 	go func() {
 		if publishErr := outboxPublisher.Run(ctx, time.Second); publishErr != nil && ctx.Err() == nil {
@@ -128,5 +125,14 @@ func main() {
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = server.Shutdown(shutdownCtx)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("identity HTTP server shutdown failed", "error", err)
+	}
+	if err := eventPublisher.Close(); err != nil {
+		logger.Error("identity event publisher close failed", "error", err)
+	}
+	if err := redisClient.Close(); err != nil {
+		logger.Error("identity Redis close failed", "error", err)
+	}
+	stop()
 }

@@ -78,7 +78,7 @@ func (q *RedisStream) Run(ctx context.Context, handler func(context.Context, por
 		}
 		if err != nil {
 			if ctx.Err() != nil {
-				return nil
+				return ctx.Err()
 			}
 			return err
 		}

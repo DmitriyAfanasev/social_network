@@ -31,7 +31,11 @@ func (r *Repository) GetOrCreateDirect(ctx context.Context, userID uuid.UUID, ot
 	if err != nil {
 		return domain.Conversation{}, err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			return
+		}
+	}()
 
 	const conversationQuery = `
 		INSERT INTO messaging.conversations (id, direct_key)
@@ -112,7 +116,7 @@ func (r *Repository) lastMessage(ctx context.Context, conversationID uuid.UUID, 
 		LIMIT 1`
 	var message domain.Message
 	if err := r.pool.QueryRow(ctx, query, conversationID, clearedAt).Scan(&message.ID, &message.ConversationID, &message.SenderID, &message.Body, &message.MediaID, &message.CreatedAt, &message.EditedAt, &message.DeletedAt); errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a conversation may legitimately have no messages.
 	} else if err != nil {
 		return nil, err
 	}

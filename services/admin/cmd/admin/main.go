@@ -17,6 +17,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg := config.Load()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -25,7 +31,7 @@ func main() {
 	pool, err := platformpostgres.Open(ctx, cfg.DatabaseURL, 5)
 	if err != nil {
 		logger.Error("admin database unavailable", "error", err)
-		os.Exit(1)
+		return err
 	}
 	defer pool.Close()
 
@@ -36,6 +42,7 @@ func main() {
 		return handler.Handle(ctx, event.ID, event.EventType, event.CorrelationID, event.Payload, event.CreatedAt)
 	}); err != nil && !errors.Is(err, context.Canceled) {
 		logger.Error("admin audit consumer stopped", "error", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }

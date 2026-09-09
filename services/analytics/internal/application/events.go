@@ -34,9 +34,8 @@ func (p *OutboxPublisher) Run(ctx context.Context, interval time.Duration) error
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		if err := p.RunOnce(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			// Отдельное событие не должно останавливать worker: оно будет доступно
-			// после backoff и попадёт в следующую попытку.
+		if err := p.RunOnce(ctx); err != nil && errors.Is(err, context.Canceled) {
+			return nil
 		}
 		select {
 		case <-ctx.Done():
@@ -59,7 +58,9 @@ func (p *OutboxPublisher) RunOnce(ctx context.Context) error {
 			if firstErr == nil {
 				firstErr = err
 			}
-			_ = p.outbox.MarkFailed(ctx, event.ID, nextAttempt(now, event.Attempts), err.Error())
+			if markErr := p.outbox.MarkFailed(ctx, event.ID, nextAttempt(now, event.Attempts), err.Error()); markErr != nil && firstErr == nil {
+				firstErr = markErr
+			}
 			continue
 		}
 		if err := p.outbox.MarkPublished(ctx, event.ID, now); err != nil && firstErr == nil {
@@ -123,7 +124,7 @@ func nextAttempt(now time.Time, attempts int) time.Time {
 	if attempts < 1 {
 		attempts = 1
 	}
-	delay := time.Duration(1<<min(attempts, 6)) * time.Second
+	delay := time.Duration(1<<minInt(attempts, 6)) * time.Second
 	return now.Add(delay)
 }
 
@@ -154,7 +155,7 @@ func waitRetry(ctx context.Context, delay time.Duration) error {
 	}
 }
 
-func min(first int, second int) int {
+func minInt(first int, second int) int {
 	if first < second {
 		return first
 	}

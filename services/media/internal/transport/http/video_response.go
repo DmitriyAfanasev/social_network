@@ -77,17 +77,14 @@ func mapVideoResponse(video application.VideoDTO) videoResponse {
 	}
 	return response
 }
-
 func mapAlbumResponse(albumID uuid.UUID, title string) videoAlbumResponse {
 	return videoAlbumResponse{ID: albumID.String(), Title: title}
 }
-
 func writeVideoAlbum(w http.ResponseWriter, status int, albumID uuid.UUID, title string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(mapAlbumResponse(albumID, title))
 }
-
 func writeVideoAlbums(w http.ResponseWriter, status int, albums []application.VideoAlbumDTO) {
 	response := videoAlbumListResponse{Albums: make([]videoAlbumListItem, 0, len(albums))}
 	for _, album := range albums {
@@ -105,31 +102,26 @@ func writeVideoAlbums(w http.ResponseWriter, status int, albums []application.Vi
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(response)
 }
-
 func writeVideoView(w http.ResponseWriter, status int, count int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(videoViewResponse{ViewsCount: count})
 }
-
 func writeVideoLike(w http.ResponseWriter, status int, result ports.InteractionResult) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(videoLikeResponse{LikesCount: result.LikesCount, Liked: result.Liked})
 }
-
 func writeVideoBookmark(w http.ResponseWriter, status int, enabled bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(videoFlagResponse{Bookmarked: &enabled})
 }
-
 func writeVideoFavorite(w http.ResponseWriter, status int, enabled bool) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(videoFlagResponse{Favorited: &enabled})
 }
-
 func writeVideo(w http.ResponseWriter, status int, video application.VideoDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

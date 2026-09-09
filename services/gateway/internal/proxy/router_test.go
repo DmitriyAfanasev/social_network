@@ -3,6 +3,7 @@ package proxy
 import (
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,12 +19,11 @@ func TestNewRouterRoutesAndRewritesRequests(t *testing.T) {
 
 	var receivedPath string
 	var receivedRequestID string
-	backend := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	backend := newIPv4Server(t, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		receivedPath = request.URL.Path
 		receivedRequestID = request.Header.Get("X-Request-ID")
 		writer.WriteHeader(http.StatusNoContent)
 	}))
-	defer backend.Close()
 
 	cfg := testConfig(backend.URL)
 	router, err := NewRouter(cfg, slog.Default(), nil)
@@ -43,11 +43,12 @@ func TestNewRouterProxiesSSEPathWithoutRewrite(t *testing.T) {
 	t.Parallel()
 
 	var receivedPath string
-	backend := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+	backend := newIPv4Server(t, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		receivedPath = request.URL.Path
-		_, _ = io.WriteString(writer, "data: ready\n\n")
+		if _, err := io.WriteString(writer, "data: ready\n\n"); err != nil {
+			t.Errorf("write SSE response: %v", err)
+		}
 	}))
-	defer backend.Close()
 
 	router, err := NewRouter(testConfig(backend.URL), slog.Default(), nil)
 	require.NoError(t, err)
@@ -64,11 +65,12 @@ func TestNewRouterProxiesSSEPathWithoutRewrite(t *testing.T) {
 func TestReadinessRequiresAllUpstreams(t *testing.T) {
 	t.Parallel()
 
-	readyBackend := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		require.Equal(t, "/readyz", request.URL.Path)
+	readyBackend := newIPv4Server(t, http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/readyz" {
+			t.Errorf("path = %q, want /readyz", request.URL.Path)
+		}
 		writer.WriteHeader(http.StatusOK)
 	}))
-	defer readyBackend.Close()
 
 	readyConfig := testConfig(readyBackend.URL)
 	readyConfig.CallsURL = "http://127.0.0.1:1"
@@ -96,6 +98,19 @@ func TestCORSPreflight(t *testing.T) {
 
 	require.Equal(t, http.StatusNoContent, response.Code)
 	require.Equal(t, "http://localhost:5173", response.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func newIPv4Server(t *testing.T, handler http.Handler) *httptest.Server {
+	t.Helper()
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("environment does not allow test listeners: %v", err)
+	}
+	server := httptest.NewUnstartedServer(handler)
+	server.Listener = listener
+	server.Start()
+	t.Cleanup(server.Close)
+	return server
 }
 
 func testConfig(backendURL string) config.Config {

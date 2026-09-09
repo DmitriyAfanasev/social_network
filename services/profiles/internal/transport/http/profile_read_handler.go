@@ -14,12 +14,6 @@ import (
 )
 
 // GetMine возвращает профиль текущего пользователя.
-
-
-
-
-
-
 func (h *Handler) GetMine(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -35,14 +29,6 @@ func (h *Handler) GetMine(w http.ResponseWriter, r *http.Request) {
 }
 
 // Search выполняет prefix-поиск публичных профилей по handle.
-
-
-
-
-
-
-
-
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if value := r.URL.Query().Get("limit"); value != "" {
@@ -68,13 +54,6 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetByHandle возвращает публичный профиль по его URL-handle.
-
-
-
-
-
-
-
 func (h *Handler) GetByHandle(w http.ResponseWriter, r *http.Request) {
 	identifier := chi.URLParam(r, "handle")
 	viewerID, _ := auth.UserIDFromContext(r.Context())

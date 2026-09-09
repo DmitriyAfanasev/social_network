@@ -21,8 +21,12 @@ func NewKafkaConsumer(broker string, topic string, groupID string, maxBytes int)
 }
 
 // Run читает completion-события и подтверждает их после успешной обработки.
-func (c *KafkaConsumer) Run(ctx context.Context, handler func(context.Context, ports.TranscodeCompletion) error) error {
-	defer c.reader.Close()
+func (c *KafkaConsumer) Run(ctx context.Context, handler func(context.Context, ports.TranscodeCompletion) error) (runErr error) {
+	defer func() {
+		if err := c.reader.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+	}()
 	for {
 		message, err := c.reader.FetchMessage(ctx)
 		if err != nil {
@@ -33,7 +37,9 @@ func (c *KafkaConsumer) Run(ctx context.Context, handler func(context.Context, p
 		}
 		var completion ports.TranscodeCompletion
 		if err := json.Unmarshal(message.Value, &completion); err != nil {
-			_ = c.reader.CommitMessages(ctx, message)
+			if err := c.reader.CommitMessages(ctx, message); err != nil {
+				return err
+			}
 			continue
 		}
 		if err := handler(ctx, completion); err != nil {

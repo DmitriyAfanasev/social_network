@@ -116,11 +116,10 @@ func newReverseProxy(item backend, logger *slog.Logger, rewrite func(*http.Reque
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(target)
-	director := proxy.Director
-	proxy.Director = func(request *http.Request) {
-		director(request)
+	proxy.Rewrite = func(request *httputil.ProxyRequest) {
+		request.SetURL(target)
 		if rewrite != nil {
-			rewrite(request)
+			rewrite(request.Out)
 		}
 	}
 	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, err error) {
@@ -132,7 +131,9 @@ func newReverseProxy(item backend, logger *slog.Logger, rewrite func(*http.Reque
 
 func health(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ok"})
+	if err := json.NewEncoder(writer).Encode(map[string]string{"status": "ok"}); err != nil {
+		return
+	}
 }
 
 func readiness(backends []backend, timeout time.Duration, logger *slog.Logger) http.HandlerFunc {
@@ -159,7 +160,9 @@ func readiness(backends []backend, timeout time.Duration, logger *slog.Logger) h
 				}
 				response, err := client.Do(probeRequest)
 				if err == nil {
-					_ = response.Body.Close()
+					if closeErr := response.Body.Close(); closeErr != nil {
+						err = closeErr
+					}
 					if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 						err = errors.New(response.Status)
 					}
@@ -183,7 +186,9 @@ func readiness(backends []backend, timeout time.Duration, logger *slog.Logger) h
 		}
 
 		writer.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(writer).Encode(map[string]string{"status": "ready"})
+		if err := json.NewEncoder(writer).Encode(map[string]string{"status": "ready"}); err != nil {
+			return
+		}
 	}
 }
 

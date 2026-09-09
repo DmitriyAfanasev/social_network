@@ -5,8 +5,9 @@ import (
 	"errors"
 	"general-project/profiles/internal/domain"
 	"general-project/profiles/internal/ports"
-	"github.com/jackc/pgx/v5"
 	"uuid"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // CanViewMedia запрещает чужому зрителю файл, связанный с закрытым или архивным фото.

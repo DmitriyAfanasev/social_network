@@ -8,9 +8,10 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/redis/go-redis/v9"
+
 	"general-project/call-signaling/internal/domain"
 	"general-project/call-signaling/internal/ports"
-	"github.com/redis/go-redis/v9"
 )
 
 const sessionPrefix = "calls:session:"
@@ -30,7 +31,7 @@ func NewRedisStore(client *redis.Client, ttlSeconds int) *RedisStore {
 func (s *RedisStore) Save(ctx context.Context, session domain.Session) error {
 	key := sessionPrefix + session.CallID.String()
 	return s.client.HSet(ctx, key, map[string]any{
-		"call_id": session.CallID, "caller_id": session.CallerID, "callee_id": session.CalleeID,
+		"call_id": session.CallID.String(), "caller_id": session.CallerID.String(), "callee_id": session.CalleeID.String(),
 		"call_type": string(session.CallType), "status": string(session.Status),
 	}).Err()
 }
@@ -40,8 +41,11 @@ func (s *RedisStore) Create(ctx context.Context, session domain.Session) error {
 	key := sessionPrefix + session.CallID.String()
 	pipe := s.client.TxPipeline()
 	pipe.HSet(ctx, key, map[string]any{
-		"call_id": session.CallID, "caller_id": session.CallerID, "callee_id": session.CalleeID,
-		"call_type": string(session.CallType), "status": string(session.Status),
+		"call_id":   session.CallID.String(),
+		"caller_id": session.CallerID.String(),
+		"callee_id": session.CalleeID.String(),
+		"call_type": string(session.CallType),
+		"status":    string(session.Status),
 	})
 	pipe.Expire(ctx, key, timeDurationSeconds(s.ttl))
 	_, err := pipe.Exec(ctx)

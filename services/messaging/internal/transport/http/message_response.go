@@ -26,13 +26,11 @@ func mapMessageResponse(message application.MessageDTO) messageResponse {
 	}
 	return response
 }
-
 func writeMessage(w http.ResponseWriter, status int, message application.MessageDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(mapMessageResponse(message))
 }
-
 func writeMessages(w http.ResponseWriter, status int, messages []application.MessageDTO, hasMore bool) {
 	response := messagesResponse{Messages: make([]messageResponse, 0, len(messages)), HasMore: hasMore}
 	for _, message := range messages {

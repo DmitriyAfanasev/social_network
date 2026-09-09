@@ -1,3 +1,4 @@
+// Package main запускает worker транскодирования видео.
 package main
 
 import (
@@ -17,7 +18,6 @@ func main() {
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	w, err := worker.New(cfg, logger)
 	if err != nil {
@@ -30,5 +30,6 @@ func main() {
 		logger.Error("video worker stopped with error", "error", err)
 		os.Exit(1)
 	}
+	stop()
 	logger.Info("video worker stopped gracefully")
 }

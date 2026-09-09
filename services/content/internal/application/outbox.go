@@ -28,7 +28,9 @@ func (p *OutboxPublisher) Run(ctx context.Context, interval time.Duration) error
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		_ = p.RunOnce(ctx)
+		if err := p.RunOnce(ctx); err != nil && ctx.Err() != nil {
+			return ctx.Err()
+		}
 		select {
 		case <-ctx.Done():
 			return nil
@@ -50,7 +52,9 @@ func (p *OutboxPublisher) RunOnce(ctx context.Context) error {
 			if firstErr == nil {
 				firstErr = err
 			}
-			_ = p.outbox.MarkFailed(ctx, event.ID, now.Add(retryDelay(event.Attempts)), err.Error())
+			if markErr := p.outbox.MarkFailed(ctx, event.ID, now.Add(retryDelay(event.Attempts)), err.Error()); markErr != nil && firstErr == nil {
+				firstErr = markErr
+			}
 			continue
 		}
 		if err := p.outbox.MarkPublished(ctx, event.ID, now); err != nil && firstErr == nil {

@@ -19,7 +19,6 @@ type fakeOutboxRepository struct {
 	failed       []uuid.UUID
 	nextAttempt  time.Time
 	failureCause string
-	failedEvents []uuid.UUID
 }
 
 func (f *fakeOutboxRepository) Claim(_ context.Context, _ int, _ time.Time) ([]domain.Event, error) {

@@ -3,12 +3,13 @@ package postgres
 import (
 	"context"
 	"general-project/profiles/internal/domain"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
 	"uuid"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGalleryRepositoryIntegration(t *testing.T) {

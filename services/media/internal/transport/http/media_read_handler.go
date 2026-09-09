@@ -5,17 +5,11 @@ import (
 	"uuid"
 
 	"general-project/libs/platform/httpx"
+
 	"github.com/go-chi/chi/v5"
 )
 
 // GetByID возвращает активные метаданные медиаобъекта.
-
-
-
-
-
-
-
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	mediaID, err := uuid.Parse(chi.URLParam(r, "mediaID"))
 	if err != nil {

@@ -33,21 +33,23 @@ func main() {
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	pool, err := platformpostgres.Open(ctx, cfg.PostgresURL, 10)
 	if err != nil {
 		logger.Error("calls database unavailable", "error", err)
 		os.Exit(1)
 	}
-	defer pool.Close()
-
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr, DB: cfg.RedisDB})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		logger.Error("calls Redis unavailable", "error", err)
+		pool.Close()
 		os.Exit(1)
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			logger.Error("calls Redis close failed", "error", err)
+		}
+	}()
 
 	sessions := store.NewRedisStore(redisClient, int(cfg.SessionTTL/time.Second))
 	authorizer := authz.NewRepository(pool)
@@ -86,5 +88,9 @@ func main() {
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = httpServer.Shutdown(shutdownCtx)
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		logger.Error("calls HTTP server shutdown failed", "error", err)
+	}
+	pool.Close()
+	stop()
 }

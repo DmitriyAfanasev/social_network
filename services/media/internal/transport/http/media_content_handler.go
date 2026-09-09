@@ -15,13 +15,6 @@ import (
 )
 
 // StreamContent отдаёт бинарное содержимое активного медиаобъекта.
-
-
-
-
-
-
-
 func (h *Handler) StreamContent(w http.ResponseWriter, r *http.Request) {
 	mediaID, err := uuid.Parse(chi.URLParam(r, "mediaID"))
 	if err != nil {
@@ -68,7 +61,6 @@ func (h *Handler) StreamContent(w http.ResponseWriter, r *http.Request) {
 	writeContentHeaders(w, media)
 	_, _ = io.Copy(w, content)
 }
-
 func writeContentHeaders(w http.ResponseWriter, media application.MediaDTO) {
 	contentType := media.ContentType
 	if contentType == "" {
@@ -83,7 +75,6 @@ func writeContentHeaders(w http.ResponseWriter, media application.MediaDTO) {
 		w.Header().Set("Accept-Ranges", "bytes")
 	}
 }
-
 func parseByteRange(value string, size int64) (int64, int64, bool) {
 	if size <= 0 || !strings.HasPrefix(value, "bytes=") {
 		return 0, 0, false

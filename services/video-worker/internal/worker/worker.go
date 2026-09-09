@@ -1,3 +1,4 @@
+// Package worker содержит фонового worker-а транскодирования видео.
 package worker
 
 import (
@@ -14,10 +15,11 @@ import (
 	"sync"
 	"uuid"
 
-	"general-project/video-worker/internal/config"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/segmentio/kafka-go"
+
+	"general-project/video-worker/internal/config"
 )
 
 // Job содержит команду на транскодирование видео.
@@ -48,6 +50,7 @@ type Worker struct {
 	slots    chan struct{}
 }
 
+// New создаёт worker и подключает его к Kafka и MinIO.
 func New(cfg config.Config, logger *slog.Logger) (*Worker, error) {
 	storage, err := minio.New(cfg.S3Endpoint, &minio.Options{Creds: credentials.NewStaticV4(cfg.S3AccessKey, cfg.S3SecretKey, ""), Secure: cfg.S3Secure})
 	if err != nil {
@@ -58,9 +61,16 @@ func New(cfg config.Config, logger *slog.Logger) (*Worker, error) {
 		producer: &kafka.Writer{Addr: kafka.TCP(cfg.KafkaBrokers), Topic: config.VideoTranscodeCompletedTopic, Balancer: &kafka.Hash{}}, slots: make(chan struct{}, cfg.ParallelJobs)}, nil
 }
 
-func (w *Worker) Run(ctx context.Context) error {
-	defer w.reader.Close()
-	defer w.producer.Close()
+// Run читает задания транскодирования до отмены контекста.
+func (w *Worker) Run(ctx context.Context) (runErr error) {
+	defer func() {
+		if err := w.reader.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+		if err := w.producer.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+	}()
 	for {
 		message, err := w.reader.FetchMessage(ctx)
 		if err != nil {
@@ -72,12 +82,16 @@ func (w *Worker) Run(ctx context.Context) error {
 		var job Job
 		if err := json.Unmarshal(message.Value, &job); err != nil {
 			w.logger.Error("invalid video job", "error", err)
-			_ = w.reader.CommitMessages(ctx, message)
+			if err := w.reader.CommitMessages(ctx, message); err != nil {
+				return err
+			}
 			continue
 		}
 		if job.ObjectKey == "" {
 			w.logger.Warn("obsolete video job skipped", "video_id", job.VideoID)
-			_ = w.reader.CommitMessages(ctx, message)
+			if err := w.reader.CommitMessages(ctx, message); err != nil {
+				return err
+			}
 			continue
 		}
 		w.logger.Info("video job started", "video_id", job.VideoID, "media_id", job.MediaID, "qualities", job.RequestedHeights)
@@ -108,8 +122,14 @@ func (w *Worker) process(ctx context.Context, job Job) error {
 		return err
 	}
 	inputPath := input.Name()
-	defer os.Remove(inputPath)
-	input.Close()
+	defer func() {
+		if err := os.Remove(inputPath); err != nil {
+			return
+		}
+	}()
+	if err := input.Close(); err != nil {
+		return err
+	}
 	bucket := job.Bucket
 	if bucket == "" {
 		bucket = w.cfg.S3Bucket
@@ -167,9 +187,15 @@ func (w *Worker) transcode(ctx context.Context, input string, videoID uuid.UUID,
 		return Rendition{}, err
 	}
 	outputPath := output.Name()
-	defer os.Remove(outputPath)
-	output.Close()
-	cmd := exec.CommandContext(ctx, "ffmpeg", "-y", "-i", input, "-vf", fmt.Sprintf("scale=-2:%d", height), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-movflags", "+faststart", outputPath)
+	defer func() {
+		if err := os.Remove(outputPath); err != nil {
+			return
+		}
+	}()
+	if err := output.Close(); err != nil {
+		return Rendition{}, err
+	}
+	cmd := exec.CommandContext(ctx, "ffmpeg", "-y", "-i", input, "-vf", fmt.Sprintf("scale=-2:%d", height), "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-movflags", "+faststart", outputPath) //nolint:gosec // executable and arguments are fixed by the worker.
 	if logs, err := cmd.CombinedOutput(); err != nil {
 		return Rendition{}, fmt.Errorf("ffmpeg %dp: %w: %s", height, err, string(logs))
 	}
@@ -186,7 +212,7 @@ func (w *Worker) transcode(ctx context.Context, input string, videoID uuid.UUID,
 }
 
 func probeDuration(ctx context.Context, input string) (float64, error) {
-	output, err := exec.CommandContext(
+	output, err := exec.CommandContext( //nolint:gosec // executable and arguments are fixed by the worker.
 		ctx,
 		"ffprobe",
 		"-v", "error",
@@ -204,4 +230,4 @@ func probeDuration(ctx context.Context, input string) (float64, error) {
 	return duration, nil
 }
 
-func mustJSON(value any) []byte { data, _ := json.Marshal(value); return data }
+func mustJSON(value any) []byte { data, _ := json.Marshal(value); return data } //nolint:errcheck // all call sites use JSON-compatible values.

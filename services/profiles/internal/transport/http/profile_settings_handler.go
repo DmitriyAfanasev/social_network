@@ -10,16 +10,6 @@ import (
 )
 
 // SetHandle назначает текущему пользователю публичный handle.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) SetHandle(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -41,17 +31,6 @@ func (h *Handler) SetHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePublicProfile изменяет описание и данные текущего профиля.
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) UpdatePublicProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -80,12 +59,6 @@ func (h *Handler) UpdatePublicProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPrivacy возвращает настройки приватности текущего пользователя.
-
-
-
-
-
-
 func (h *Handler) GetPrivacy(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -101,15 +74,6 @@ func (h *Handler) GetPrivacy(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePrivacy сохраняет настройки приватности текущего пользователя.
-
-
-
-
-
-
-
-
-
 func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {

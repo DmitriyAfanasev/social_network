@@ -12,12 +12,6 @@ import (
 )
 
 // GetRelationships возвращает друзей, подписчиков и подписки текущего пользователя.
-
-
-
-
-
-
 func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -32,14 +26,6 @@ func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPublicFriends возвращает друзей указанного профиля с учётом приватности.
-
-
-
-
-
-
-
-
 func (h *Handler) GetPublicFriends(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -59,14 +45,6 @@ func (h *Handler) GetPublicFriends(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetRecommendations возвращает кандидатов в друзья, отсортированных по числу общих друзей.
-
-
-
-
-
-
-
-
 func (h *Handler) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -108,7 +86,6 @@ func mapRelationshipsResponse(result application.RelationshipsDTO) relationships
 		Subscriptions: mapUUIDs(result.Subscriptions),
 	}
 }
-
 func mapRecommendationsResponse(result []application.RecommendationDTO) recommendationsResponse {
 	response := recommendationsResponse{Recommendations: make([]recommendationResponse, 0, len(result))}
 	for _, recommendation := range result {
@@ -116,7 +93,6 @@ func mapRecommendationsResponse(result []application.RecommendationDTO) recommen
 	}
 	return response
 }
-
 func mapUUIDs(values []uuid.UUID) []string {
 	result := make([]string, 0, len(values))
 	for _, value := range values {
@@ -124,7 +100,6 @@ func mapUUIDs(values []uuid.UUID) []string {
 	}
 	return result
 }
-
 func mapFriendRequests(requests []application.FriendRequestDTO) []friendRequestResponse {
 	result := make([]friendRequestResponse, 0, len(requests))
 	for _, request := range requests {
@@ -135,8 +110,7 @@ func mapFriendRequests(requests []application.FriendRequestDTO) []friendRequestR
 	}
 	return result
 }
-
-func writeJSON(w http.ResponseWriter, status int, value any) {
+func writeJSON(w http.ResponseWriter, status int, value any) { //nolint:unparam // status is part of the response helper contract.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)

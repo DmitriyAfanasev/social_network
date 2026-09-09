@@ -32,8 +32,12 @@ func NewConsumer(broker string, topic string, groupID string) *Consumer {
 }
 
 // Run читает события и подтверждает их только после успешной обработки.
-func (c *Consumer) Run(ctx context.Context, handle func(context.Context, Event) error) error {
-	defer c.reader.Close()
+func (c *Consumer) Run(ctx context.Context, handle func(context.Context, Event) error) (runErr error) {
+	defer func() {
+		if err := c.reader.Close(); err != nil && runErr == nil {
+			runErr = err
+		}
+	}()
 	for {
 		message, err := c.reader.FetchMessage(ctx)
 		if err != nil {
@@ -44,7 +48,9 @@ func (c *Consumer) Run(ctx context.Context, handle func(context.Context, Event) 
 		}
 		var event Event
 		if err := json.Unmarshal(message.Value, &event); err != nil || event.ID == uuid.Nil() || event.EventType == "" || len(event.Payload) == 0 || event.CreatedAt.IsZero() {
-			_ = c.reader.CommitMessages(ctx, message)
+			if err := c.reader.CommitMessages(ctx, message); err != nil {
+				return err
+			}
 			continue
 		}
 		if err := handle(ctx, event); err != nil {

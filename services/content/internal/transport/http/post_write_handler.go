@@ -7,21 +7,13 @@ import (
 	"general-project/content/internal/application"
 	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
+
 	"github.com/go-chi/chi/v5"
 )
 
 type postRequest = PostRequest
 
 // Create создаёт текстовый пост от имени текущего пользователя.
-
-
-
-
-
-
-
-
-
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -46,18 +38,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update изменяет текст поста текущего пользователя.
-
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -86,14 +66,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete удаляет пост текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -109,7 +81,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -118,7 +89,6 @@ func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uui
 	}
 	return userID, true
 }
-
 func parsePostID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	postID, err := uuid.Parse(chi.URLParam(r, "postID"))
 	if err != nil {
@@ -127,7 +97,6 @@ func parsePostID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	}
 	return postID, true
 }
-
 func parseMediaIDs(values *[]string) ([]uuid.UUID, error) {
 	if values == nil {
 		return nil, nil

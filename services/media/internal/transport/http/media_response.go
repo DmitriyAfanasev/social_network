@@ -33,18 +33,15 @@ func mapMediaResponse(media application.MediaDTO) mediaResponse {
 		CreatedAt:        media.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
 	}
 }
-
 func writeMedia(w http.ResponseWriter, status int, media application.MediaDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(mapMediaResponse(media))
 }
-
 func writeMediaError(w http.ResponseWriter, err error) {
 	status, code, message := mediaErrorStatus(err)
 	httpx.WriteError(w, status, code, message)
 }
-
 func mediaErrorStatus(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, application.ErrValidation):

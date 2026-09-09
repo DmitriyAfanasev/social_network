@@ -24,6 +24,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg := config.Load()
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -32,7 +38,7 @@ func main() {
 	pool, err := platformpostgres.Open(ctx, cfg.DatabaseURL, 10)
 	if err != nil {
 		logger.Error("analytics database unavailable", "error", err)
-		os.Exit(1)
+		return err
 	}
 	defer pool.Close()
 
@@ -40,7 +46,11 @@ func main() {
 	processed := postgres.NewProcessedEventRepository(pool)
 	recordHandler := postgres.NewEventRecordHandler(pool)
 	eventPublisher := kafka.NewPublisherWithDLQ(cfg.KafkaBrokers, cfg.EventsTopic, cfg.DLQTopic)
-	defer eventPublisher.Close()
+	defer func() {
+		if err := eventPublisher.Close(); err != nil {
+			logger.Error("analytics event publisher close failed", "error", err)
+		}
+	}()
 	eventConsumer := kafka.NewConsumer(cfg.KafkaBrokers, cfg.EventsTopic, cfg.ConsumerGroup, cfg.KafkaMaxBytes)
 	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
 	consumer := application.NewEventConsumer(processed, recordHandler, eventPublisher, cfg.MaxAttempts, cfg.RetryBase)
@@ -83,5 +93,9 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = server.Shutdown(shutdownCtx)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("analytics HTTP server shutdown failed", "error", err)
+		return err
+	}
+	return nil
 }

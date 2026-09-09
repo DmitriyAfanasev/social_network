@@ -7,14 +7,6 @@ import (
 )
 
 // AddFriend создаёт заявку в друзья для текущего и целевого пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) AddFriend(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -34,14 +26,6 @@ func (h *Handler) AddFriend(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFriend удаляет friendship между текущим и целевым пользователем.
-
-
-
-
-
-
-
-
 func (h *Handler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

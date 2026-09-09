@@ -37,7 +37,11 @@ func (c *Client) ValidateOwned(ctx context.Context, userID uuid.UUID, mediaIDs [
 		}
 		var payload mediaResponse
 		decodeErr := json.NewDecoder(response.Body).Decode(&payload)
-		response.Body.Close()
+		defer func() {
+			if err := response.Body.Close(); err != nil {
+				return
+			}
+		}()
 		if response.StatusCode == http.StatusNotFound {
 			return ports.ErrMediaNotFound
 		}

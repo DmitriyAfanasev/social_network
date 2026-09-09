@@ -3,9 +3,9 @@ package application
 import (
 	"context"
 	"testing"
+	"uuid"
 
 	"github.com/stretchr/testify/require"
-	"uuid"
 
 	"general-project/admin/internal/domain"
 )

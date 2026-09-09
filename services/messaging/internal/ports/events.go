@@ -1,3 +1,4 @@
+// Package ports содержит интерфейсы application-слоя messaging-сервиса.
 package ports
 
 import (

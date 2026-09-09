@@ -34,18 +34,19 @@ func main() {
 	slog.SetDefault(logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		logger.Error("gateway Redis unavailable", "error", err)
 		os.Exit(1)
 	}
-	defer redisClient.Close()
 
 	router, err := proxy.NewRouter(cfg, logger, ratelimit.NewRedisFixedWindow(redisClient))
 	if err != nil {
 		logger.Error("gateway configuration is invalid", "error", err)
+		if closeErr := redisClient.Close(); closeErr != nil {
+			logger.Error("gateway Redis close failed", "error", closeErr)
+		}
 		os.Exit(1)
 	}
 	server := &http.Server{
@@ -64,5 +65,11 @@ func main() {
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = server.Shutdown(shutdownCtx)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("gateway shutdown failed", "error", err)
+	}
+	if err := redisClient.Close(); err != nil {
+		logger.Error("gateway Redis close failed", "error", err)
+	}
+	stop()
 }

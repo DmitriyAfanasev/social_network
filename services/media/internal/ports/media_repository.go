@@ -1,3 +1,4 @@
+// Package ports содержит интерфейсы, которыми владеет application-слой media.
 package ports
 
 import (

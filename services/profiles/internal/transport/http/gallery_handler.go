@@ -3,18 +3,13 @@ package httptransport
 import (
 	"general-project/libs/platform/auth"
 	"general-project/profiles/internal/application"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"uuid"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // PhotoMediaVisibility возвращает решение о доступе к содержимому фотографии.
-
-
-
-
-
-
 func (h *Handler) PhotoMediaVisibility(w http.ResponseWriter, r *http.Request) {
 	viewerID, _ := auth.UserIDFromContext(r.Context())
 	mediaID, err := uuid.Parse(chi.URLParam(r, "mediaID"))
@@ -34,14 +29,6 @@ func (h *Handler) PhotoMediaVisibility(w http.ResponseWriter, r *http.Request) {
 type photoMediaVisibilityResponse = PhotoMediaVisibilityResponse
 
 // UpdatePhotoAlbum изменяет настройки альбома владельца.
-
-
-
-
-
-
-
-
 func (h *Handler) UpdatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -64,13 +51,6 @@ func (h *Handler) UpdatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 type updatePhotoRequest = UpdatePhotoRequest
 
 // UpdatePhoto изменяет подпись, координаты и состояние архива фотографии.
-
-
-
-
-
-
-
 func (h *Handler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -94,12 +74,6 @@ type photoCommentPayload = PhotoCommentPayload
 type photoCommentsResponse = PhotoCommentsResponse
 
 // ListPhotoComments возвращает комментарии доступной фотографии.
-
-
-
-
-
-
 func (h *Handler) ListPhotoComments(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -123,13 +97,6 @@ func (h *Handler) ListPhotoComments(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddPhotoComment добавляет комментарий с проверкой политики альбома.
-
-
-
-
-
-
-
 func (h *Handler) AddPhotoComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {

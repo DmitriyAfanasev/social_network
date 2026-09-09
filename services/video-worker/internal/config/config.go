@@ -1,3 +1,4 @@
+// Package config содержит конфигурацию video-worker.
 package config
 
 import (
@@ -6,10 +7,13 @@ import (
 )
 
 const (
+	// VideoTranscodeRequestedTopic — Kafka topic входящих заданий.
 	VideoTranscodeRequestedTopic = "video.transcode.requested"
+	// VideoTranscodeCompletedTopic — Kafka topic результатов транскодирования.
 	VideoTranscodeCompletedTopic = "video.transcode.completed"
 )
 
+// Config содержит настройки video-worker.
 type Config struct {
 	KafkaBrokers  string
 	KafkaGroupID  string
@@ -23,6 +27,7 @@ type Config struct {
 	LogLevel      slog.Level
 }
 
+// Load загружает настройки video-worker из окружения.
 func Load() Config {
 	return Config{
 		KafkaBrokers:  platformconfig.Env("KAFKA_BROKERS", "localhost:9092"),

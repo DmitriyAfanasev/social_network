@@ -10,13 +10,13 @@ import (
 	"uuid"
 
 	"general-project/identity/internal/application"
+
 	"github.com/stretchr/testify/require"
 )
 
 type fakeReadinessChecker struct{}
 
 func (fakeReadinessChecker) Check(_ context.Context) error { return nil }
-
 func TestHealth(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +27,6 @@ func TestHealth(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.JSONEq(t, `{"status":"ok"}`, recorder.Body.String())
 }
-
 func TestReady(t *testing.T) {
 	t.Parallel()
 
@@ -38,7 +37,6 @@ func TestReady(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.JSONEq(t, `{"status":"ready"}`, recorder.Body.String())
 }
-
 func TestWriteAuthUsesGeneratedResponseModel(t *testing.T) {
 	t.Parallel()
 

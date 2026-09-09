@@ -24,7 +24,9 @@ func UI(writer http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = writer.Write(content)
+	if _, err := writer.Write(content); err != nil {
+		return
+	}
 }
 
 // JSON возвращает единую OpenAPI-спецификацию в формате JSON.
@@ -44,5 +46,7 @@ func serveSpec(writer http.ResponseWriter, name string, contentType string) {
 		return
 	}
 	writer.Header().Set("Content-Type", contentType)
-	_, _ = writer.Write(content)
+	if _, err := writer.Write(content); err != nil {
+		return
+	}
 }

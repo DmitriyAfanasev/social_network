@@ -8,17 +8,11 @@ import (
 	"general-project/content/internal/application"
 	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
+
 	"github.com/go-chi/chi/v5"
 )
 
 // GetByID возвращает текстовый пост по UUID.
-
-
-
-
-
-
-
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	postID, err := uuid.Parse(chi.URLParam(r, "postID"))
 	if err != nil {
@@ -35,13 +29,6 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // Feed возвращает последние текстовые посты.
-
-
-
-
-
-
-
 func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if value := r.URL.Query().Get("limit"); value != "" {

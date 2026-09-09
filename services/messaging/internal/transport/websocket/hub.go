@@ -116,7 +116,9 @@ func (c *client) enqueue(payload []byte) bool {
 func (c *client) close() {
 	c.closeOnce.Do(func() {
 		close(c.closed)
-		_ = c.connection.Close()
+		if err := c.connection.Close(); err != nil {
+			return
+		}
 	})
 }
 

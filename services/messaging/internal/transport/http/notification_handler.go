@@ -15,13 +15,6 @@ import (
 // StreamNotifications открывает SSE-поток realtime-уведомлений пользователя.
 // Для EventSource поддерживается access_token в query; обычные клиенты могут
 // передать Bearer-токен в Authorization.
-
-
-
-
-
-
-
 func (h *Handler) StreamNotifications(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.notificationUser(w, r)
 	if !ok {
@@ -70,7 +63,6 @@ func (h *Handler) StreamNotifications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
 func (h *Handler) notificationUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	token := strings.TrimSpace(r.URL.Query().Get("access_token"))
 	if token == "" {
@@ -92,7 +84,6 @@ func (h *Handler) notificationUser(w http.ResponseWriter, r *http.Request) (uuid
 	}
 	return userID, true
 }
-
 func notificationEventName(payload []byte) string {
 	var envelope struct {
 		Type string `json:"type"`

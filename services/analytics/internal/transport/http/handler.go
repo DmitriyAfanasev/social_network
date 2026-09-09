@@ -43,14 +43,6 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetVideoStats возвращает агрегированную статистику конкретного видео.
-
-
-
-
-
-
-
-
 func (h *Handler) GetVideoStats(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -66,14 +58,6 @@ func (h *Handler) GetVideoStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListMyVideoStats возвращает историю видео, просмотренных текущим пользователем.
-
-
-
-
-
-
-
-
 func (h *Handler) ListMyVideoStats(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -100,7 +84,6 @@ func (h *Handler) ListMyVideoStats(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, response)
 }
-
 func mapVideoStats(stats domain.VideoStats) VideoStatsResponse {
 	return VideoStatsResponse{
 		VideoId:             stats.VideoID.String(),
@@ -112,14 +95,12 @@ func mapVideoStats(stats domain.VideoStats) VideoStatsResponse {
 		LastViewedAt:        stats.LastViewedAt,
 	}
 }
-
 func mapViewerVideoStats(stats domain.ViewerVideoStats) ViewerVideoStatsResponse {
 	return ViewerVideoStatsResponse{
 		VideoId: stats.VideoID.String(), Views: stats.Views, WatchSeconds: stats.WatchSeconds,
 		AverageWatchSeconds: stats.AverageWatchSeconds, LastViewedAt: stats.LastViewedAt,
 	}
 }
-
 func writeAnalyticsError(w http.ResponseWriter, err error) {
 	if errors.Is(err, application.ErrVideoAnalyticsValidation) {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_request", "некорректные параметры запроса")
@@ -127,13 +108,13 @@ func writeAnalyticsError(w http.ResponseWriter, err error) {
 	}
 	httpx.WriteError(w, http.StatusInternalServerError, "analytics_unavailable", "не удалось получить аналитику")
 }
-
 func writeStatus(w http.ResponseWriter, status int, value string) {
 	writeJSON(w, status, StatusResponse{Status: StatusResponseStatus(value)})
 }
-
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	if err := json.NewEncoder(w).Encode(value); err != nil {
+		return
+	}
 }

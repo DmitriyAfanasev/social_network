@@ -7,6 +7,7 @@ import (
 	"uuid"
 
 	"general-project/profiles/internal/application"
+
 	"github.com/stretchr/testify/require"
 )
 

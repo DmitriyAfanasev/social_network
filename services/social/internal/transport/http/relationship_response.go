@@ -12,12 +12,11 @@ type actionResponse = ActionResponse
 
 type friendRequestActionResponse = FriendRequestActionResponse
 
-func writeAction(w http.ResponseWriter, status int, result application.ActionDTO) {
+func writeAction(w http.ResponseWriter, status int, result application.ActionDTO) { //nolint:unparam // status is part of the response helper contract.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(actionResponse{State: result.State})
 }
-
 func writeFriendRequestAction(w http.ResponseWriter, status int, result application.FriendRequestActionDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

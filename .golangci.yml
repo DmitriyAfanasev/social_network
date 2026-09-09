@@ -1,0 +1,132 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - unconvert
+    - misspell
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - errname
+    - fatcontext
+    - gocritic
+    - gocyclo
+    - gosec
+    - nilerr
+    - nilnil
+    - rowserrcheck
+    - sqlclosecheck
+    - testifylint
+    - tparallel
+    - unparam
+    - wastedassign
+    - revive
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    misspell:
+      locale: US
+  exclusions:
+    rules:
+      - path: 'services/media/internal/application/.*'
+        linters:
+          - errcheck
+          - contextcheck
+      - path: 'services/media/internal/transport/http/.*'
+        linters:
+          - errcheck
+      - path: 'services/media/internal/adapters/access/.*'
+        linters:
+          - errcheck
+      - path: 'services/media/internal/adapters/.*_test\.go'
+        linters:
+          - errcheck
+          - testifylint
+      - path: 'services/media/cmd/.*'
+        linters:
+          - errcheck
+          - gocritic
+      - path: 'services/media/internal/adapters/postgres/.*'
+        linters:
+          - errcheck
+      - path: 'services/messaging/internal/application/.*'
+        linters:
+          - errcheck
+      - path: 'services/messaging/internal/adapters/access/.*'
+        linters:
+          - errcheck
+      - path: 'services/messaging/internal/transport/http/.*'
+        linters:
+          - errcheck
+      - path: 'services/messaging/internal/adapters/redis/.*'
+        linters:
+          - errcheck
+      - path: 'services/messaging/cmd/.*'
+        linters:
+          - errcheck
+          - gocritic
+      - path: 'services/messaging/internal/transport/websocket/contract_test\.go'
+        linters:
+          - errcheck
+          - bodyclose
+          - testifylint
+      - path: 'services/profiles/internal/application/.*'
+        linters:
+          - errcheck
+      - path: 'services/profiles/internal/transport/http/.*'
+        linters:
+          - errcheck
+      - path: 'services/profiles/cmd/.*'
+        linters:
+          - errcheck
+          - gocritic
+      - path: 'services/profiles/internal/adapters/(media|social)/.*'
+        linters:
+          - errcheck
+      - path: 'services/profiles/internal/adapters/postgres/.*_test\.go'
+        linters:
+          - errcheck
+      - path: 'services/social/internal/application/.*'
+        linters:
+          - errcheck
+      - path: 'services/social/internal/transport/http/.*'
+        linters:
+          - errcheck
+      - path: 'services/social/cmd/.*'
+        linters:
+          - errcheck
+          - gocritic
+      - path: 'services/social/internal/adapters/profiles/.*'
+        linters:
+          - errcheck
+      - path: 'services/social/internal/adapters/postgres/.*'
+        linters:
+          - errcheck
+      - path: 'services/social/internal/adapters/postgres/relationship_repository\.go'
+        linters:
+          - misspell
+      - path: 'services/social/internal/adapters/postgres/relationship_repository\.go'
+        linters:
+          - gocritic
+      - path: 'services/social/internal/application/service\.go'
+        linters:
+          - gocritic
+          - staticcheck
+      - path: 'services/social/internal/adapters/postgres/relationship_repository\.go'
+        linters:
+          - staticcheck
+formatters:
+  enable:
+    - gofmt
+    - goimports

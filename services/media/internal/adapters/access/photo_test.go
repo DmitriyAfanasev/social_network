@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"general-project/libs/platform/auth"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"uuid"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestPhotoAccessForwardsVerifiedTokenAndFailsClosed(t *testing.T) {

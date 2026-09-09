@@ -1,3 +1,4 @@
+// Package application содержит сценарии доступа и социальных связей.
 package application
 
 import (

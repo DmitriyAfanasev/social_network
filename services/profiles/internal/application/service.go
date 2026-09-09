@@ -241,11 +241,10 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID uuid.UUID, in
 	if err != nil {
 		return ProfileDTO{}, err
 	}
-	profile, err := s.profiles.UpdatePublicProfile(ctx, userID, bio)
-	if err != nil {
+	if _, err := s.profiles.UpdatePublicProfile(ctx, userID, bio); err != nil {
 		return ProfileDTO{}, err
 	}
-	profile, err = s.profiles.UpdateProfileDetails(ctx, userID, input.Details)
+	profile, err := s.profiles.UpdateProfileDetails(ctx, userID, input.Details)
 	if err != nil {
 		return ProfileDTO{}, err
 	}

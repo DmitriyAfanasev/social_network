@@ -277,9 +277,9 @@ func TestSocialServiceDeclinesAndCancelsFriendRequests(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, string(domain.FriendRequestDeclined), declined.State)
 
-	cancelled, err := service.CancelFriendRequest(context.Background(), senderID, cancelID)
+	cancelled, err := service.CancelFriendRequest(context.Background(), senderID, cancelID) //nolint:misspell // mirrors the API contract.
 	require.NoError(t, err)
-	require.Equal(t, string(domain.FriendRequestCancelled), cancelled.State)
+	require.Equal(t, string(domain.FriendRequestCancelled), cancelled.State) //nolint:misspell // mirrors the API contract.
 }
 
 func TestSocialServiceCreatesSubscription(t *testing.T) {

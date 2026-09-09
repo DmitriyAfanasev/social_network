@@ -12,6 +12,9 @@ func WithID(ctx context.Context, id string) context.Context {
 
 // ID возвращает correlation ID операции или пустую строку.
 func ID(ctx context.Context) string {
-	id, _ := ctx.Value(contextKey{}).(string)
+	id, ok := ctx.Value(contextKey{}).(string)
+	if !ok {
+		return ""
+	}
 	return id
 }

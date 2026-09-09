@@ -17,12 +17,6 @@ type presenceResponse = PresenceResponse
 type presenceListResponse = PresenceListResponse
 
 // Heartbeat отмечает текущего пользователя активным независимо от открытого чата.
-
-
-
-
-
-
 func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -40,15 +34,6 @@ func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPresenceBatch возвращает online-состояние нескольких пользователей одним запросом.
-
-
-
-
-
-
-
-
-
 func (h *Handler) GetPresenceBatch(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.authenticatedUser(w, r); !ok {
 		return
@@ -97,15 +82,6 @@ func (h *Handler) GetPresenceBatch(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPresence возвращает online-состояние пользователя по свежему heartbeat.
-
-
-
-
-
-
-
-
-
 func (h *Handler) GetPresence(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.authenticatedUser(w, r); !ok {
 		return
@@ -128,7 +104,6 @@ func (h *Handler) GetPresence(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_ = writePresenceResponse(w, presenceResponse{UserID: userID.String(), Online: online})
 }
-
 func writePresenceResponse(w http.ResponseWriter, response presenceResponse) error {
 	return json.NewEncoder(w).Encode(response)
 }

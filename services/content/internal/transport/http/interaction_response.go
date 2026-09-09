@@ -23,13 +23,13 @@ func mapCommentResponse(comment application.CommentDTO) commentResponse {
 		UpdatedAt: comment.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
 	}
 }
-
 func writeComment(w http.ResponseWriter, status int, comment application.CommentDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(mapCommentResponse(comment))
+	if err := json.NewEncoder(w).Encode(mapCommentResponse(comment)); err != nil {
+		return
+	}
 }
-
 func writeComments(w http.ResponseWriter, status int, comments []application.CommentDTO) {
 	response := commentsResponse{Comments: make([]commentResponse, 0, len(comments))}
 	for _, comment := range comments {
@@ -37,11 +37,14 @@ func writeComments(w http.ResponseWriter, status int, comments []application.Com
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		return
+	}
 }
-
 func writeLike(w http.ResponseWriter, status int, like application.LikeDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(likeResponse{PostID: like.PostID.String(), UserID: like.UserID.String(), Liked: like.Liked})
+	if err := json.NewEncoder(w).Encode(likeResponse{PostID: like.PostID.String(), UserID: like.UserID.String(), Liked: like.Liked}); err != nil {
+		return
+	}
 }

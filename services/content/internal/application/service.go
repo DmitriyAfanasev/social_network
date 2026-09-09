@@ -165,7 +165,7 @@ func (s *ContentService) ListRecent(ctx context.Context, limit int, viewerIDs ..
 	}
 	if s.cache != nil {
 		if payload, marshalErr := json.Marshal(result); marshalErr == nil {
-			_ = s.cache.Set(ctx, cacheKey, payload, feedCacheTTL)
+			_ = s.cache.Set(ctx, cacheKey, payload, feedCacheTTL) //nolint:errcheck // cache is best-effort.
 		}
 	}
 	if err := s.enrichLikeStatsForPosts(ctx, result, firstViewer(viewerIDs)); err != nil {
@@ -319,18 +319,18 @@ func (s *ContentService) cachePost(ctx context.Context, key string, dto PostDTO)
 		return
 	}
 	if payload, err := json.Marshal(dto); err == nil {
-		_ = s.cache.Set(ctx, key, payload, postCacheTTL)
+		_ = s.cache.Set(ctx, key, payload, postCacheTTL) //nolint:errcheck // cache is best-effort.
 	}
 }
 
 func (s *ContentService) invalidatePost(ctx context.Context, postID uuid.UUID) {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, postCacheKey(postID))
+		_ = s.cache.Delete(ctx, postCacheKey(postID)) //nolint:errcheck // cache is best-effort.
 	}
 }
 
 func (s *ContentService) invalidateFeed(ctx context.Context) {
 	if s.cache != nil {
-		_ = s.cache.Delete(ctx, feedCacheKey(10), feedCacheKey(20), feedCacheKey(50))
+		_ = s.cache.Delete(ctx, feedCacheKey(10), feedCacheKey(20), feedCacheKey(50)) //nolint:errcheck // cache is best-effort.
 	}
 }

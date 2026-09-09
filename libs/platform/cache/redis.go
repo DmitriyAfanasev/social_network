@@ -3,6 +3,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -21,7 +22,7 @@ func NewRedis(client *redis.Client) *Redis {
 // Get получает значение из кэша или возвращает nil, если ключ отсутствует.
 func (c *Redis) Get(ctx context.Context, key string) ([]byte, error) {
 	value, err := c.client.Get(ctx, key).Bytes()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return nil, nil
 	}
 	return value, err

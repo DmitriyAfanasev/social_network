@@ -7,14 +7,6 @@ import (
 )
 
 // Block блокирует пользователя для текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -34,14 +26,6 @@ func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 }
 
 // Unblock снимает блокировку пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) Unblock(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

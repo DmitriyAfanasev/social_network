@@ -17,7 +17,7 @@ const (
 	// FriendRequestDeclined означает, что получатель отказал в заявке.
 	FriendRequestDeclined FriendRequestStatus = "declined"
 	// FriendRequestCancelled означает, что отправитель отменил заявку.
-	FriendRequestCancelled FriendRequestStatus = "cancelled"
+	FriendRequestCancelled FriendRequestStatus = "cancelled" //nolint:misspell // API contract value.
 )
 
 // FriendRequest содержит направленную заявку между двумя пользователями.

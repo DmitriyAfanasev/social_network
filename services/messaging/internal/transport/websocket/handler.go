@@ -50,14 +50,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	item := h.hub.add(userID, connection)
-	presenceCtx, cancelPresence := context.WithCancel(context.Background())
+	presenceCtx, cancelPresence := context.WithCancel(r.Context())
 	defer cancelPresence()
 	if h.presence != nil {
 		go h.heartbeat(presenceCtx, userID)
 	}
 	defer func() {
 		h.hub.remove(userID, item)
-		_ = connection.Close()
+		if err := connection.Close(); err != nil {
+			return
+		}
 	}()
 
 	connection.SetReadLimit(1 << 20)
@@ -121,7 +123,9 @@ func (h *Handler) heartbeat(ctx context.Context, userID uuid.UUID) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
-		_ = h.presence.Heartbeat(ctx, userID, 30*time.Second)
+		if err := h.presence.Heartbeat(ctx, userID, 30*time.Second); err != nil && ctx.Err() != nil {
+			return
+		}
 		select {
 		case <-ctx.Done():
 			return

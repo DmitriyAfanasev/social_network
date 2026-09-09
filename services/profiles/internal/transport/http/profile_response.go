@@ -14,12 +14,11 @@ type profileResponse = ProfileResponse
 type privacyResponse = PrivacyResponse
 type profilesResponse = ProfilesResponse
 
-func writeProfile(w http.ResponseWriter, status int, profile application.ProfileDTO) {
+func writeProfile(w http.ResponseWriter, status int, profile application.ProfileDTO) { //nolint:unparam // status is part of the response helper contract.
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(mapProfileResponse(profile))
 }
-
 func mapProfileResponse(profile application.ProfileDTO) profileResponse {
 	return profileResponse{
 		UserID:      profile.UserID.String(),
@@ -48,7 +47,6 @@ func mapProfileResponse(profile application.ProfileDTO) profileResponse {
 		UpdatedAt: profile.UpdatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"),
 	}
 }
-
 func profileErrorStatus(err error) (int, string, string) {
 	switch {
 	case errors.Is(err, application.ErrValidation):
@@ -65,7 +63,6 @@ func profileErrorStatus(err error) (int, string, string) {
 		return http.StatusInternalServerError, "internal_error", "внутренняя ошибка сервера"
 	}
 }
-
 func writeProfileError(w http.ResponseWriter, err error) {
 	status, code, message := profileErrorStatus(err)
 	httpx.WriteError(w, status, code, message)

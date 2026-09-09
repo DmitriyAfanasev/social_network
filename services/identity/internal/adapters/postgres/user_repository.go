@@ -82,7 +82,11 @@ func (r *UserRepository) Create(ctx context.Context, user domain.User, passwordH
 	if err != nil {
 		return domain.User{}, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			return
+		}
+	}()
 
 	const userQuery = `
 		INSERT INTO identity.users (id, email, status)

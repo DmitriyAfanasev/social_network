@@ -32,7 +32,9 @@ func TestPostgresIdentityRepositories(t *testing.T) {
 	userID := uuid.New()
 	user := domain.User{ID: userID, Email: "identity-integration-" + userID.String() + "@example.test", Status: domain.UserStatusPending}
 	t.Cleanup(func() {
-		_, _ = pool.Exec(ctx, `DELETE FROM identity.users WHERE id = $1`, userID)
+		if _, err := pool.Exec(ctx, `DELETE FROM identity.users WHERE id = $1`, userID); err != nil {
+			t.Logf("cleanup identity user: %v", err)
+		}
 	})
 
 	created, err := userRepository.Create(ctx, user, "bcrypt-hash", nil)

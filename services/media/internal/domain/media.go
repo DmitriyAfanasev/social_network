@@ -1,3 +1,4 @@
+// Package domain содержит сущности и правила медиа-сервиса.
 package domain
 
 import (

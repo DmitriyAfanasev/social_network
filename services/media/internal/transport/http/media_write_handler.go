@@ -5,32 +5,24 @@ import (
 	"net/http"
 	"uuid"
 
+	"github.com/go-chi/chi/v5"
+
 	"general-project/libs/platform/auth"
 	"general-project/libs/platform/httpx"
 	"general-project/media/internal/application"
-	"github.com/go-chi/chi/v5"
 )
 
 const maxMultipartMemory = 8 << 20
 const maxMediaUploadSize int64 = 25 * 1024 * 1024
 
 // Upload загружает файл в object storage и создаёт его метаданные.
-
-
-
-
-
-
-
-
-
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
 		return
 	}
 	limitMultipartBody(w, r, maxMediaUploadSize)
-	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
+	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil { //nolint:gosec // maxMultipartMemory is an explicit bounded limit.
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_multipart", "некорректная multipart-форма")
 		return
 	}
@@ -56,20 +48,11 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	writeMedia(w, http.StatusCreated, media)
 }
-
 func limitMultipartBody(w http.ResponseWriter, r *http.Request, fileLimit int64) {
 	r.Body = http.MaxBytesReader(w, r.Body, fileLimit+maxMultipartMemory)
 }
 
 // Delete удаляет медиаобъект текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -86,7 +69,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
 func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -95,7 +77,6 @@ func (h *Handler) authenticatedUser(w http.ResponseWriter, r *http.Request) (uui
 	}
 	return userID, true
 }
-
 func readUpload(file io.Reader, maxSize int64) ([]byte, error) {
 	content, err := io.ReadAll(io.LimitReader(file, maxSize+1))
 	if err != nil {

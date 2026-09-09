@@ -149,7 +149,7 @@ func (p *RedisPresenceStore) IsOnline(ctx context.Context, userID uuid.UUID) (bo
 		return false, err
 	}
 	score, err := p.client.ZScore(ctx, presenceKey, userID.String()).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return false, nil
 	}
 	if err != nil {

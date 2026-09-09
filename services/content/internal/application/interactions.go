@@ -1,3 +1,4 @@
+// Package application содержит сценарии работы с комментариями и реакциями.
 package application
 
 import (
@@ -119,7 +120,9 @@ func (s *CommentService) invalidatePostCaches(ctx context.Context, postID uuid.U
 	if s.cache == nil {
 		return
 	}
-	_ = s.cache.Delete(ctx, postCacheKey(postID), feedCacheKey(10), feedCacheKey(20), feedCacheKey(50))
+	if err := s.cache.Delete(ctx, postCacheKey(postID), feedCacheKey(10), feedCacheKey(20), feedCacheKey(50)); err != nil {
+		return
+	}
 }
 
 // LikePost добавляет лайк текущего пользователя к существующему посту.

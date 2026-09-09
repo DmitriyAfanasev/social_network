@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"general-project/media/internal/domain"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"uuid"
+
+	"github.com/stretchr/testify/require"
 )
 
 type fakePhotoAccess struct {

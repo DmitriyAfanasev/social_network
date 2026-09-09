@@ -50,12 +50,12 @@ func RequestIDFromContext(ctx context.Context) string {
 func Recovery(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
+			defer func(ctx context.Context) {
 				if recovered := recover(); recovered != nil {
-					logger.ErrorContext(r.Context(), "http panic recovered", "panic", recovered, "stack", string(debug.Stack()))
+					logger.ErrorContext(ctx, "http panic recovered", "panic", recovered, "stack", string(debug.Stack()))
 					WriteError(w, http.StatusInternalServerError, "internal_error", "internal server error")
 				}
-			}()
+			}(r.Context())
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -82,7 +82,9 @@ type ErrorResponse struct {
 func WriteError(w http.ResponseWriter, status int, code string, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(ErrorResponse{Code: code, Message: message})
+	if err := json.NewEncoder(w).Encode(ErrorResponse{Code: code, Message: message}); err != nil {
+		return
+	}
 }
 
 func newRequestID() string {

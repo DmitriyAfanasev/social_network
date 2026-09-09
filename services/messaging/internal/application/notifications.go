@@ -1,3 +1,4 @@
+// Package application содержит сценарии уведомлений messaging-сервиса.
 package application
 
 import (

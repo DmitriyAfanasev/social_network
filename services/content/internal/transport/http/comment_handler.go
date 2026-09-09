@@ -7,18 +7,11 @@ import (
 
 	"general-project/content/internal/application"
 	"general-project/libs/platform/httpx"
+
 	"github.com/go-chi/chi/v5"
 )
 
 // ListComments возвращает комментарии поста в порядке публикации.
-
-
-
-
-
-
-
-
 func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 	postID, ok := parsePostID(w, r)
 	if !ok {
@@ -42,17 +35,6 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateComment создаёт комментарий к посту от имени текущего пользователя.
-
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -76,14 +58,6 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteComment удаляет комментарий текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

@@ -1,3 +1,4 @@
+// Package domain содержит сущности и правила messaging-сервиса.
 package domain
 
 import (

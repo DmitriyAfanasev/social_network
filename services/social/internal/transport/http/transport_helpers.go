@@ -16,11 +16,9 @@ import (
 func parseTargetID(r *http.Request) (uuid.UUID, error) {
 	return uuid.Parse(chi.URLParam(r, "targetID"))
 }
-
 func parseRequestID(r *http.Request) (uuid.UUID, error) {
 	return uuid.Parse(chi.URLParam(r, "requestID"))
 }
-
 func authenticatedUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -29,7 +27,6 @@ func authenticatedUser(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool)
 	}
 	return userID, true
 }
-
 func writeSocialError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, application.ErrValidation):

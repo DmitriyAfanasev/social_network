@@ -10,14 +10,6 @@ import (
 )
 
 // ListFriendRequests возвращает входящие и исходящие pending-заявки.
-
-
-
-
-
-
-
-
 func (h *Handler) ListFriendRequests(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -52,46 +44,16 @@ func (h *Handler) ListFriendRequests(w http.ResponseWriter, r *http.Request) {
 }
 
 // AcceptFriendRequest принимает входящую заявку и создаёт friendship.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request) {
 	h.transitionFriendRequest(w, r, h.social.AcceptFriendRequest)
 }
 
 // DeclineFriendRequest отклоняет входящую заявку.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) DeclineFriendRequest(w http.ResponseWriter, r *http.Request) {
 	h.transitionFriendRequest(w, r, h.social.DeclineFriendRequest)
 }
 
 // CancelFriendRequest отменяет исходящую заявку.
-
-
-
-
-
-
-
-
-
-
 func (h *Handler) CancelFriendRequest(w http.ResponseWriter, r *http.Request) {
 	h.transitionFriendRequest(w, r, h.social.CancelFriendRequest)
 }

@@ -13,13 +13,6 @@ import (
 )
 
 // GetPhotos возвращает фотоальбомы профиля, включая историю аватаров.
-
-
-
-
-
-
-
 func (h *Handler) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -46,13 +39,6 @@ func (h *Handler) GetPhotos(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreatePhotoAlbum создаёт фотоальбом текущего пользователя.
-
-
-
-
-
-
-
 func (h *Handler) CreatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -72,14 +58,6 @@ func (h *Handler) CreatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddPhoto добавляет медиаобъект в фотоальбом текущего пользователя.
-
-
-
-
-
-
-
-
 func (h *Handler) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -98,11 +76,6 @@ func (h *Handler) AddPhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePhoto удаляет фотографию текущего пользователя.
-
-
-
-
-
 func (h *Handler) DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -121,13 +94,6 @@ func (h *Handler) DeletePhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetAvatar назначает медиаобъект текущим аватаром пользователя.
-
-
-
-
-
-
-
 func (h *Handler) SetAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -146,13 +112,6 @@ func (h *Handler) SetAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // SelectAvatar выбирает аватар из истории пользователя.
-
-
-
-
-
-
-
 func (h *Handler) SelectAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -171,10 +130,6 @@ func (h *Handler) SelectAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveAvatar сбрасывает текущий аватар на стабильное значение по умолчанию.
-
-
-
-
 func (h *Handler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -188,11 +143,6 @@ func (h *Handler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // AvatarHistory возвращает список доступных аватаров пользователя.
-
-
-
-
-
 func (h *Handler) AvatarHistory(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -223,7 +173,6 @@ func currentUserID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	}
 	return userID, ok
 }
-
 func decodePhotoRequest(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, string, bool) {
 	albumID, err := uuid.Parse(chi.URLParam(r, "albumID"))
 	if err != nil {
@@ -242,7 +191,6 @@ func decodePhotoRequest(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid
 	}
 	return albumID, mediaID, request.Caption, true
 }
-
 func decodeAvatarRequest(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	var request avatarRequest
 	if err := decodeJSON(r, &request); err != nil {
@@ -256,7 +204,6 @@ func decodeAvatarRequest(w http.ResponseWriter, r *http.Request) (uuid.UUID, boo
 	}
 	return mediaID, true
 }
-
 func mapPhotoAlbumResponse(album application.ProfilePhotoAlbumDTO) photoAlbumPayload {
 	var id *string
 	if album.ID != nil {
@@ -274,7 +221,6 @@ func mapPhotoAlbumResponse(album application.ProfilePhotoAlbumDTO) photoAlbumPay
 	}
 	return result
 }
-
 func mapProfilePhotosResponse(result application.ProfilePhotosDTO) profilePhotosResponse {
 	response := profilePhotosResponse{OwnerID: result.OwnerID.String(), IsOwnProfile: result.IsOwnProfile, Albums: make([]photoAlbumPayload, 0, len(result.Albums))}
 	for _, album := range result.Albums {
@@ -282,7 +228,6 @@ func mapProfilePhotosResponse(result application.ProfilePhotosDTO) profilePhotos
 	}
 	return response
 }
-
 func mapAvatarHistoryResponse(result application.AvatarHistoryDTO) avatarHistoryResponse {
 	response := avatarHistoryResponse{CurrentAvatar: result.CurrentURL, Avatars: make([]avatarPayload, 0, len(result.Avatars))}
 	for _, avatar := range result.Avatars {
@@ -290,7 +235,6 @@ func mapAvatarHistoryResponse(result application.AvatarHistoryDTO) avatarHistory
 	}
 	return response
 }
-
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
