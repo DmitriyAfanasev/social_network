@@ -10,16 +10,16 @@ import (
 )
 
 // SetHandle назначает текущему пользователю публичный handle.
-// @Summary Назначить handle профиля
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body setHandleRequest true "Новый handle"
-// @Success 200 {object} profileResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 409 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/profiles/me/handle [put]
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) SetHandle(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -41,17 +41,17 @@ func (h *Handler) SetHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePublicProfile изменяет описание и данные текущего профиля.
-// @Summary Обновить публичный профиль
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body updateProfileRequest true "Публичные поля профиля"
-// @Success 200 {object} profileResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/profiles/me [patch]
+
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) UpdatePublicProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -80,12 +80,12 @@ func (h *Handler) UpdatePublicProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPrivacy возвращает настройки приватности текущего пользователя.
-// @Summary Получить настройки приватности
-// @Tags profiles
-// @Produce json
-// @Success 200 {object} privacyResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/profiles/me/privacy [get]
+
+
+
+
+
+
 func (h *Handler) GetPrivacy(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -101,15 +101,15 @@ func (h *Handler) GetPrivacy(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePrivacy сохраняет настройки приватности текущего пользователя.
-// @Summary Обновить настройки приватности
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body privacyRequest true "Настройки приватности"
-// @Success 200 {object} privacyResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/profiles/me/privacy [put]
+
+
+
+
+
+
+
+
+
 func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -136,37 +136,9 @@ func (h *Handler) UpdatePrivacy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, mapPrivacyResponse(privacy))
 }
 
-type setHandleRequest struct {
-	Handle string `json:"handle"`
-}
-
-type updateProfileRequest struct {
-	Bio         string `json:"bio"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	MiddleName  string `json:"middle_name"`
-	BirthDate   string `json:"birth_date"`
-	Gender      string `json:"gender"`
-	PhoneNumber string `json:"phone_number"`
-	Country     string `json:"country"`
-	City        string `json:"city"`
-	Street      string `json:"street"`
-	Status      string `json:"status"`
-}
-
-type privacyRequest struct {
-	ProfileVisibility   string `json:"profile_visibility"`
-	FriendRequestPolicy string `json:"friend_request_policy"`
-	MessagePolicy       string `json:"message_policy"`
-	PhoneVisibility     string `json:"phone_visibility"`
-	BirthDateVisibility string `json:"birth_date_visibility"`
-	GenderVisibility    string `json:"gender_visibility"`
-	LocationVisibility  string `json:"location_visibility"`
-	StatusVisibility    string `json:"status_visibility"`
-	FriendsVisibility   string `json:"friends_visibility"`
-	PostsVisibility     string `json:"posts_visibility"`
-	MusicVisibility     string `json:"music_visibility"`
-}
+type setHandleRequest = SetHandleRequest
+type updateProfileRequest = UpdateProfileRequest
+type privacyRequest = PrivacyRequest
 
 func mapPrivacyResponse(privacy application.ProfilePrivacyDTO) privacyResponse {
 	return privacyResponse{

@@ -1,0 +1,350 @@
+openapi: 3.0.3
+info:
+  title: Social Service API
+  version: 1.0.0
+  description: Контракт социальных связей и заявок в друзья.
+paths:
+  /healthz:
+    get:
+      tags: [system]
+      summary: Проверить состояние процесса
+      responses:
+        '200':
+          description: Процесс доступен
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, example: ok}
+  /readyz:
+    get:
+      tags: [system]
+      summary: Проверить готовность сервиса
+      responses:
+        '200':
+          description: Зависимости доступны
+        '503':
+          description: База данных недоступна
+  /v1/social/blocks/{targetID}:
+    parameters: [{'$ref': '#/components/parameters/TargetID'}]
+    put:
+      tags: [blocks]
+      summary: Заблокировать пользователя
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/ActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [blocks]
+      summary: Снять блокировку
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/ActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/friendships/{targetID}:
+    parameters: [{'$ref': '#/components/parameters/TargetID'}]
+    put:
+      tags: [friendships]
+      summary: Отправить заявку в друзья
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/FriendRequestActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [friendships]
+      summary: Удалить из друзей
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/ActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/subscriptions/{targetID}:
+    parameters: [{'$ref': '#/components/parameters/TargetID'}]
+    put:
+      tags: [subscriptions]
+      summary: Подписаться на пользователя
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/ActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [subscriptions]
+      summary: Отписаться от пользователя
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/ActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/friend-requests:
+    get:
+      tags: [friend-requests]
+      summary: Получить заявки в друзья
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: direction
+          in: query
+          required: false
+          schema: {type: string, enum: [incoming, outgoing, all], default: all}
+      responses:
+        '200': {$ref: '#/components/responses/FriendRequestsOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/friend-requests/{requestID}/accept:
+    parameters: [{'$ref': '#/components/parameters/RequestID'}]
+    post:
+      tags: [friend-requests]
+      summary: Принять заявку в друзья
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/FriendRequestActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /v1/social/friend-requests/{requestID}/decline:
+    parameters: [{'$ref': '#/components/parameters/RequestID'}]
+    post:
+      tags: [friend-requests]
+      summary: Отклонить заявку в друзья
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/FriendRequestActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /v1/social/friend-requests/{requestID}:
+    parameters: [{'$ref': '#/components/parameters/RequestID'}]
+    delete:
+      tags: [friend-requests]
+      summary: Отменить заявку в друзья
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/FriendRequestActionOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+  /v1/social/relationships:
+    get:
+      tags: [social]
+      summary: Получить социальные связи
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/RelationshipsOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/social/relationships/{targetID}:
+    parameters: [{'$ref': '#/components/parameters/TargetID'}]
+    get:
+      tags: [social]
+      summary: Проверить социальную близость
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/RelationshipAccessOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/relationships/{targetID}/friends:
+    parameters: [{'$ref': '#/components/parameters/TargetID'}]
+    get:
+      tags: [social]
+      summary: Получить друзей профиля
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/PublicFriendsOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/social/recommendations:
+    get:
+      tags: [social]
+      summary: Получить рекомендации друзей
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, format: int32, default: 10}
+      responses:
+        '200': {$ref: '#/components/responses/RecommendationsOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+components:
+  parameters:
+    TargetID:
+      name: targetID
+      in: path
+      required: true
+      schema: {type: string}
+    RequestID:
+      name: requestID
+      in: path
+      required: true
+      schema: {type: string}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ActionOK:
+      description: Операция выполнена
+      content: {application/json: {schema: {$ref: '#/components/schemas/ActionResponse'}}}
+    FriendRequestActionOK:
+      description: Операция с заявкой выполнена
+      content: {application/json: {schema: {$ref: '#/components/schemas/FriendRequestActionResponse'}}}
+    FriendRequestsOK:
+      description: Списки заявок
+      content: {application/json: {schema: {$ref: '#/components/schemas/FriendRequestsResponse'}}}
+    RelationshipsOK:
+      description: Социальные связи
+      content: {application/json: {schema: {$ref: '#/components/schemas/RelationshipsResponse'}}}
+    RelationshipAccessOK:
+      description: Признаки социальной близости
+      content: {application/json: {schema: {$ref: '#/components/schemas/RelationshipAccessResponse'}}}
+    PublicFriendsOK:
+      description: Друзья профиля
+      content: {application/json: {schema: {$ref: '#/components/schemas/PublicFriendsResponse'}}}
+    RecommendationsOK:
+      description: Рекомендации друзей
+      content: {application/json: {schema: {$ref: '#/components/schemas/RecommendationsResponse'}}}
+    Unauthorized:
+      description: Требуется access-токен
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Forbidden:
+      description: Операция запрещена
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    NotFound:
+      description: Объект не найден
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Conflict:
+      description: Конфликт состояния
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    ValidationError:
+      description: Ошибка валидации
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+    ActionResponse:
+      type: object
+      required: [state]
+      properties:
+        state:
+          type: string
+    FriendRequestActionResponse:
+      type: object
+      required: [state]
+      properties:
+        request_id:
+          type: string
+          x-go-type: string
+          x-go-name: RequestID
+        state:
+          type: string
+    RelationshipAccessResponse:
+      type: object
+      required: [is_friend, is_friend_of_friend, is_blocked]
+      properties:
+        is_friend:
+          type: boolean
+        is_friend_of_friend:
+          type: boolean
+        is_blocked:
+          type: boolean
+    RelationshipsResponse:
+      type: object
+      required: [friends, subscribers, subscriptions]
+      properties:
+        friends:
+          type: array
+          items:
+            type: string
+            x-go-type: string
+        subscribers:
+          type: array
+          items:
+            type: string
+            x-go-type: string
+        subscriptions:
+          type: array
+          items:
+            type: string
+            x-go-type: string
+    PublicFriendsResponse:
+      type: object
+      required: [friends, visible]
+      properties:
+        friends:
+          type: array
+          items:
+            type: string
+            x-go-type: string
+        visible:
+          type: boolean
+    RecommendationsResponse:
+      type: object
+      required: [recommendations]
+      properties:
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationResponse'
+    RecommendationResponse:
+      type: object
+      required: [user_id, common_friends]
+      properties:
+        user_id:
+          type: string
+          x-go-type: string
+          x-go-name: UserID
+        common_friends:
+          type: integer
+          format: int32
+          x-go-type: int
+          x-go-name: CommonFriends
+    FriendRequestsResponse:
+      type: object
+      required: [incoming, outgoing]
+      properties:
+        incoming:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendRequestResponse'
+        outgoing:
+          type: array
+          items:
+            $ref: '#/components/schemas/FriendRequestResponse'
+    FriendRequestResponse:
+      type: object
+      required: [id, sender_id, recipient_id, status, created_at]
+      properties:
+        id:
+          type: string
+          x-go-type: string
+          x-go-name: ID
+        sender_id:
+          type: string
+          x-go-type: string
+          x-go-name: SenderID
+        recipient_id:
+          type: string
+          x-go-type: string
+          x-go-name: RecipientID
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        responded_at:
+          type: string
+          format: date-time

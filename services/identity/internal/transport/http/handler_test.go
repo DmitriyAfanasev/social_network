@@ -5,7 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"uuid"
+
+	"general-project/identity/internal/application"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,4 +37,43 @@ func TestReady(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.JSONEq(t, `{"status":"ready"}`, recorder.Body.String())
+}
+
+func TestWriteAuthUsesGeneratedResponseModel(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, time.September, 9, 12, 0, 0, 0, time.UTC)
+	userID := uuid.MustParse("aa695c9d-1c93-4c64-a396-2b8504193359")
+	recorder := httptest.NewRecorder()
+
+	writeAuth(recorder, http.StatusOK, application.AuthDTO{
+		User: application.UserDTO{
+			ID:        userID,
+			Email:     "user@example.com",
+			Status:    "active",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		AccessToken:      "access-token",
+		TokenType:        "Bearer",
+		ExpiresIn:        900,
+		RefreshToken:     "refresh-token",
+		RefreshExpiresIn: 86_400,
+	})
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.JSONEq(t, `{
+		"user": {
+			"id": "aa695c9d-1c93-4c64-a396-2b8504193359",
+			"email": "user@example.com",
+			"status": "active",
+			"created_at": "2026-09-09T12:00:00Z",
+			"updated_at": "2026-09-09T12:00:00Z"
+		},
+		"access_token": "access-token",
+		"token_type": "Bearer",
+		"expires_in": 900,
+		"refresh_token": "refresh-token",
+		"refresh_expires_in": 86400
+	}`, recorder.Body.String())
 }

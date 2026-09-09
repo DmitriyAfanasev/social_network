@@ -7,24 +7,11 @@ import (
 	"general-project/content/internal/application"
 )
 
-type commentResponse struct {
-	ID        string `json:"id"`
-	PostID    string `json:"post_id"`
-	AuthorID  string `json:"author_id"`
-	Body      string `json:"body"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
-}
+type commentResponse = CommentResponse
 
-type commentsResponse struct {
-	Comments []commentResponse `json:"comments"`
-}
+type commentsResponse = CommentsResponse
 
-type likeResponse struct {
-	PostID string `json:"post_id"`
-	UserID string `json:"user_id"`
-	Liked  bool   `json:"liked"`
-}
+type likeResponse = LikeResponse
 
 func mapCommentResponse(comment application.CommentDTO) commentResponse {
 	return commentResponse{

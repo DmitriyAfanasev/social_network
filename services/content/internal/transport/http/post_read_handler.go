@@ -12,13 +12,13 @@ import (
 )
 
 // GetByID возвращает текстовый пост по UUID.
-// @Summary Получить пост
-// @Tags content
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Success 200 {object} postResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID} [get]
+
+
+
+
+
+
+
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	postID, err := uuid.Parse(chi.URLParam(r, "postID"))
 	if err != nil {
@@ -35,13 +35,13 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // Feed возвращает последние текстовые посты.
-// @Summary Получить ленту постов
-// @Tags content
-// @Produce json
-// @Param limit query int false "Количество постов" default(20)
-// @Success 200 {object} postsResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/content/feed [get]
+
+
+
+
+
+
+
 func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if value := r.URL.Query().Get("limit"); value != "" {

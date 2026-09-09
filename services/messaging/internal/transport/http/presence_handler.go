@@ -12,22 +12,17 @@ import (
 	"general-project/libs/platform/httpx"
 )
 
-type presenceResponse struct {
-	UserID string `json:"user_id"`
-	Online bool   `json:"online"`
-}
+type presenceResponse = PresenceResponse
 
-type presenceListResponse struct {
-	Presence []presenceResponse `json:"presence"`
-}
+type presenceListResponse = PresenceListResponse
 
 // Heartbeat отмечает текущего пользователя активным независимо от открытого чата.
-// @Summary Обновить presence текущего пользователя
-// @Tags messaging
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 500 {object} httpx.ErrorResponse
-// @Router /v1/messaging/presence/heartbeat [post]
+
+
+
+
+
+
 func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -45,15 +40,15 @@ func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPresenceBatch возвращает online-состояние нескольких пользователей одним запросом.
-// @Summary Проверить presence списка пользователей
-// @Tags messaging
-// @Produce json
-// @Param user_ids query string true "UUID пользователей через запятую"
-// @Success 200 {object} presenceListResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 500 {object} httpx.ErrorResponse
-// @Router /v1/messaging/presence [get]
+
+
+
+
+
+
+
+
+
 func (h *Handler) GetPresenceBatch(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.authenticatedUser(w, r); !ok {
 		return
@@ -102,15 +97,15 @@ func (h *Handler) GetPresenceBatch(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPresence возвращает online-состояние пользователя по свежему heartbeat.
-// @Summary Проверить presence пользователя
-// @Tags messaging
-// @Produce json
-// @Param userID path string true "UUID пользователя"
-// @Success 200 {object} presenceResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 500 {object} httpx.ErrorResponse
-// @Router /v1/messaging/presence/{userID} [get]
+
+
+
+
+
+
+
+
+
 func (h *Handler) GetPresence(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.authenticatedUser(w, r); !ok {
 		return

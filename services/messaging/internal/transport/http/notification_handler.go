@@ -15,13 +15,13 @@ import (
 // StreamNotifications открывает SSE-поток realtime-уведомлений пользователя.
 // Для EventSource поддерживается access_token в query; обычные клиенты могут
 // передать Bearer-токен в Authorization.
-// @Summary Открыть поток уведомлений
-// @Tags messaging
-// @Produce text/event-stream
-// @Param access_token query string false "Access-токен для EventSource"
-// @Success 200 {string} string "SSE stream"
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/notifications/stream [get]
+
+
+
+
+
+
+
 func (h *Handler) StreamNotifications(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.notificationUser(w, r)
 	if !ok {

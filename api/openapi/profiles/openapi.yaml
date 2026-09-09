@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Profiles API
+  version: 1.0.0
+  description: Схемы HTTP transport-слоя profiles-сервиса.
+paths: {}
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      required: [status]
+      properties: { status: { type: string, enum: [ok, ready, database_unavailable] } }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties: { code: { type: string }, message: { type: string } }
+    PrivacyResponse:
+      type: object
+      required: [profile_visibility, friend_request_policy, message_policy, phone_visibility, birth_date_visibility, gender_visibility, location_visibility, status_visibility, friends_visibility, posts_visibility, music_visibility]
+      properties:
+        profile_visibility: { type: string }
+        friend_request_policy: { type: string }
+        message_policy: { type: string }
+        phone_visibility: { type: string }
+        birth_date_visibility: { type: string }
+        gender_visibility: { type: string }
+        location_visibility: { type: string }
+        status_visibility: { type: string }
+        friends_visibility: { type: string }
+        posts_visibility: { type: string }
+        music_visibility: { type: string }
+    ProfileResponse:
+      type: object
+      required: [user_id, bio, avatar_url, first_name, last_name, middle_name, birth_date, gender, phone_number, country, city, street, status, privacy, created_at, updated_at]
+      properties:
+        user_id: { type: string, format: uuid, x-go-type: string, x-go-name: UserID }
+        handle: { type: string, nullable: true }
+        bio: { type: string }
+        avatar_url: { type: string, x-go-name: AvatarURL }
+        first_name: { type: string }
+        last_name: { type: string }
+        middle_name: { type: string }
+        birth_date: { type: string }
+        gender: { type: string }
+        phone_number: { type: string }
+        country: { type: string }
+        city: { type: string }
+        street: { type: string }
+        status: { type: string }
+        privacy: { $ref: '#/components/schemas/PrivacyResponse' }
+        created_at: { type: string }
+        updated_at: { type: string }
+    ProfilesResponse:
+      type: object
+      required: [profiles]
+      properties: { profiles: { type: array, items: { $ref: '#/components/schemas/ProfileResponse' } } }
+    SetHandleRequest:
+      type: object
+      required: [handle]
+      properties: { handle: { type: string } }
+    UpdateProfileRequest:
+      type: object
+      required: [bio, first_name, last_name, middle_name, birth_date, gender, phone_number, country, city, street, status]
+      properties:
+        bio: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        middle_name: { type: string }
+        birth_date: { type: string }
+        gender: { type: string }
+        phone_number: { type: string }
+        country: { type: string }
+        city: { type: string }
+        street: { type: string }
+        status: { type: string }
+    PrivacyRequest:
+      allOf: [{ $ref: '#/components/schemas/PrivacyResponse' }]
+    PhotoAlbumRequest:
+      type: object
+      required: [description, visibility, comment_policy, title]
+      properties:
+        description: { type: string }
+        visibility: { type: string }
+        comment_policy: { type: string }
+        title: { type: string }
+    AddPhotoRequest:
+      type: object
+      required: [media_id, caption]
+      properties:
+        media_id: { type: string, format: uuid, x-go-type: string, x-go-name: MediaID }
+        caption: { type: string }
+    AvatarRequest:
+      type: object
+      required: [media_id]
+      properties: { media_id: { type: string, format: uuid, x-go-type: string, x-go-name: MediaID } }
+    UpdatePhotoRequest:
+      type: object
+      required: [caption, archived]
+      properties:
+        caption: { type: string }
+        archived: { type: boolean }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+    PhotoCommentRequest:
+      type: object
+      required: [body]
+      properties: { body: { type: string } }
+    PhotoPayload:
+      type: object
+      required: [archived, id, media_id, photo_url, created_at]
+      properties:
+        archived: { type: boolean }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+        id: { type: string, format: uuid, x-go-type: string, x-go-name: ID }
+        album_id: { type: string, format: uuid, x-go-type: string, x-go-name: AlbumID, nullable: true }
+        media_id: { type: string, format: uuid, x-go-type: string, x-go-name: MediaID }
+        photo_url: { type: string, x-go-name: URL }
+        caption: { type: string, nullable: true }
+        created_at: { type: string }
+    PhotoAlbumPayload:
+      type: object
+      required: [description, visibility, comment_policy, title, kind, created_at, photos]
+      properties:
+        description: { type: string }
+        visibility: { type: string }
+        comment_policy: { type: string }
+        id: { type: string, format: uuid, x-go-type: string, x-go-name: ID, nullable: true }
+        title: { type: string }
+        kind: { type: string }
+        created_at: { type: string }
+        photos: { type: array, items: { $ref: '#/components/schemas/PhotoPayload' } }
+    PhotoAlbumResponse:
+      type: object
+      required: [album]
+      properties: { album: { $ref: '#/components/schemas/PhotoAlbumPayload' } }
+    ProfilePhotosResponse:
+      type: object
+      required: [owner_id, is_own_profile, albums]
+      properties:
+        owner_id: { type: string, format: uuid, x-go-type: string, x-go-name: OwnerID }
+        is_own_profile: { type: boolean }
+        albums: { type: array, items: { $ref: '#/components/schemas/PhotoAlbumPayload' } }
+    AvatarPayload:
+      type: object
+      required: [id, media_id, avatar_url, created_at, is_current]
+      properties:
+        id: { type: string, format: uuid, x-go-type: string, x-go-name: ID }
+        media_id: { type: string, format: uuid, x-go-type: string, x-go-name: MediaID }
+        avatar_url: { type: string, x-go-name: URL }
+        created_at: { type: string }
+        is_current: { type: boolean }
+    AvatarHistoryResponse:
+      type: object
+      required: [current_avatar, avatars]
+      properties:
+        current_avatar: { type: string }
+        avatars: { type: array, items: { $ref: '#/components/schemas/AvatarPayload' } }
+    PhotoMediaVisibilityResponse:
+      type: object
+      required: [allowed]
+      properties: { allowed: { type: boolean } }
+    PhotoCommentPayload:
+      type: object
+      required: [id, user_id, author_name, body, created_at]
+      properties:
+        id: { type: string, format: uuid, x-go-type: string, x-go-name: ID }
+        user_id: { type: string, format: uuid, x-go-type: string, x-go-name: UserID }
+        author_name: { type: string }
+        body: { type: string }
+        created_at: { type: string }
+    PhotoCommentsResponse:
+      type: object
+      required: [comments]
+      properties: { comments: { type: array, items: { $ref: '#/components/schemas/PhotoCommentPayload' } } }

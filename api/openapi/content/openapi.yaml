@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: Content Service API
+  version: 1.0.0
+  description: Контракт текстовых публикаций, комментариев и лайков.
+paths:
+  /v1/content/posts:
+    post:
+      tags: [content]
+      summary: Создать пост
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PostRequest'}
+      responses:
+        '201': {$ref: '#/components/responses/PostCreated'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/content/posts/{postID}:
+    parameters: [{'$ref': '#/components/parameters/PostID'}]
+    get:
+      tags: [content]
+      summary: Получить пост
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/PostOK'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    patch:
+      tags: [content]
+      summary: Изменить пост
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PostRequest'}
+      responses:
+        '200': {$ref: '#/components/responses/PostOK'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+    delete:
+      tags: [content]
+      summary: Удалить пост
+      security: [{bearerAuth: []}]
+      responses:
+        '204': {description: Пост удалён}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /v1/content/feed:
+    get:
+      tags: [content]
+      summary: Получить ленту постов
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, format: int32, default: 20}
+      responses:
+        '200': {$ref: '#/components/responses/PostsOK'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/content/posts/{postID}/comments:
+    parameters: [{'$ref': '#/components/parameters/PostID'}]
+    get:
+      tags: [content]
+      summary: Получить комментарии поста
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, format: int32, default: 50}
+      responses:
+        '200': {$ref: '#/components/responses/CommentsOK'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [content]
+      summary: Создать комментарий
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PostRequest'}
+      responses:
+        '201': {$ref: '#/components/responses/CommentCreated'}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/content/comments/{commentID}:
+    parameters: [{'$ref': '#/components/parameters/CommentID'}]
+    delete:
+      tags: [content]
+      summary: Удалить комментарий
+      security: [{bearerAuth: []}]
+      responses:
+        '204': {description: Комментарий удалён}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+  /v1/content/posts/{postID}/like:
+    parameters: [{'$ref': '#/components/parameters/PostID'}]
+    post:
+      tags: [content]
+      summary: Поставить лайк посту
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/LikeOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [content]
+      summary: Убрать лайк с поста
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {$ref: '#/components/responses/LikeOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    PostID: {name: postID, in: path, required: true, schema: {type: string}}
+    CommentID: {name: commentID, in: path, required: true, schema: {type: string}}
+  responses:
+    PostCreated:
+      description: Пост создан
+      content: {application/json: {schema: {$ref: '#/components/schemas/PostResponse'}}}
+    PostOK:
+      description: Пост
+      content: {application/json: {schema: {$ref: '#/components/schemas/PostResponse'}}}
+    PostsOK:
+      description: Лента постов
+      content: {application/json: {schema: {$ref: '#/components/schemas/PostsResponse'}}}
+    CommentCreated:
+      description: Комментарий создан
+      content: {application/json: {schema: {$ref: '#/components/schemas/CommentResponse'}}}
+    CommentsOK:
+      description: Комментарии поста
+      content: {application/json: {schema: {$ref: '#/components/schemas/CommentsResponse'}}}
+    LikeOK:
+      description: Состояние лайка
+      content: {application/json: {schema: {$ref: '#/components/schemas/LikeResponse'}}}
+    BadRequest: {description: Некорректный запрос}
+    Unauthorized: {description: Требуется access-токен}
+    Forbidden: {description: Операция запрещена}
+    NotFound: {description: Объект не найден}
+    ValidationError: {description: Ошибка валидации}
+  schemas:
+    PostRequest:
+      type: object
+      required: [body]
+      properties:
+        body: {type: string}
+        media_ids:
+          type: array
+          items: {type: string}
+          x-go-type: '[]string'
+          x-go-name: MediaIDs
+    PostResponse:
+      type: object
+      required: [id, author_id, body, media_ids, comments_count, likes_count, is_liked_by_current, liked_user_ids, created_at, updated_at]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        author_id: {type: string, x-go-type: string, x-go-name: AuthorID}
+        body: {type: string}
+        media_ids: {type: array, items: {type: string}, x-go-type: '[]string', x-go-name: MediaIDs}
+        comments_count: {type: integer, format: int32, x-go-type: int, x-go-name: CommentsCount}
+        likes_count: {type: integer, format: int32, x-go-type: int, x-go-name: LikesCount}
+        is_liked_by_current: {type: boolean, x-go-name: LikedByViewer}
+        liked_user_ids: {type: array, items: {type: string}, x-go-type: '[]string', x-go-name: LikedUserIDs}
+        created_at: {type: string, x-go-name: CreatedAt}
+        updated_at: {type: string, x-go-name: UpdatedAt}
+    PostsResponse:
+      type: object
+      required: [posts]
+      properties:
+        posts: {type: array, items: {$ref: '#/components/schemas/PostResponse'}}
+    CommentResponse:
+      type: object
+      required: [id, post_id, author_id, body, created_at, updated_at]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        post_id: {type: string, x-go-type: string, x-go-name: PostID}
+        author_id: {type: string, x-go-type: string, x-go-name: AuthorID}
+        body: {type: string}
+        created_at: {type: string, x-go-name: CreatedAt}
+        updated_at: {type: string, x-go-name: UpdatedAt}
+    CommentsResponse:
+      type: object
+      required: [comments]
+      properties:
+        comments: {type: array, items: {$ref: '#/components/schemas/CommentResponse'}}
+    LikeResponse:
+      type: object
+      required: [post_id, user_id, liked]
+      properties:
+        post_id: {type: string, x-go-type: string, x-go-name: PostID}
+        user_id: {type: string, x-go-type: string, x-go-name: UserID}
+        liked: {type: boolean}

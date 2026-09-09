@@ -37,5 +37,5 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 func writeStatus(w http.ResponseWriter, status int, value string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": value})
+	_ = json.NewEncoder(w).Encode(StatusResponse{Status: StatusResponseStatus(value)})
 }

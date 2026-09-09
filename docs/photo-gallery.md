@@ -35,7 +35,7 @@
 | GET, POST /v1/profiles/photos/{photoID}/comments | Прочитать последние 100 комментариев / добавить |
 | GET /v1/profiles/photo-media/{mediaID}/visibility | Проверить доступ к содержимому |
 
-Полная схема генерируется командой `task generate:swagger`.
+Полная схема собирается из OpenAPI-спецификаций командой `task generate:swagger`.
 
 ## Приватность и хранение
 

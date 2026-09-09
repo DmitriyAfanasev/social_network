@@ -15,13 +15,13 @@ import (
 )
 
 // StreamContent отдаёт бинарное содержимое активного медиаобъекта.
-// @Summary Скачать или воспроизвести медиа
-// @Tags media
-// @Produce application/octet-stream
-// @Param mediaID path string true "UUID медиаобъекта"
-// @Success 200 {file} binary
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/{mediaID}/content [get]
+
+
+
+
+
+
+
 func (h *Handler) StreamContent(w http.ResponseWriter, r *http.Request) {
 	mediaID, err := uuid.Parse(chi.URLParam(r, "mediaID"))
 	if err != nil {

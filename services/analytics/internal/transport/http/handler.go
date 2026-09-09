@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 	"uuid"
 
 	"github.com/go-chi/chi/v5"
@@ -44,14 +43,14 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetVideoStats возвращает агрегированную статистику конкретного видео.
-// @Summary Получить аналитику видео
-// @Tags analytics
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoStatsResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/analytics/videos/{videoID} [get]
+
+
+
+
+
+
+
+
 func (h *Handler) GetVideoStats(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -67,14 +66,14 @@ func (h *Handler) GetVideoStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListMyVideoStats возвращает историю видео, просмотренных текущим пользователем.
-// @Summary Получить историю просмотров видео
-// @Tags analytics
-// @Produce json
-// @Param limit query int false "Количество видео, от 1 до 100" default(20)
-// @Success 200 {object} viewerVideoStatsListResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/analytics/me/videos [get]
+
+
+
+
+
+
+
+
 func (h *Handler) ListMyVideoStats(w http.ResponseWriter, r *http.Request) {
 	userID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -95,38 +94,16 @@ func (h *Handler) ListMyVideoStats(w http.ResponseWriter, r *http.Request) {
 		writeAnalyticsError(w, err)
 		return
 	}
-	response := viewerVideoStatsListResponse{Videos: make([]viewerVideoStatsResponse, 0, len(items))}
+	response := ViewerVideoStatsListResponse{Videos: make([]ViewerVideoStatsResponse, 0, len(items))}
 	for _, item := range items {
 		response.Videos = append(response.Videos, mapViewerVideoStats(item))
 	}
 	writeJSON(w, http.StatusOK, response)
 }
 
-type videoStatsResponse struct {
-	VideoID             string     `json:"video_id"`
-	Views               int64      `json:"views"`
-	UniqueViewers       int64      `json:"unique_viewers"`
-	TotalWatchSeconds   float64    `json:"total_watch_seconds"`
-	AverageWatchSeconds float64    `json:"average_watch_seconds"`
-	CompletedViews      int64      `json:"completed_views"`
-	LastViewedAt        *time.Time `json:"last_viewed_at,omitempty"`
-}
-
-type viewerVideoStatsResponse struct {
-	VideoID             string    `json:"video_id"`
-	Views               int64     `json:"views"`
-	WatchSeconds        float64   `json:"watch_seconds"`
-	AverageWatchSeconds float64   `json:"average_watch_seconds"`
-	LastViewedAt        time.Time `json:"last_viewed_at"`
-}
-
-type viewerVideoStatsListResponse struct {
-	Videos []viewerVideoStatsResponse `json:"videos"`
-}
-
-func mapVideoStats(stats domain.VideoStats) videoStatsResponse {
-	return videoStatsResponse{
-		VideoID:             stats.VideoID.String(),
+func mapVideoStats(stats domain.VideoStats) VideoStatsResponse {
+	return VideoStatsResponse{
+		VideoId:             stats.VideoID.String(),
 		Views:               stats.Views,
 		UniqueViewers:       stats.UniqueViewers,
 		TotalWatchSeconds:   stats.TotalWatchSeconds,
@@ -136,9 +113,9 @@ func mapVideoStats(stats domain.VideoStats) videoStatsResponse {
 	}
 }
 
-func mapViewerVideoStats(stats domain.ViewerVideoStats) viewerVideoStatsResponse {
-	return viewerVideoStatsResponse{
-		VideoID: stats.VideoID.String(), Views: stats.Views, WatchSeconds: stats.WatchSeconds,
+func mapViewerVideoStats(stats domain.ViewerVideoStats) ViewerVideoStatsResponse {
+	return ViewerVideoStatsResponse{
+		VideoId: stats.VideoID.String(), Views: stats.Views, WatchSeconds: stats.WatchSeconds,
 		AverageWatchSeconds: stats.AverageWatchSeconds, LastViewedAt: stats.LastViewedAt,
 	}
 }
@@ -152,7 +129,7 @@ func writeAnalyticsError(w http.ResponseWriter, err error) {
 }
 
 func writeStatus(w http.ResponseWriter, status int, value string) {
-	writeJSON(w, status, map[string]string{"status": value})
+	writeJSON(w, status, StatusResponse{Status: StatusResponseStatus(value)})
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

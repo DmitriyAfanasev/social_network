@@ -8,14 +8,9 @@ import (
 	"general-project/social/internal/application"
 )
 
-type actionResponse struct {
-	State string `json:"state"`
-}
+type actionResponse = ActionResponse
 
-type friendRequestActionResponse struct {
-	RequestID string `json:"request_id,omitempty"`
-	State     string `json:"state"`
-}
+type friendRequestActionResponse = FriendRequestActionResponse
 
 func writeAction(w http.ResponseWriter, status int, result application.ActionDTO) {
 	w.Header().Set("Content-Type", "application/json")
@@ -30,5 +25,9 @@ func writeFriendRequestAction(w http.ResponseWriter, status int, result applicat
 	if result.RequestID != uuid.Nil() {
 		requestID = result.RequestID.String()
 	}
-	_ = json.NewEncoder(w).Encode(friendRequestActionResponse{RequestID: requestID, State: result.State})
+	var requestIDValue *string
+	if requestID != "" {
+		requestIDValue = &requestID
+	}
+	_ = json.NewEncoder(w).Encode(friendRequestActionResponse{RequestID: requestIDValue, State: result.State})
 }

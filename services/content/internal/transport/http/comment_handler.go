@@ -11,14 +11,14 @@ import (
 )
 
 // ListComments возвращает комментарии поста в порядке публикации.
-// @Summary Получить комментарии поста
-// @Tags content
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Param limit query int false "Количество комментариев" default(50)
-// @Success 200 {object} commentsResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID}/comments [get]
+
+
+
+
+
+
+
+
 func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 	postID, ok := parsePostID(w, r)
 	if !ok {
@@ -42,17 +42,17 @@ func (h *Handler) ListComments(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateComment создаёт комментарий к посту от имени текущего пользователя.
-// @Summary Создать комментарий
-// @Tags content
-// @Accept json
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Param request body postRequest true "Текст комментария"
-// @Success 201 {object} commentResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID}/comments [post]
+
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -76,14 +76,14 @@ func (h *Handler) CreateComment(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteComment удаляет комментарий текущего пользователя.
-// @Summary Удалить комментарий
-// @Tags content
-// @Param commentID path string true "UUID комментария"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/comments/{commentID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

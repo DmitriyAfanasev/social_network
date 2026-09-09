@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: Messaging Service API
+  version: 1.0.0
+  description: Контракт диалогов, сообщений, presence и SSE-уведомлений.
+paths:
+  /v1/messaging/conversations/direct:
+    post:
+      tags: [messaging]
+      summary: Получить или создать прямой диалог
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/DirectConversationRequest'}}}}
+      responses:
+        '200': {$ref: '#/components/responses/ConversationOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/messaging/conversations:
+    get:
+      tags: [messaging]
+      summary: Список диалогов
+      security: [{bearerAuth: []}]
+      parameters: [{name: archived, in: query, schema: {type: boolean, default: false}}]
+      responses:
+        '200': {$ref: '#/components/responses/ConversationsOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /v1/messaging/conversations/{conversationID}/archive:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/unarchive:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    delete: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/unread:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    post: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/pin:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/unpin:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/mute:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/unmute:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    patch: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/history:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    delete: {$ref: '#/components/pathOperations/NoContentOperation'}
+  /v1/messaging/conversations/{conversationID}/messages:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}]
+    get:
+      tags: [messaging]
+      summary: Получить сообщения
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: offset, in: query, schema: {type: integer, format: int32, default: 0}}
+        - {name: limit, in: query, schema: {type: integer, format: int32, default: 50}}
+      responses:
+        '200': {$ref: '#/components/responses/MessagesOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+    post:
+      tags: [messaging]
+      summary: Отправить сообщение
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/MessageRequest'}}}}
+      responses:
+        '201': {$ref: '#/components/responses/MessageOK'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /v1/messaging/messages/{messageID}:
+    parameters: [{'$ref': '#/components/parameters/MessageID'}]
+    patch:
+      tags: [messaging]
+      summary: Изменить сообщение
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/MessageRequest'}}}}
+      responses: {'200': {$ref: '#/components/responses/MessageOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+    delete:
+      tags: [messaging]
+      summary: Удалить сообщение
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Сообщение удалено}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/messaging/conversations/{conversationID}/messages/{messageID}/media:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}, {'$ref': '#/components/parameters/MessageID'}]
+    delete:
+      tags: [messaging]
+      summary: Удалить media сообщения
+      security: [{bearerAuth: []}]
+      responses: {'200': {$ref: '#/components/responses/MessageOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/messaging/conversations/{conversationID}/messages/{messageID}/read:
+    parameters: [{'$ref': '#/components/parameters/ConversationID'}, {'$ref': '#/components/parameters/MessageID'}]
+    post:
+      tags: [messaging]
+      summary: Отметить сообщение прочитанным
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Сообщение отмечено}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/messaging/presence/heartbeat:
+    post:
+      tags: [messaging]
+      summary: Обновить presence
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Presence обновлён}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /v1/messaging/presence:
+    get:
+      tags: [messaging]
+      summary: Проверить presence списка пользователей
+      security: [{bearerAuth: []}]
+      parameters: [{name: user_ids, in: query, required: true, schema: {type: string}}]
+      responses: {'200': {$ref: '#/components/responses/PresenceListOK'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /v1/messaging/presence/{userID}:
+    parameters: [{'$ref': '#/components/parameters/UserID'}]
+    get:
+      tags: [messaging]
+      summary: Проверить presence пользователя
+      security: [{bearerAuth: []}]
+      responses: {'200': {$ref: '#/components/responses/PresenceOK'}, '400': {$ref: '#/components/responses/BadRequest'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /v1/notifications/stream:
+    get:
+      tags: [messaging]
+      summary: Открыть поток уведомлений
+      security: [{bearerAuth: []}]
+      parameters: [{name: access_token, in: query, schema: {type: string}}]
+      responses: {'200': {description: SSE stream, content: {text/event-stream: {schema: {type: string}}}}, '401': {$ref: '#/components/responses/Unauthorized'}}
+components:
+  securitySchemes: {bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}}
+  parameters:
+    ConversationID: {name: conversationID, in: path, required: true, schema: {type: string}}
+    MessageID: {name: messageID, in: path, required: true, schema: {type: string}}
+    UserID: {name: userID, in: path, required: true, schema: {type: string}}
+  pathOperations:
+    NoContentOperation:
+      summary: Изменить состояние диалога
+      tags: [messaging]
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Операция выполнена}, '401': {$ref: '#/components/responses/Unauthorized'}, '404': {$ref: '#/components/responses/NotFound'}}
+  responses:
+    ConversationOK: {description: Диалог, content: {application/json: {schema: {$ref: '#/components/schemas/ConversationResponse'}}}}
+    ConversationsOK: {description: Диалоги, content: {application/json: {schema: {$ref: '#/components/schemas/ConversationsResponse'}}}}
+    MessageOK: {description: Сообщение, content: {application/json: {schema: {$ref: '#/components/schemas/MessageResponse'}}}}
+    MessagesOK: {description: Сообщения, content: {application/json: {schema: {$ref: '#/components/schemas/MessagesResponse'}}}}
+    PresenceOK: {description: Presence, content: {application/json: {schema: {$ref: '#/components/schemas/PresenceResponse'}}}}
+    PresenceListOK: {description: Presence, content: {application/json: {schema: {$ref: '#/components/schemas/PresenceListResponse'}}}}
+    BadRequest: {description: Некорректный запрос}
+    Unauthorized: {description: Требуется access-токен}
+    NotFound: {description: Объект не найден}
+    ValidationError: {description: Ошибка валидации}
+  schemas:
+    DirectConversationRequest:
+      type: object
+      required: [other_user_id]
+      properties: {other_user_id: {type: string, x-go-type: string, x-go-name: OtherUserID}}
+    MessageRequest:
+      type: object
+      required: [body]
+      properties:
+        body: {type: string}
+        media_id: {type: string, x-go-type: string, x-go-name: MediaID}
+    MessageResponse:
+      type: object
+      required: [id, conversation_id, sender_id, body, created_at, deleted]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        conversation_id: {type: string, x-go-type: string, x-go-name: ConversationID}
+        sender_id: {type: string, x-go-type: string, x-go-name: SenderID}
+        body: {type: string}
+        media_id: {type: string, x-go-type: string, x-go-name: MediaID}
+        created_at: {type: string, x-go-name: CreatedAt}
+        edited_at: {type: string, x-go-name: EditedAt}
+        deleted: {type: boolean}
+    MessagesResponse:
+      type: object
+      required: [messages, has_more]
+      properties:
+        messages: {type: array, items: {$ref: '#/components/schemas/MessageResponse'}}
+        has_more: {type: boolean}
+    ConversationResponse:
+      type: object
+      required: [id, participant_ids, archived, pinned, muted, created_at, updated_at]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        participant_ids: {type: array, items: {type: string}, x-go-type: '[]string', x-go-name: ParticipantIDs}
+        archived: {type: boolean}
+        pinned: {type: boolean}
+        muted: {type: boolean}
+        created_at: {type: string, x-go-name: CreatedAt}
+        updated_at: {type: string, x-go-name: UpdatedAt}
+        last_message: {$ref: '#/components/schemas/MessageResponse'}
+    ConversationsResponse:
+      type: object
+      required: [conversations]
+      properties: {conversations: {type: array, items: {$ref: '#/components/schemas/ConversationResponse'}}}
+    PresenceResponse:
+      type: object
+      required: [user_id, online]
+      properties: {user_id: {type: string, x-go-type: string, x-go-name: UserID}, online: {type: boolean}}
+    PresenceListResponse:
+      type: object
+      required: [presence]
+      properties: {presence: {type: array, items: {$ref: '#/components/schemas/PresenceResponse'}}}

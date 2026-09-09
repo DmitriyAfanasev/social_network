@@ -7,14 +7,14 @@ import (
 )
 
 // AddFriend создаёт заявку в друзья для текущего и целевого пользователя.
-// @Summary Отправить заявку в друзья
-// @Tags friendships
-// @Produce json
-// @Param targetID path string true "UUID пользователя"
-// @Success 200 {object} friendRequestActionResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/friendships/{targetID} [put]
+
+
+
+
+
+
+
+
 func (h *Handler) AddFriend(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -34,14 +34,14 @@ func (h *Handler) AddFriend(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveFriend удаляет friendship между текущим и целевым пользователем.
-// @Summary Удалить из друзей
-// @Tags friendships
-// @Produce json
-// @Param targetID path string true "UUID пользователя"
-// @Success 200 {object} actionResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/friendships/{targetID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

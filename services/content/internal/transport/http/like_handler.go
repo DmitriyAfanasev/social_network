@@ -9,27 +9,27 @@ import (
 )
 
 // Like добавляет лайк текущего пользователя к посту.
-// @Summary Поставить лайк посту
-// @Tags content
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Success 200 {object} likeResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID}/like [post]
+
+
+
+
+
+
+
+
 func (h *Handler) Like(w http.ResponseWriter, r *http.Request) {
 	h.handleLike(w, r, h.likes.LikePost)
 }
 
 // Unlike убирает лайк текущего пользователя у поста.
-// @Summary Убрать лайк с поста
-// @Tags content
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Success 200 {object} likeResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID}/like [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) Unlike(w http.ResponseWriter, r *http.Request) {
 	h.handleLike(w, r, h.likes.UnlikePost)
 }

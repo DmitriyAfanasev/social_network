@@ -10,43 +10,9 @@ import (
 	"general-project/profiles/internal/ports"
 )
 
-type profileResponse struct {
-	UserID      string          `json:"user_id"`
-	Handle      *string         `json:"handle,omitempty"`
-	Bio         string          `json:"bio"`
-	AvatarURL   string          `json:"avatar_url"`
-	FirstName   string          `json:"first_name"`
-	LastName    string          `json:"last_name"`
-	MiddleName  string          `json:"middle_name"`
-	BirthDate   string          `json:"birth_date,omitempty"`
-	Gender      string          `json:"gender,omitempty"`
-	PhoneNumber string          `json:"phone_number,omitempty"`
-	Country     string          `json:"country,omitempty"`
-	City        string          `json:"city,omitempty"`
-	Street      string          `json:"street,omitempty"`
-	Status      string          `json:"status,omitempty"`
-	Privacy     privacyResponse `json:"privacy"`
-	CreatedAt   string          `json:"created_at"`
-	UpdatedAt   string          `json:"updated_at"`
-}
-
-type privacyResponse struct {
-	ProfileVisibility   string `json:"profile_visibility"`
-	FriendRequestPolicy string `json:"friend_request_policy"`
-	MessagePolicy       string `json:"message_policy"`
-	PhoneVisibility     string `json:"phone_visibility"`
-	BirthDateVisibility string `json:"birth_date_visibility"`
-	GenderVisibility    string `json:"gender_visibility"`
-	LocationVisibility  string `json:"location_visibility"`
-	StatusVisibility    string `json:"status_visibility"`
-	FriendsVisibility   string `json:"friends_visibility"`
-	PostsVisibility     string `json:"posts_visibility"`
-	MusicVisibility     string `json:"music_visibility"`
-}
-
-type profilesResponse struct {
-	Profiles []profileResponse `json:"profiles"`
-}
+type profileResponse = ProfileResponse
+type privacyResponse = PrivacyResponse
+type profilesResponse = ProfilesResponse
 
 func writeProfile(w http.ResponseWriter, status int, profile application.ProfileDTO) {
 	w.Header().Set("Content-Type", "application/json")

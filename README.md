@@ -17,7 +17,7 @@ docker compose up --build
 Единый Swagger UI gateway доступен по адресу
 [`http://localhost:8000/swagger/`](http://localhost:8000/swagger/). Исходные
 спецификации находятся по адресам `/swagger.json` и `/swagger.yaml`. После
-изменения HTTP-аннотаций обновите их командой `task generate:swagger`.
+изменения OpenAPI-спецификаций обновите их командой `task generate:swagger`.
 
 Для проверки с телефона в той же Wi-Fi сети используйте LAN IP компьютера,
 например `http://192.168.1.50:5173`, а не `localhost`. Полная инструкция,

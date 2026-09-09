@@ -11,22 +11,9 @@ import (
 	"general-project/libs/platform/httpx"
 )
 
-type postResponse struct {
-	ID            string   `json:"id"`
-	AuthorID      string   `json:"author_id"`
-	Body          string   `json:"body"`
-	MediaIDs      []string `json:"media_ids,omitempty"`
-	CommentsCount int      `json:"comments_count"`
-	LikesCount    int      `json:"likes_count"`
-	LikedByViewer bool     `json:"is_liked_by_current"`
-	LikedUserIDs  []string `json:"liked_user_ids,omitempty"`
-	CreatedAt     string   `json:"created_at"`
-	UpdatedAt     string   `json:"updated_at"`
-}
+type postResponse = PostResponse
 
-type postsResponse struct {
-	Posts []postResponse `json:"posts"`
-}
+type postsResponse = PostsResponse
 
 func mapPostResponse(post application.PostDTO) postResponse {
 	return postResponse{

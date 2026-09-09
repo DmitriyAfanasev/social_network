@@ -14,13 +14,13 @@ import (
 const maxMusicUploadSize int64 = 15 * 1024 * 1024
 
 // ListMusic возвращает музыкальные треки владельца с учётом приватности.
-// @Summary Получить свою музыку
-// @Tags media
-// @Produce json
-// @Param owner_id query string false "UUID владельца"
-// @Success 200 {object} musicListResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/music [get]
+
+
+
+
+
+
+
 func (h *Handler) ListMusic(w http.ResponseWriter, r *http.Request) {
 	viewerID, _ := auth.UserIDFromContext(r.Context())
 	ownerID := viewerID
@@ -45,17 +45,17 @@ func (h *Handler) ListMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateMusic загружает аудиофайл и создаёт музыкальный трек.
-// @Summary Загрузить музыкальный трек
-// @Tags media
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Аудиофайл"
-// @Param title formData string false "Название"
-// @Param artist formData string false "Исполнитель"
-// @Success 201 {object} musicResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/media/music [post]
+
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) CreateMusic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -94,14 +94,14 @@ func (h *Handler) CreateMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteMusic удаляет музыкальный трек текущего пользователя.
-// @Summary Удалить музыкальный трек
-// @Tags media
-// @Param trackID path string true "UUID трека"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/music/{trackID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) DeleteMusic(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -120,15 +120,15 @@ func (h *Handler) DeleteMusic(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddMusicToLibrary добавляет доступный трек в личную аудиотеку пользователя.
-// @Summary Добавить трек в свою аудиотеку
-// @Tags media
-// @Produce json
-// @Param trackID path string true "UUID трека"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/music/{trackID}/save [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) AddMusicToLibrary(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -147,12 +147,12 @@ func (h *Handler) AddMusicToLibrary(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveMusicFromLibrary удаляет чужой трек из личной аудиотеки пользователя.
-// @Summary Удалить трек из своей аудиотеки
-// @Tags media
-// @Param trackID path string true "UUID трека"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/music/{trackID}/save [delete]
+
+
+
+
+
+
 func (h *Handler) RemoveMusicFromLibrary(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

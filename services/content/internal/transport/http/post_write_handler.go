@@ -10,21 +10,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type postRequest struct {
-	Body     string   `json:"body"`
-	MediaIDs []string `json:"media_ids,omitempty"`
-}
+type postRequest = PostRequest
 
 // Create создаёт текстовый пост от имени текущего пользователя.
-// @Summary Создать пост
-// @Tags content
-// @Accept json
-// @Produce json
-// @Param request body postRequest true "Текст и вложения поста"
-// @Success 201 {object} postResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/content/posts [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -49,18 +46,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update изменяет текст поста текущего пользователя.
-// @Summary Изменить пост
-// @Tags content
-// @Accept json
-// @Produce json
-// @Param postID path string true "UUID поста"
-// @Param request body postRequest true "Новый текст и вложения поста"
-// @Success 200 {object} postResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID} [patch]
+
+
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -89,14 +86,14 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete удаляет пост текущего пользователя.
-// @Summary Удалить пост
-// @Tags content
-// @Param postID path string true "UUID поста"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/content/posts/{postID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -131,9 +128,12 @@ func parsePostID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return postID, true
 }
 
-func parseMediaIDs(values []string) ([]uuid.UUID, error) {
-	mediaIDs := make([]uuid.UUID, 0, len(values))
-	for _, value := range values {
+func parseMediaIDs(values *[]string) ([]uuid.UUID, error) {
+	if values == nil {
+		return nil, nil
+	}
+	mediaIDs := make([]uuid.UUID, 0, len(*values))
+	for _, value := range *values {
 		mediaID, err := uuid.Parse(value)
 		if err != nil {
 			return nil, err

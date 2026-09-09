@@ -13,13 +13,13 @@ import (
 )
 
 // GetPhotos возвращает фотоальбомы профиля, включая историю аватаров.
-// @Summary Получить фото профиля
-// @Tags profiles
-// @Produce json
-// @Param handle path string true "Публичный handle"
-// @Success 200 {object} profilePhotosResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/profiles/{handle}/photos [get]
+
+
+
+
+
+
+
 func (h *Handler) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -46,13 +46,13 @@ func (h *Handler) GetPhotos(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreatePhotoAlbum создаёт фотоальбом текущего пользователя.
-// @Summary Создать фотоальбом
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body photoAlbumRequest true "Название альбома"
-// @Success 201 {object} photoAlbumResponse
-// @Router /v1/profiles/me/photo-albums [post]
+
+
+
+
+
+
+
 func (h *Handler) CreatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -72,14 +72,14 @@ func (h *Handler) CreatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddPhoto добавляет медиаобъект в фотоальбом текущего пользователя.
-// @Summary Добавить фото в альбом
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param albumID path string true "UUID альбома"
-// @Param request body addPhotoRequest true "Медиаобъект и подпись"
-// @Success 201 {object} photoAlbumResponse
-// @Router /v1/profiles/me/photo-albums/{albumID}/photos [post]
+
+
+
+
+
+
+
+
 func (h *Handler) AddPhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -98,11 +98,11 @@ func (h *Handler) AddPhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePhoto удаляет фотографию текущего пользователя.
-// @Summary Удалить фото профиля
-// @Tags profiles
-// @Param photoID path string true "UUID фотографии"
-// @Success 204
-// @Router /v1/profiles/me/photos/{photoID} [delete]
+
+
+
+
+
 func (h *Handler) DeletePhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -121,13 +121,13 @@ func (h *Handler) DeletePhoto(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetAvatar назначает медиаобъект текущим аватаром пользователя.
-// @Summary Установить аватар
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body avatarRequest true "Медиаобъект"
-// @Success 200 {object} avatarHistoryResponse
-// @Router /v1/profiles/me/avatar [put]
+
+
+
+
+
+
+
 func (h *Handler) SetAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -146,13 +146,13 @@ func (h *Handler) SetAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // SelectAvatar выбирает аватар из истории пользователя.
-// @Summary Выбрать аватар из истории
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param request body avatarRequest true "Медиаобъект"
-// @Success 200 {object} avatarHistoryResponse
-// @Router /v1/profiles/me/avatar/select [post]
+
+
+
+
+
+
+
 func (h *Handler) SelectAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -171,10 +171,10 @@ func (h *Handler) SelectAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // RemoveAvatar сбрасывает текущий аватар на стабильное значение по умолчанию.
-// @Summary Удалить аватар
-// @Tags profiles
-// @Success 204
-// @Router /v1/profiles/me/avatar [delete]
+
+
+
+
 func (h *Handler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -188,11 +188,11 @@ func (h *Handler) RemoveAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 // AvatarHistory возвращает список доступных аватаров пользователя.
-// @Summary Получить историю аватаров
-// @Tags profiles
-// @Produce json
-// @Success 200 {object} avatarHistoryResponse
-// @Router /v1/profiles/me/avatar/history [get]
+
+
+
+
+
 func (h *Handler) AvatarHistory(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -206,67 +206,15 @@ func (h *Handler) AvatarHistory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, mapAvatarHistoryResponse(result))
 }
 
-type photoAlbumRequest struct {
-	Description   string `json:"description"`
-	Visibility    string `json:"visibility"`
-	CommentPolicy string `json:"comment_policy"`
-	Title         string `json:"title"`
-}
-
-type addPhotoRequest struct {
-	MediaID string `json:"media_id"`
-	Caption string `json:"caption"`
-}
-
-type avatarRequest struct {
-	MediaID string `json:"media_id"`
-}
-
-type photoAlbumResponse struct {
-	Album photoAlbumPayload `json:"album"`
-}
-
-type photoAlbumPayload struct {
-	Description   string         `json:"description"`
-	Visibility    string         `json:"visibility"`
-	CommentPolicy string         `json:"comment_policy"`
-	ID            *string        `json:"id,omitempty"`
-	Title         string         `json:"title"`
-	Kind          string         `json:"kind"`
-	CreatedAt     string         `json:"created_at"`
-	Photos        []photoPayload `json:"photos"`
-}
-
-type photoPayload struct {
-	Archived  bool     `json:"archived"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
-	ID        string   `json:"id"`
-	AlbumID   *string  `json:"album_id,omitempty"`
-	MediaID   string   `json:"media_id"`
-	URL       string   `json:"photo_url"`
-	Caption   *string  `json:"caption,omitempty"`
-	CreatedAt string   `json:"created_at"`
-}
-
-type profilePhotosResponse struct {
-	OwnerID      string              `json:"owner_id"`
-	IsOwnProfile bool                `json:"is_own_profile"`
-	Albums       []photoAlbumPayload `json:"albums"`
-}
-
-type avatarHistoryResponse struct {
-	CurrentAvatar string          `json:"current_avatar"`
-	Avatars       []avatarPayload `json:"avatars"`
-}
-
-type avatarPayload struct {
-	ID        string `json:"id"`
-	MediaID   string `json:"media_id"`
-	URL       string `json:"avatar_url"`
-	CreatedAt string `json:"created_at"`
-	IsCurrent bool   `json:"is_current"`
-}
+type photoAlbumRequest = PhotoAlbumRequest
+type addPhotoRequest = AddPhotoRequest
+type avatarRequest = AvatarRequest
+type photoAlbumResponse = PhotoAlbumResponse
+type photoAlbumPayload = PhotoAlbumPayload
+type photoPayload = PhotoPayload
+type profilePhotosResponse = ProfilePhotosResponse
+type avatarHistoryResponse = AvatarHistoryResponse
+type avatarPayload = AvatarPayload
 
 func currentUserID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	userID, ok := auth.UserIDFromContext(r.Context())

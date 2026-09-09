@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"time"
 
 	"general-project/identity/internal/application"
 	platformauth "general-project/libs/platform/auth"
@@ -12,18 +11,18 @@ import (
 )
 
 // Register принимает данные нового пользователя и отправляет confirmation-ссылку.
-// @Summary Регистрация пользователя
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body registerRequest true "Данные регистрации"
-// @Success 202 {object} messageResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 409 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/auth/register [post]
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var request registerRequest
+	var request RegisterRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -40,16 +39,16 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequestRegistrationConfirmation повторно отправляет confirmation-ссылку.
-// @Summary Повторно отправить подтверждение регистрации
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body emailRequest true "Email пользователя"
-// @Success 202 {object} messageResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/auth/registration-confirmation-requests [post]
+
+
+
+
+
+
+
+
 func (h *Handler) RequestRegistrationConfirmation(w http.ResponseWriter, r *http.Request) {
-	var request emailRequest
+	var request EmailRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -63,16 +62,16 @@ func (h *Handler) RequestRegistrationConfirmation(w http.ResponseWriter, r *http
 }
 
 // ConfirmRegistration активирует пользователя по одноразовому токену.
-// @Summary Подтвердить регистрацию
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body tokenRequest true "Confirmation-токен"
-// @Success 200 {object} authResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/auth/confirm-registration [post]
+
+
+
+
+
+
+
+
 func (h *Handler) ConfirmRegistration(w http.ResponseWriter, r *http.Request) {
-	var request tokenRequest
+	var request TokenRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -86,16 +85,16 @@ func (h *Handler) ConfirmRegistration(w http.ResponseWriter, r *http.Request) {
 }
 
 // RequestPasswordReset отправляет одноразовую ссылку для сброса пароля.
-// @Summary Запросить сброс пароля
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body emailRequest true "Email пользователя"
-// @Success 202 {object} messageResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/auth/password-reset-requests [post]
+
+
+
+
+
+
+
+
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	var request emailRequest
+	var request EmailRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -109,16 +108,16 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 }
 
 // ResetPassword меняет пароль по одноразовому reset-токену и выдаёт новую сессию.
-// @Summary Сбросить пароль
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body resetPasswordRequest true "Reset-токен и новый пароль"
-// @Success 200 {object} authResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/auth/password-reset [post]
+
+
+
+
+
+
+
+
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	var request resetPasswordRequest
+	var request ResetPasswordRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -132,12 +131,12 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // Permissions возвращает permissions текущего пользователя.
-// @Summary Получить permissions пользователя
-// @Tags auth
-// @Produce json
-// @Success 200 {object} permissionsResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/auth/me/permissions [get]
+
+
+
+
+
+
 func (h *Handler) Permissions(w http.ResponseWriter, r *http.Request) {
 	userID, ok := platformauth.UserIDFromContext(r.Context())
 	if !ok {
@@ -151,21 +150,21 @@ func (h *Handler) Permissions(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(permissionsResponse{Permissions: permissions})
+	_ = json.NewEncoder(w).Encode(PermissionsResponse{Permissions: permissions})
 }
 
 // Login проверяет credentials и выдает access-токен.
-// @Summary Вход пользователя
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body loginRequest true "Данные входа"
-// @Success 200 {object} authResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/auth/login [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
-	var request loginRequest
+	var request LoginRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -182,17 +181,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // Refresh ротирует refresh-токен и возвращает новую пару токенов.
-// @Summary Обновить токены
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body refreshRequest true "Refresh-токен"
-// @Success 200 {object} authResponse
-// @Failure 400 {object} httpx.ErrorResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/auth/refresh [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var request refreshRequest
+	var request RefreshRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -206,15 +205,15 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout отзывает refresh-токен и завершает сессию пользователя.
-// @Summary Завершить сессию
-// @Tags auth
-// @Accept json
-// @Param request body refreshRequest true "Refresh-токен"
-// @Success 204
-// @Failure 400 {object} httpx.ErrorResponse
-// @Router /v1/auth/logout [post]
+
+
+
+
+
+
+
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	var request refreshRequest
+	var request RefreshRequest
 	if err := decodeJSON(r, &request); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid_json", "некорректное тело запроса")
 		return
@@ -226,59 +225,6 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type registerRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type refreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-type emailRequest struct {
-	Email string `json:"email"`
-}
-
-type tokenRequest struct {
-	Token string `json:"token"`
-}
-
-type resetPasswordRequest struct {
-	Token       string `json:"token"`
-	NewPassword string `json:"new_password"`
-}
-
-type messageResponse struct {
-	Message string `json:"message"`
-}
-
-type permissionsResponse struct {
-	Permissions []string `json:"permissions"`
-}
-
-type authResponse struct {
-	User             userResponse `json:"user"`
-	AccessToken      string       `json:"access_token"`
-	TokenType        string       `json:"token_type"`
-	ExpiresIn        int64        `json:"expires_in"`
-	RefreshToken     string       `json:"refresh_token"`
-	RefreshExpiresIn int64        `json:"refresh_expires_in"`
-}
-
-type userResponse struct {
-	ID         string     `json:"id"`
-	Email      string     `json:"email"`
-	Status     string     `json:"status"`
-	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
-}
-
 func decodeJSON(r *http.Request, target any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -286,11 +232,11 @@ func decodeJSON(r *http.Request, target any) error {
 }
 
 func writeAuth(w http.ResponseWriter, status int, result application.AuthDTO) {
-	response := authResponse{
-		User: userResponse{
-			ID:         result.User.ID.String(),
+	response := AuthResponse{
+		User: UserResponse{
+			Id:         result.User.ID.String(),
 			Email:      result.User.Email,
-			Status:     result.User.Status,
+			Status:     UserResponseStatus(result.User.Status),
 			LastSeenAt: result.User.LastSeenAt,
 			CreatedAt:  result.User.CreatedAt,
 			UpdatedAt:  result.User.UpdatedAt,
@@ -313,7 +259,7 @@ func writeRegistration(w http.ResponseWriter, status int, result application.Reg
 func writeMessage(w http.ResponseWriter, status int, result application.MessageDTO) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(messageResponse{Message: result.Message})
+	_ = json.NewEncoder(w).Encode(MessageResponse{Message: result.Message})
 }
 
 func writeApplicationError(w http.ResponseWriter, err error) {

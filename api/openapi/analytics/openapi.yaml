@@ -1,0 +1,120 @@
+openapi: 3.0.3
+info:
+  title: Analytics API
+  version: 1.0.0
+  description: HTTP-контракт аналитики видео.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Проверить состояние процесса
+      responses:
+        '200': { $ref: '#/components/responses/StatusOK' }
+  /readyz:
+    get:
+      operationId: ready
+      summary: Проверить готовность сервиса
+      responses:
+        '200': { $ref: '#/components/responses/StatusOK' }
+        '503': { $ref: '#/components/responses/DatabaseUnavailable' }
+  /v1/analytics/videos/{videoID}:
+    get:
+      operationId: getVideoStats
+      summary: Получить аналитику видео
+      tags: [analytics]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/VideoID'
+      responses:
+        '200':
+          description: Агрегированная статистика видео.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VideoStatsResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/AnalyticsUnavailable' }
+  /v1/analytics/me/videos:
+    get:
+      operationId: listMyVideoStats
+      summary: Получить историю просмотров видео
+      tags: [analytics]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Статистика просмотренных видео.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ViewerVideoStatsListResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/AnalyticsUnavailable' }
+components:
+  securitySchemes:
+    BearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    VideoID:
+      name: videoID
+      in: path
+      required: true
+      schema: { type: string, format: uuid, x-go-type: string }
+  responses:
+    StatusOK:
+      description: Сервис работает.
+      content: { application/json: { schema: { $ref: '#/components/schemas/StatusResponse' } } }
+    DatabaseUnavailable:
+      description: База данных недоступна.
+      content: { application/json: { schema: { $ref: '#/components/schemas/StatusResponse' } } }
+    InvalidRequest:
+      description: Некорректные параметры запроса.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Unauthorized:
+      description: Требуется действующий access-токен.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    AnalyticsUnavailable:
+      description: Не удалось получить аналитику.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+  schemas:
+    StatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, ready, database_unavailable] }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    VideoStatsResponse:
+      type: object
+      required: [video_id, views, unique_viewers, total_watch_seconds, average_watch_seconds, completed_views]
+      properties:
+        video_id: { type: string, format: uuid, x-go-type: string }
+        views: { type: integer, format: int64 }
+        unique_viewers: { type: integer, format: int64 }
+        total_watch_seconds: { type: number, format: double }
+        average_watch_seconds: { type: number, format: double }
+        completed_views: { type: integer, format: int64 }
+        last_viewed_at: { type: string, format: date-time, nullable: true }
+    ViewerVideoStatsResponse:
+      type: object
+      required: [video_id, views, watch_seconds, average_watch_seconds, last_viewed_at]
+      properties:
+        video_id: { type: string, format: uuid, x-go-type: string }
+        views: { type: integer, format: int64 }
+        watch_seconds: { type: number, format: double }
+        average_watch_seconds: { type: number, format: double }
+        last_viewed_at: { type: string, format: date-time }
+    ViewerVideoStatsListResponse:
+      type: object
+      required: [videos]
+      properties:
+        videos:
+          type: array
+          items: { $ref: '#/components/schemas/ViewerVideoStatsResponse' }

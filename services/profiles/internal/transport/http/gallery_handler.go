@@ -9,12 +9,12 @@ import (
 )
 
 // PhotoMediaVisibility возвращает решение о доступе к содержимому фотографии.
-// @Summary Проверить доступ к файлу фотографии
-// @Tags profiles
-// @Produce json
-// @Param mediaID path string true "UUID медиа"
-// @Success 200 {object} photoMediaVisibilityResponse
-// @Router /v1/profiles/photo-media/{mediaID}/visibility [get]
+
+
+
+
+
+
 func (h *Handler) PhotoMediaVisibility(w http.ResponseWriter, r *http.Request) {
 	viewerID, _ := auth.UserIDFromContext(r.Context())
 	mediaID, err := uuid.Parse(chi.URLParam(r, "mediaID"))
@@ -31,19 +31,17 @@ func (h *Handler) PhotoMediaVisibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, photoMediaVisibilityResponse{Allowed: allowed})
 }
 
-type photoMediaVisibilityResponse struct {
-	Allowed bool `json:"allowed"`
-}
+type photoMediaVisibilityResponse = PhotoMediaVisibilityResponse
 
 // UpdatePhotoAlbum изменяет настройки альбома владельца.
-// @Summary Изменить фотоальбом
-// @Tags profiles
-// @Accept json
-// @Produce json
-// @Param albumID path string true "UUID альбома"
-// @Param request body photoAlbumRequest true "Настройки альбома"
-// @Success 200 {object} photoAlbumResponse
-// @Router /v1/profiles/me/photo-albums/{albumID} [put]
+
+
+
+
+
+
+
+
 func (h *Handler) UpdatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -63,21 +61,16 @@ func (h *Handler) UpdatePhotoAlbum(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, photoAlbumResponse{Album: mapPhotoAlbumResponse(album)})
 }
 
-type updatePhotoRequest struct {
-	Caption   string   `json:"caption"`
-	Archived  bool     `json:"archived"`
-	Latitude  *float64 `json:"latitude"`
-	Longitude *float64 `json:"longitude"`
-}
+type updatePhotoRequest = UpdatePhotoRequest
 
 // UpdatePhoto изменяет подпись, координаты и состояние архива фотографии.
-// @Summary Изменить фотографию
-// @Tags profiles
-// @Accept json
-// @Param photoID path string true "UUID фотографии"
-// @Param request body updatePhotoRequest true "Полное состояние фотографии"
-// @Success 204
-// @Router /v1/profiles/me/photos/{photoID} [put]
+
+
+
+
+
+
+
 func (h *Handler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -96,27 +89,17 @@ func (h *Handler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type photoCommentRequest struct {
-	Body string `json:"body"`
-}
-type photoCommentPayload struct {
-	ID         string `json:"id"`
-	UserID     string `json:"user_id"`
-	AuthorName string `json:"author_name"`
-	Body       string `json:"body"`
-	CreatedAt  string `json:"created_at"`
-}
-type photoCommentsResponse struct {
-	Comments []photoCommentPayload `json:"comments"`
-}
+type photoCommentRequest = PhotoCommentRequest
+type photoCommentPayload = PhotoCommentPayload
+type photoCommentsResponse = PhotoCommentsResponse
 
 // ListPhotoComments возвращает комментарии доступной фотографии.
-// @Summary Получить комментарии фотографии
-// @Tags profiles
-// @Produce json
-// @Param photoID path string true "UUID фотографии"
-// @Success 200 {object} photoCommentsResponse
-// @Router /v1/profiles/photos/{photoID}/comments [get]
+
+
+
+
+
+
 func (h *Handler) ListPhotoComments(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {
@@ -140,13 +123,13 @@ func (h *Handler) ListPhotoComments(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddPhotoComment добавляет комментарий с проверкой политики альбома.
-// @Summary Добавить комментарий фотографии
-// @Tags profiles
-// @Accept json
-// @Param photoID path string true "UUID фотографии"
-// @Param request body photoCommentRequest true "Текст комментария"
-// @Success 204
-// @Router /v1/profiles/photos/{photoID}/comments [post]
+
+
+
+
+
+
+
 func (h *Handler) AddPhotoComment(w http.ResponseWriter, r *http.Request) {
 	userID, ok := currentUserID(w, r)
 	if !ok {

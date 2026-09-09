@@ -1,0 +1,245 @@
+openapi: 3.0.3
+info:
+  title: Media Service API
+  version: 1.0.0
+  description: Контракт загрузки медиа, видео, музыки и взаимодействий с ними.
+paths:
+  /v1/media:
+    post:
+      tags: [media]
+      summary: Загрузить медиа
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/MediaUploadRequest'}}}}
+      responses: {'201': {$ref: '#/components/responses/MediaOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/media/{mediaID}:
+    parameters: [{'$ref': '#/components/parameters/MediaID'}]
+    get:
+      tags: [media]
+      summary: Получить метаданные медиа
+      responses: {'200': {$ref: '#/components/responses/MediaOK'}, '404': {$ref: '#/components/responses/NotFound'}}
+    delete:
+      tags: [media]
+      summary: Удалить медиа
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Медиа удалено}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/media/{mediaID}/content:
+    parameters: [{'$ref': '#/components/parameters/MediaID'}]
+    get:
+      tags: [media]
+      summary: Скачать или воспроизвести медиа
+      responses: {'200': {description: Бинарное содержимое, content: {application/octet-stream: {schema: {type: string, format: binary}}}}, '206': {description: Частичное содержимое}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/media/videos:
+    get:
+      tags: [media]
+      summary: Получить видео по альбомам
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: owner_id, in: query, schema: {type: string}}
+        - {name: tab, in: query, schema: {type: string, enum: [uploaded, favorite, viewed, bookmarked]}}
+        - {name: q, in: query, schema: {type: string}}
+      responses: {'200': {$ref: '#/components/responses/VideoAlbumsOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      tags: [media]
+      summary: Загрузить видео
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/VideoUploadRequest'}}}}
+      responses: {'202': {$ref: '#/components/responses/VideoOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/media/videos/albums:
+    post:
+      tags: [media]
+      summary: Создать альбом видео
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {application/x-www-form-urlencoded: {schema: {$ref: '#/components/schemas/AlbumRequest'}}}}
+      responses: {'201': {$ref: '#/components/responses/AlbumOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/media/videos/albums/{albumID}:
+    parameters: [{'$ref': '#/components/parameters/AlbumID'}]
+    delete:
+      tags: [media]
+      summary: Удалить альбом видео
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Альбом удалён}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/media/videos/{videoID}:
+    parameters: [{'$ref': '#/components/parameters/VideoID'}]
+    get:
+      tags: [media]
+      summary: Получить видео
+      responses: {'200': {$ref: '#/components/responses/VideoOK'}, '404': {$ref: '#/components/responses/NotFound'}}
+    delete:
+      tags: [media]
+      summary: Удалить видео
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Видео удалено}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/media/videos/{videoID}/view:
+    parameters: [{'$ref': '#/components/parameters/VideoID'}]
+    post:
+      tags: [media]
+      summary: Зафиксировать просмотр видео
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/RecordViewRequest'}}}}
+      responses: {'200': {$ref: '#/components/responses/VideoViewOK'}}
+  /v1/media/videos/{videoID}/like:
+    parameters: [{'$ref': '#/components/parameters/VideoID'}]
+    post: {tags: [media], summary: Поставить или убрать like видео, security: [{bearerAuth: []}], responses: {'200': {$ref: '#/components/responses/VideoLikeOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+  /v1/media/videos/{videoID}/bookmark:
+    parameters: [{'$ref': '#/components/parameters/VideoID'}]
+    post: {tags: [media], summary: Изменить закладку видео, security: [{bearerAuth: []}], responses: {'200': {$ref: '#/components/responses/VideoFlagOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+    delete: {tags: [media], summary: Убрать закладку видео, security: [{bearerAuth: []}], responses: {'200': {$ref: '#/components/responses/VideoFlagOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+  /v1/media/videos/{videoID}/favorite:
+    parameters: [{'$ref': '#/components/parameters/VideoID'}]
+    post: {tags: [media], summary: Добавить видео в избранное, security: [{bearerAuth: []}], responses: {'200': {$ref: '#/components/responses/VideoFlagOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+    delete: {tags: [media], summary: Убрать видео из избранного, security: [{bearerAuth: []}], responses: {'200': {$ref: '#/components/responses/VideoFlagOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+  /v1/media/music:
+    get:
+      tags: [media]
+      summary: Получить музыку
+      security: [{bearerAuth: []}]
+      parameters: [{name: owner_id, in: query, schema: {type: string}}]
+      responses: {'200': {$ref: '#/components/responses/MusicListOK'}, '401': {$ref: '#/components/responses/Unauthorized'}}
+    post:
+      tags: [media]
+      summary: Загрузить музыкальный трек
+      security: [{bearerAuth: []}]
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/MusicUploadRequest'}}}}
+      responses: {'201': {$ref: '#/components/responses/MusicOK'}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/media/music/{trackID}:
+    parameters: [{'$ref': '#/components/parameters/TrackID'}]
+    delete:
+      tags: [media]
+      summary: Удалить музыкальный трек
+      security: [{bearerAuth: []}]
+      responses: {'204': {description: Трек удалён}, '401': {$ref: '#/components/responses/Unauthorized'}, '403': {$ref: '#/components/responses/Forbidden'}, '404': {$ref: '#/components/responses/NotFound'}}
+  /v1/media/music/{trackID}/save:
+    parameters: [{'$ref': '#/components/parameters/TrackID'}]
+    post: {tags: [media], summary: Добавить трек в библиотеку, security: [{bearerAuth: []}], responses: {'204': {description: Трек сохранён}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+    delete: {tags: [media], summary: Удалить трек из библиотеки, security: [{bearerAuth: []}], responses: {'204': {description: Трек удалён}, '401': {$ref: '#/components/responses/Unauthorized'}}}
+components:
+  securitySchemes: {bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}}
+  parameters:
+    MediaID: {name: mediaID, in: path, required: true, schema: {type: string}}
+    VideoID: {name: videoID, in: path, required: true, schema: {type: string}}
+    AlbumID: {name: albumID, in: path, required: true, schema: {type: string}}
+    TrackID: {name: trackID, in: path, required: true, schema: {type: string}}
+  responses:
+    MediaOK: {description: Медиа, content: {application/json: {schema: {$ref: '#/components/schemas/MediaResponse'}}}}
+    VideoOK: {description: Видео, content: {application/json: {schema: {$ref: '#/components/schemas/VideoResponse'}}}}
+    VideoAlbumsOK: {description: Альбомы видео, content: {application/json: {schema: {$ref: '#/components/schemas/VideoAlbumListResponse'}}}}
+    AlbumOK: {description: Альбом, content: {application/json: {schema: {$ref: '#/components/schemas/VideoAlbumResponse'}}}}
+    VideoViewOK: {description: Просмотры, content: {application/json: {schema: {$ref: '#/components/schemas/VideoViewResponse'}}}}
+    VideoLikeOK: {description: Лайк, content: {application/json: {schema: {$ref: '#/components/schemas/VideoLikeResponse'}}}}
+    VideoFlagOK: {description: Флаг видео, content: {application/json: {schema: {$ref: '#/components/schemas/VideoFlagResponse'}}}}
+    MusicOK: {description: Трек, content: {application/json: {schema: {$ref: '#/components/schemas/MusicResponse'}}}}
+    MusicListOK: {description: Музыка, content: {application/json: {schema: {$ref: '#/components/schemas/MusicListResponse'}}}}
+    Unauthorized: {description: Требуется access-токен}
+    Forbidden: {description: Операция запрещена}
+    NotFound: {description: Объект не найден}
+    ValidationError: {description: Ошибка валидации}
+  schemas:
+    MediaUploadRequest:
+      type: object
+      required: [file]
+      properties: {file: {type: string, format: binary, x-go-type: string}}
+    VideoUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, x-go-type: string}
+        title: {type: string}
+        album_id: {type: string}
+        heights: {type: string}
+    MusicUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, x-go-type: string}
+        title: {type: string}
+        artist: {type: string}
+    AlbumRequest:
+      type: object
+      required: [title]
+      properties: {title: {type: string}}
+    MediaResponse:
+      type: object
+      required: [id, original_filename, media_type, size, checksum, uploaded_by, created_at]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        original_filename: {type: string, x-go-name: OriginalFilename}
+        content_type: {type: string, x-go-name: ContentType}
+        media_type: {type: string, x-go-name: MediaType}
+        size: {type: integer, format: int64, x-go-name: Size}
+        checksum: {type: string}
+        uploaded_by: {type: string, x-go-type: string, x-go-name: UploadedBy}
+        created_at: {type: string, x-go-name: CreatedAt}
+    MusicResponse:
+      type: object
+      required: [id, media_id, user_id, title, artist, created_at, is_saved]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        media_id: {type: string, x-go-type: string, x-go-name: MediaID}
+        user_id: {type: string, x-go-type: string, x-go-name: UserID}
+        title: {type: string}
+        artist: {type: string}
+        duration: {type: number, format: double}
+        created_at: {type: string, x-go-name: CreatedAt}
+        is_saved: {type: boolean, x-go-name: IsSaved}
+    MusicListResponse:
+      type: object
+      required: [tracks]
+      properties: {tracks: {type: array, items: {$ref: '#/components/schemas/MusicResponse'}}}
+    VideoResponse:
+      type: object
+      required: [id, media_id, title, status, views_count, likes_count, is_liked_by_current, is_bookmarked_by_current, is_favorited_by_current, created_at, updated_at, renditions]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        media_id: {type: string, x-go-type: string, x-go-name: MediaID}
+        album_id: {type: string, x-go-type: string, x-go-name: AlbumID}
+        owner_id: {type: string, x-go-type: string, x-go-name: OwnerID}
+        title: {type: string}
+        original_filename: {type: string, x-go-name: OriginalFilename}
+        status: {type: string}
+        duration: {type: number, format: double}
+        views_count: {type: integer, format: int32, x-go-type: int, x-go-name: ViewsCount}
+        likes_count: {type: integer, format: int32, x-go-type: int, x-go-name: LikesCount}
+        is_liked_by_current: {type: boolean, x-go-name: LikedByViewer}
+        is_bookmarked_by_current: {type: boolean, x-go-name: BookmarkedByViewer}
+        is_favorited_by_current: {type: boolean, x-go-name: FavoritedByViewer}
+        created_at: {type: string, x-go-name: CreatedAt}
+        updated_at: {type: string, x-go-name: UpdatedAt}
+        renditions: {type: array, items: {$ref: '#/components/schemas/RenditionResponse'}}
+    RenditionResponse:
+      type: object
+      required: [id, height, content_type, size, duration, created_at]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        height: {type: integer, format: int32, x-go-type: int}
+        content_type: {type: string}
+        size: {type: integer, format: int64}
+        duration: {type: number, format: double}
+        created_at: {type: string}
+    VideoAlbumResponse:
+      type: object
+      required: [id, title]
+      properties: {id: {type: string, x-go-type: string, x-go-name: ID}, title: {type: string}}
+    VideoAlbumListItem:
+      type: object
+      required: [title, videos]
+      properties:
+        id: {type: string, x-go-type: string, x-go-name: ID}
+        title: {type: string}
+        videos: {type: array, items: {$ref: '#/components/schemas/VideoResponse'}}
+    VideoAlbumListResponse:
+      type: object
+      required: [albums]
+      properties: {albums: {type: array, items: {$ref: '#/components/schemas/VideoAlbumListItem'}}}
+    VideoViewResponse:
+      type: object
+      required: [views_count]
+      properties: {views_count: {type: integer, format: int32, x-go-type: int, x-go-name: ViewsCount}}
+    VideoLikeResponse:
+      type: object
+      required: [likes_count, liked]
+      properties: {likes_count: {type: integer, format: int32, x-go-type: int, x-go-name: LikesCount}, liked: {type: boolean}}
+    VideoFlagResponse:
+      type: object
+      properties: {bookmarked: {type: boolean}, favorited: {type: boolean}}
+    RecordViewRequest:
+      type: object
+      properties: {seconds: {type: number, format: double}}

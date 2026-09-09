@@ -7,21 +7,9 @@ import (
 	"general-project/messaging/internal/application"
 )
 
-type messageResponse struct {
-	ID             string  `json:"id"`
-	ConversationID string  `json:"conversation_id"`
-	SenderID       string  `json:"sender_id"`
-	Body           string  `json:"body"`
-	MediaID        *string `json:"media_id,omitempty"`
-	CreatedAt      string  `json:"created_at"`
-	EditedAt       string  `json:"edited_at,omitempty"`
-	Deleted        bool    `json:"deleted"`
-}
+type messageResponse = MessageResponse
 
-type messagesResponse struct {
-	Messages []messageResponse `json:"messages"`
-	HasMore  bool              `json:"has_more"`
-}
+type messagesResponse = MessagesResponse
 
 func mapMessageResponse(message application.MessageDTO) messageResponse {
 	response := messageResponse{ID: message.ID.String(), ConversationID: message.ConversationID.String(), SenderID: message.SenderID.String(), Body: message.Body, CreatedAt: message.CreatedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00"), Deleted: message.DeletedAt != nil}
@@ -33,7 +21,8 @@ func mapMessageResponse(message application.MessageDTO) messageResponse {
 		response.MediaID = &value
 	}
 	if message.EditedAt != nil {
-		response.EditedAt = message.EditedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00")
+		value := message.EditedAt.UTC().Format("2006-01-02T15:04:05.999999Z07:00")
+		response.EditedAt = &value
 	}
 	return response
 }

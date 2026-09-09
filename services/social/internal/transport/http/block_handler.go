@@ -7,14 +7,14 @@ import (
 )
 
 // Block блокирует пользователя для текущего пользователя.
-// @Summary Заблокировать пользователя
-// @Tags blocks
-// @Produce json
-// @Param targetID path string true "UUID пользователя"
-// @Success 200 {object} actionResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/blocks/{targetID} [put]
+
+
+
+
+
+
+
+
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -34,14 +34,14 @@ func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 }
 
 // Unblock снимает блокировку пользователя.
-// @Summary Снять блокировку
-// @Tags blocks
-// @Produce json
-// @Param targetID path string true "UUID пользователя"
-// @Success 200 {object} actionResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/blocks/{targetID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) Unblock(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {

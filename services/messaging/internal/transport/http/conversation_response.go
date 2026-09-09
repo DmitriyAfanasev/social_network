@@ -7,20 +7,9 @@ import (
 	"general-project/messaging/internal/application"
 )
 
-type conversationResponse struct {
-	ID             string           `json:"id"`
-	ParticipantIDs []string         `json:"participant_ids"`
-	Archived       bool             `json:"archived"`
-	Pinned         bool             `json:"pinned"`
-	Muted          bool             `json:"muted"`
-	CreatedAt      string           `json:"created_at"`
-	UpdatedAt      string           `json:"updated_at"`
-	LastMessage    *messageResponse `json:"last_message,omitempty"`
-}
+type conversationResponse = ConversationResponse
 
-type conversationsResponse struct {
-	Conversations []conversationResponse `json:"conversations"`
-}
+type conversationsResponse = ConversationsResponse
 
 func mapConversationResponse(conversation application.ConversationDTO) conversationResponse {
 	response := conversationResponse{

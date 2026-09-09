@@ -10,14 +10,14 @@ import (
 )
 
 // GetRelationship возвращает социальную близость текущего пользователя к цели.
-// @Summary Проверить социальную близость
-// @Tags social
-// @Produce json
-// @Param targetID path string true "UUID пользователя"
-// @Success 200 {object} relationshipAccessResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/relationships/{targetID} [get]
+
+
+
+
+
+
+
+
 func (h *Handler) GetRelationship(w http.ResponseWriter, r *http.Request) {
 	actorID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -36,8 +36,4 @@ func (h *Handler) GetRelationship(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, relationshipAccessResponse{IsFriend: result.IsFriend, IsFriendOfFriend: result.IsFriendOfFriend, IsBlocked: result.IsBlocked})
 }
 
-type relationshipAccessResponse struct {
-	IsFriend         bool `json:"is_friend"`
-	IsFriendOfFriend bool `json:"is_friend_of_friend"`
-	IsBlocked        bool `json:"is_blocked"`
-}
+type relationshipAccessResponse = RelationshipAccessResponse

@@ -15,15 +15,15 @@ const maxMultipartMemory = 8 << 20
 const maxMediaUploadSize int64 = 25 * 1024 * 1024
 
 // Upload загружает файл в object storage и создаёт его метаданные.
-// @Summary Загрузить медиа
-// @Tags media
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Файл"
-// @Success 201 {object} mediaResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/media [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -62,14 +62,14 @@ func limitMultipartBody(w http.ResponseWriter, r *http.Request, fileLimit int64)
 }
 
 // Delete удаляет медиаобъект текущего пользователя.
-// @Summary Удалить медиа
-// @Tags media
-// @Param mediaID path string true "UUID медиаобъекта"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/{mediaID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

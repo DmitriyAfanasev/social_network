@@ -18,18 +18,18 @@ import (
 const maxVideoUploadSize int64 = 50 * 1024 * 1024
 
 // CreateVideo загружает видео и ставит задачу транскодирования в Kafka.
-// @Summary Загрузить видео
-// @Tags media
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Видео"
-// @Param title formData string false "Название видео"
-// @Param album_id formData string false "UUID альбома"
-// @Param heights formData string false "Высоты через запятую"
-// @Success 202 {object} videoResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/media/videos [post]
+
+
+
+
+
+
+
+
+
+
+
+
 func (h *Handler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -79,15 +79,15 @@ func (h *Handler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListVideos возвращает видео текущего владельца, сгруппированные по альбомам.
-// @Summary Получить видео по альбомам
-// @Tags media
-// @Produce json
-// @Param owner_id query string false "UUID владельца"
-// @Param tab query string false "uploaded, favorite, viewed или bookmarked"
-// @Param q query string false "Поиск по названию"
-// @Success 200 {object} videoAlbumListResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/videos [get]
+
+
+
+
+
+
+
+
+
 func (h *Handler) ListVideos(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -111,15 +111,15 @@ func (h *Handler) ListVideos(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateAlbum создаёт альбом видео текущего пользователя.
-// @Summary Создать альбом видео
-// @Tags media
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Param title formData string true "Название альбома"
-// @Success 201 {object} videoAlbumResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/albums [post]
+
+
+
+
+
+
+
+
+
 func (h *Handler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -138,14 +138,14 @@ func (h *Handler) CreateAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteAlbum удаляет альбом и видео текущего пользователя.
-// @Summary Удалить альбом видео
-// @Tags media
-// @Param albumID path string true "UUID альбома"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/albums/{albumID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -164,12 +164,12 @@ func (h *Handler) DeleteAlbum(w http.ResponseWriter, r *http.Request) {
 }
 
 // RecordView фиксирует просмотр видео, допускается анонимный просмотр.
-// @Summary Зафиксировать просмотр видео
-// @Tags media
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoViewResponse
-// @Router /v1/media/videos/{videoID}/view [post]
+
+
+
+
+
+
 func (h *Handler) RecordView(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -209,13 +209,13 @@ func decodeJSON(r *http.Request, target any) error {
 }
 
 // ToggleLike переключает like текущего пользователя.
-// @Summary Поставить или убрать like видео
-// @Tags media
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoLikeResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/{videoID}/like [post]
+
+
+
+
+
+
+
 func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {
@@ -235,27 +235,27 @@ func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetBookmark изменяет состояние закладки видео.
-// @Summary Изменить закладку видео
-// @Tags media
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoFlagResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/{videoID}/bookmark [post]
-// @Router /v1/media/videos/{videoID}/bookmark [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) SetBookmark(w http.ResponseWriter, r *http.Request) {
 	h.setVideoFlag(w, r, true)
 }
 
 // SetFavorite изменяет состояние избранного видео.
-// @Summary Изменить избранное видео
-// @Tags media
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoFlagResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/{videoID}/favorite [post]
-// @Router /v1/media/videos/{videoID}/favorite [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) SetFavorite(w http.ResponseWriter, r *http.Request) {
 	h.setVideoFlag(w, r, false)
 }
@@ -289,13 +289,13 @@ func (h *Handler) setVideoFlag(w http.ResponseWriter, r *http.Request, bookmark 
 }
 
 // GetVideo возвращает состояние видео и готовые варианты.
-// @Summary Получить видео
-// @Tags media
-// @Produce json
-// @Param videoID path string true "UUID видео"
-// @Success 200 {object} videoResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/{videoID} [get]
+
+
+
+
+
+
+
 func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
 	if err != nil {
@@ -315,14 +315,14 @@ func (h *Handler) GetVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteVideo удаляет видео текущего пользователя.
-// @Summary Удалить видео
-// @Tags media
-// @Param videoID path string true "UUID видео"
-// @Success 204
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 403 {object} httpx.ErrorResponse
-// @Failure 404 {object} httpx.ErrorResponse
-// @Router /v1/media/videos/{videoID} [delete]
+
+
+
+
+
+
+
+
 func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := h.authenticatedUser(w, r)
 	if !ok {

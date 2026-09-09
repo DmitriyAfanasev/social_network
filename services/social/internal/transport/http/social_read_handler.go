@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 	"uuid"
 
 	"github.com/go-chi/chi/v5"
@@ -13,12 +12,12 @@ import (
 )
 
 // GetRelationships возвращает друзей, подписчиков и подписки текущего пользователя.
-// @Summary Получить социальные связи
-// @Tags social
-// @Produce json
-// @Success 200 {object} relationshipsResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Router /v1/social/relationships [get]
+
+
+
+
+
+
 func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -33,14 +32,14 @@ func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetPublicFriends возвращает друзей указанного профиля с учётом приватности.
-// @Summary Получить друзей профиля
-// @Tags social
-// @Produce json
-// @Param targetID path string true "UUID владельца профиля"
-// @Success 200 {object} publicFriendsResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/relationships/{targetID}/friends [get]
+
+
+
+
+
+
+
+
 func (h *Handler) GetPublicFriends(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -60,14 +59,14 @@ func (h *Handler) GetPublicFriends(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetRecommendations возвращает кандидатов в друзья, отсортированных по числу общих друзей.
-// @Summary Получить рекомендации друзей
-// @Tags social
-// @Produce json
-// @Param limit query int false "Количество результатов" default(10)
-// @Success 200 {object} recommendationsResponse
-// @Failure 401 {object} httpx.ErrorResponse
-// @Failure 422 {object} httpx.ErrorResponse
-// @Router /v1/social/recommendations [get]
+
+
+
+
+
+
+
+
 func (h *Handler) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authenticatedUser(w, r)
 	if !ok {
@@ -90,39 +89,17 @@ func (h *Handler) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, mapRecommendationsResponse(result))
 }
 
-type relationshipsResponse struct {
-	Friends       []string `json:"friends"`
-	Subscribers   []string `json:"subscribers"`
-	Subscriptions []string `json:"subscriptions"`
-}
+type relationshipsResponse = RelationshipsResponse
 
-type publicFriendsResponse struct {
-	Friends []string `json:"friends"`
-	Visible bool     `json:"visible"`
-}
+type publicFriendsResponse = PublicFriendsResponse
 
-type recommendationsResponse struct {
-	Recommendations []recommendationResponse `json:"recommendations"`
-}
+type recommendationsResponse = RecommendationsResponse
 
-type friendRequestsResponse struct {
-	Incoming []friendRequestResponse `json:"incoming"`
-	Outgoing []friendRequestResponse `json:"outgoing"`
-}
+type friendRequestsResponse = FriendRequestsResponse
 
-type friendRequestResponse struct {
-	ID          string     `json:"id"`
-	SenderID    string     `json:"sender_id"`
-	RecipientID string     `json:"recipient_id"`
-	Status      string     `json:"status"`
-	CreatedAt   time.Time  `json:"created_at"`
-	RespondedAt *time.Time `json:"responded_at,omitempty"`
-}
+type friendRequestResponse = FriendRequestResponse
 
-type recommendationResponse struct {
-	UserID        string `json:"user_id"`
-	CommonFriends int    `json:"common_friends"`
-}
+type recommendationResponse = RecommendationResponse
 
 func mapRelationshipsResponse(result application.RelationshipsDTO) relationshipsResponse {
 	return relationshipsResponse{

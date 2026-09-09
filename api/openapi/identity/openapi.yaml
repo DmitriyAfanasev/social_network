@@ -1,0 +1,379 @@
+openapi: 3.0.3
+info:
+  title: Identity API
+  version: 1.0.0
+  description: HTTP-контракт identity-сервиса.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Проверить состояние процесса
+      responses:
+        '200':
+          description: Процесс работает.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+  /readyz:
+    get:
+      operationId: ready
+      summary: Проверить готовность сервиса
+      responses:
+        '200':
+          description: Внешние зависимости доступны.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '503':
+          description: База данных недоступна.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+  /v1/auth/register:
+    post:
+      operationId: register
+      summary: Регистрация пользователя
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          description: Ссылка подтверждения отправлена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '409': { $ref: '#/components/responses/IdentityConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/auth/registration-confirmation-requests:
+    post:
+      operationId: requestRegistrationConfirmation
+      summary: Повторно отправить подтверждение регистрации
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Ссылка подтверждения отправлена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/auth/confirm-registration:
+    post:
+      operationId: confirmRegistration
+      summary: Подтвердить регистрацию
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Учётная запись подтверждена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '422': { $ref: '#/components/responses/InvalidVerificationToken' }
+  /v1/auth/password-reset-requests:
+    post:
+      operationId: requestPasswordReset
+      summary: Запросить сброс пароля
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          description: Ссылка сброса отправлена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/auth/password-reset:
+    post:
+      operationId: resetPassword
+      summary: Сбросить пароль
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Пароль изменён.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/auth/login:
+    post:
+      operationId: login
+      summary: Вход пользователя
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Токены выданы.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '401': { $ref: '#/components/responses/InvalidCredentials' }
+  /v1/auth/refresh:
+    post:
+      operationId: refresh
+      summary: Обновить токены
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Токены обновлены.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+        '401': { $ref: '#/components/responses/InvalidRefreshToken' }
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Завершить сессию
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Сессия завершена.
+        '400': { $ref: '#/components/responses/InvalidJSON' }
+  /v1/auth/me/permissions:
+    get:
+      operationId: permissions
+      summary: Получить permissions пользователя
+      tags: [auth]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Permissions текущего пользователя.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    InvalidJSON:
+      description: Некорректное JSON-тело.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Данные не прошли проверку.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    IdentityConflict:
+      description: Email уже используется.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidCredentials:
+      description: Неверный email или пароль.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidRefreshToken:
+      description: Refresh-токен недействителен.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidVerificationToken:
+      description: Одноразовый токен недействителен.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Требуется действующий access-токен.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    StatusResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, ready, database_unavailable]
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          x-go-type: string
+        password:
+          type: string
+          minLength: 8
+          format: password
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          x-go-type: string
+        password:
+          type: string
+          format: password
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          x-go-type: string
+    TokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 8
+          format: password
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    PermissionsResponse:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+    AuthResponse:
+      type: object
+      required: [user, access_token, token_type, expires_in, refresh_token, refresh_expires_in]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          format: int64
+          minimum: 1
+        refresh_token:
+          type: string
+        refresh_expires_in:
+          type: integer
+          format: int64
+          minimum: 1
+    UserResponse:
+      type: object
+      required: [id, email, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: string
+        email:
+          type: string
+          format: email
+          x-go-type: string
+        status:
+          type: string
+          enum: [pending, active, blocked]
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

@@ -2,6 +2,7 @@ version: "3"
 
 vars:
   DATABASE_URL: '{{default "postgres://admin:password@localhost:5432/database?sslmode=disable" .DATABASE_URL}}'
+  OAPI_CODEGEN_VERSION: v2.8.0
 
 tasks:
   fmt:
@@ -102,10 +103,26 @@ tasks:
       - go -C services/gateway build -o /tmp/general-project-gateway ./cmd/gateway
 
   generate:swagger:
-    desc: Generate the unified Swagger/OpenAPI document for gateway
+    desc: Generate the unified OpenAPI document for gateway
     cmds:
-      - swag init --parseDependency --parseInternal --useStructName --dir services/gateway,services/identity,services/profiles,services/social,services/content,services/media,services/messaging,services/analytics --generalInfo cmd/gateway/main.go --output services/gateway/docs --outputTypes json,yaml
-      - bash scripts/ensure-swagger-security.sh
+      - python3 scripts/merge-openapi.py
+
+  generate:openapi:
+    desc: Generate HTTP transport models from OpenAPI contracts
+    cmds:
+      - GOWORK=off go -C services/identity run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/identity/openapi.yaml
+      - GOWORK=off go -C services/analytics run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/analytics/openapi.yaml
+      - GOWORK=off go -C services/profiles run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/profiles/openapi.yaml
+      - GOWORK=off go -C services/social run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/social/openapi.yaml
+      - GOWORK=off go -C services/content run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/content/openapi.yaml
+      - GOWORK=off go -C services/messaging run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/messaging/openapi.yaml
+      - GOWORK=off go -C services/media run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@{{.OAPI_CODEGEN_VERSION}} --config ../../api/openapi/oapi-codegen.yaml --package httptransport -o internal/transport/http/openapi.gen.go ../../api/openapi/media/openapi.yaml
+
+  check:openapi:
+    desc: Verify that generated HTTP transport models are up to date
+    cmds:
+      - task generate:openapi
+      - git diff --exit-code -- services/identity/internal/transport/http/openapi.gen.go services/analytics/internal/transport/http/openapi.gen.go services/profiles/internal/transport/http/openapi.gen.go services/social/internal/transport/http/openapi.gen.go services/content/internal/transport/http/openapi.gen.go services/messaging/internal/transport/http/openapi.gen.go services/media/internal/transport/http/openapi.gen.go
 
   generate:proto:
     desc: Generate protobuf and gRPC code from api/proto
