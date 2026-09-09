@@ -81,6 +81,11 @@ tasks:
     cmds:
       - go build -o /tmp/general-project-media ./services/media/cmd/media
 
+  build:media-image-worker:
+    desc: Build the media image optimization worker binary
+    cmds:
+      - go build -o /tmp/general-project-media-image-worker ./services/media/cmd/media-image-worker
+
   build:messaging:
     desc: Build the messaging service binary
     cmds:

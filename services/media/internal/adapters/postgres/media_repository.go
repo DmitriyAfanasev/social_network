@@ -99,6 +99,22 @@ func (r *MediaRepository) FindByID(ctx context.Context, mediaID uuid.UUID) (doma
 	return r.scanOne(ctx, query, mediaID)
 }
 
+// UpdateProcessedImage обновляет метаданные заменённого WebP-изображения.
+func (r *MediaRepository) UpdateProcessedImage(ctx context.Context, mediaID uuid.UUID, contentType string, size int64, checksum string, width int, height int) error {
+	const query = `
+		UPDATE media.media
+		SET content_type = $2, size = $3, checksum = $4, width = $5, height = $6
+		WHERE id = $1 AND deleted_at IS NULL`
+	result, err := r.pool.Exec(ctx, query, mediaID, contentType, size, checksum, width, height)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ports.ErrNotFound
+	}
+	return nil
+}
+
 // Delete помечает метаданные медиаобъекта временем удаления.
 func (r *MediaRepository) Delete(ctx context.Context, mediaID uuid.UUID, deletedAt time.Time) error {
 	const query = `

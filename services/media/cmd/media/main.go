@@ -26,6 +26,7 @@ import (
 	"general-project/libs/platform/ratelimit"
 	accessadapter "general-project/media/internal/adapters/access"
 	eventsadapter "general-project/media/internal/adapters/events"
+	imagejobsadapter "general-project/media/internal/adapters/imagejobs"
 	postgresadapter "general-project/media/internal/adapters/postgres"
 	storageadapter "general-project/media/internal/adapters/storage"
 	"general-project/media/internal/application"
@@ -66,7 +67,8 @@ func main() {
 	mediaService := application.NewProtectedMediaService(mediaRepository, mediaCache, storage, cfg.S3Bucket, accessadapter.NewClient(cfg.ProfilesURL, cfg.SocialURL), outbox)
 	eventPublisher := eventsadapter.NewEventPublisher(cfg.KafkaBrokers, cfg.EventsTopic)
 	defer eventPublisher.Close()
-	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher)
+	imageJobs := imagejobsadapter.NewRedisStream(redisClient, cfg.ImageJobsStream, cfg.ImageJobsGroup, "media-outbox", cfg.ImageJobsMaxLength, cfg.ImageJobsRetryIdle)
+	outboxPublisher := application.NewOutboxPublisher(outbox, eventPublisher, imageJobs)
 	go func() {
 		if publishErr := outboxPublisher.Run(ctx, time.Second); publishErr != nil && ctx.Err() == nil {
 			logger.Error("media outbox publisher stopped", "error", publishErr)

@@ -27,6 +27,7 @@ type MediaRepository interface {
 	Create(ctx context.Context, media domain.Media) (domain.Media, error)
 	CreateWithOutbox(ctx context.Context, media domain.Media, event OutboxEvent) (domain.Media, error)
 	FindByID(ctx context.Context, mediaID uuid.UUID) (domain.Media, error)
+	UpdateProcessedImage(ctx context.Context, mediaID uuid.UUID, contentType string, size int64, checksum string, width int, height int) error
 	Delete(ctx context.Context, mediaID uuid.UUID, deletedAt time.Time) error
 }
 
@@ -53,6 +54,21 @@ type OutboxRepository interface {
 type EventPublisher interface {
 	Publish(ctx context.Context, event OutboxEvent) error
 	Close() error
+}
+
+// ImageOptimizationJob описывает запрос на преобразование изображения в WebP.
+type ImageOptimizationJob struct {
+	MediaID uuid.UUID
+}
+
+// ImageOptimizationPublisher публикует задания фоновой обработки изображений.
+type ImageOptimizationPublisher interface {
+	Publish(ctx context.Context, job ImageOptimizationJob) error
+}
+
+// ImageOptimizationConsumer читает задания изображений и подтверждает их после успешной обработки.
+type ImageOptimizationConsumer interface {
+	Run(ctx context.Context, handler func(context.Context, ImageOptimizationJob) error) error
 }
 
 // MediaCache хранит DTO метаданных для быстрых повторных чтений.

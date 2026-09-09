@@ -45,6 +45,20 @@ func (f *fakeMediaRepository) FindByID(_ context.Context, mediaID uuid.UUID) (do
 	return media, nil
 }
 
+func (f *fakeMediaRepository) UpdateProcessedImage(_ context.Context, mediaID uuid.UUID, contentType string, size int64, checksum string, width int, height int) error {
+	media, ok := f.media[mediaID]
+	if !ok || media.DeletedAt != nil {
+		return ports.ErrNotFound
+	}
+	media.ContentType = contentType
+	media.Size = size
+	media.Checksum = checksum
+	media.Width = &width
+	media.Height = &height
+	f.media[mediaID] = media
+	return nil
+}
+
 func (f *fakeMediaRepository) Delete(_ context.Context, mediaID uuid.UUID, deletedAt time.Time) error {
 	media, ok := f.media[mediaID]
 	if !ok {

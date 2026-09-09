@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	general-project/libs/platform v0.0.0
+	github.com/deepteams/webp v1.2.7
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/minio/minio-go/v7 v7.0.97
