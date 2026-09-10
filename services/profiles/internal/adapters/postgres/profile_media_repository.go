@@ -7,7 +7,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/profiles/internal/domain"
 	"general-project/profiles/internal/ports"
@@ -15,11 +14,11 @@ import (
 
 // ProfileMediaRepository реализует операции фотоальбомов и аватаров через pgx.
 type ProfileMediaRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewProfileMediaRepository создаёт PostgreSQL-адаптер фотоальбомов и аватаров.
-func NewProfileMediaRepository(pool *pgxpool.Pool) *ProfileMediaRepository {
+func NewProfileMediaRepository(pool dbPool) *ProfileMediaRepository {
 	return &ProfileMediaRepository{pool: pool}
 }
 

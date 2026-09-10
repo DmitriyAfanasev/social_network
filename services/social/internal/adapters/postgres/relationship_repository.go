@@ -8,7 +8,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/social/internal/domain"
 	"general-project/social/internal/ports"
@@ -16,11 +15,11 @@ import (
 
 // BlockRepository реализует операции блокировок через pgx.
 type BlockRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewBlockRepository создаёт адаптер блокировок.
-func NewBlockRepository(pool *pgxpool.Pool) *BlockRepository {
+func NewBlockRepository(pool dbPool) *BlockRepository {
 	return &BlockRepository{pool: pool}
 }
 
@@ -88,11 +87,11 @@ func (r *BlockRepository) Unblock(ctx context.Context, blockerID uuid.UUID, bloc
 
 // FriendshipRepository реализует дружбу и подписки через pgx.
 type FriendshipRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewFriendshipRepository создаёт адаптер дружбы и подписок.
-func NewFriendshipRepository(pool *pgxpool.Pool) *FriendshipRepository {
+func NewFriendshipRepository(pool dbPool) *FriendshipRepository {
 	return &FriendshipRepository{pool: pool}
 }
 

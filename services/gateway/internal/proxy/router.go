@@ -116,6 +116,9 @@ func newReverseProxy(item backend, logger *slog.Logger, rewrite func(*http.Reque
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(target)
+	// NewSingleHostReverseProxy задаёт Director по умолчанию. Для поддержки
+	// Rewrite и безопасной замены пути должен остаться ровно один механизм.
+	proxy.Director = nil
 	proxy.Rewrite = func(request *httputil.ProxyRequest) {
 		request.SetURL(target)
 		if rewrite != nil {

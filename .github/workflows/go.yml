@@ -4,9 +4,12 @@ on:
   push:
     branches: [main, dev, go-migration]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
 
 jobs:
-  verify:
+  unit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -43,3 +46,68 @@ jobs:
 
       - name: Goose migration smoke-check
         run: task db:smoke
+
+  integration:
+    name: PostgreSQL integration (${{ matrix.service }})
+    needs: unit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [identity, content, social, media, messaging, analytics]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: true
+
+      - name: Install task and goose
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.44.1
+          go install github.com/pressly/goose/v3/cmd/goose@v3.24.3
+
+      - name: Repository integration test
+        run: task test:integration:${{ matrix.service }}
+
+  e2e:
+    name: Critical E2E scenarios
+    needs: integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: true
+
+      - name: Install task and goose
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.44.1
+          go install github.com/pressly/goose/v3/cmd/goose@v3.24.3
+
+      - name: Run critical E2E suite
+        run: task test:e2e
+
+  benchmarks:
+    name: Allocation-aware benchmarks
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+          cache: true
+
+      - name: Run benchmarks
+        run: task bench

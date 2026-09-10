@@ -5,18 +5,16 @@ import (
 	"context"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"general-project/admin/internal/domain"
 )
 
 // AuditRepository реализует moderation audit через pgx.
 type AuditRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewAuditRepository создаёт PostgreSQL-адаптер moderation audit.
-func NewAuditRepository(pool *pgxpool.Pool) *AuditRepository {
+func NewAuditRepository(pool dbPool) *AuditRepository {
 	return &AuditRepository{pool: pool}
 }
 

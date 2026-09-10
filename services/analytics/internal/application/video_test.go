@@ -53,3 +53,21 @@ func TestVideoAnalyticsServiceValidatesViewerQuery(t *testing.T) {
 	require.ErrorIs(t, err, ErrVideoAnalyticsValidation)
 	require.Zero(t, repository.limit)
 }
+
+func TestVideoAnalyticsServiceValidatesVideoAndViewerBoundaries(t *testing.T) {
+	t.Parallel()
+
+	repository := &fakeVideoAnalyticsRepository{}
+	service := NewVideoAnalyticsService(repository)
+
+	_, err := service.GetVideoStats(context.Background(), uuid.Nil())
+	require.ErrorIs(t, err, ErrVideoAnalyticsValidation)
+
+	for _, limit := range []int{0, 101} {
+		_, err = service.ListViewerVideoStats(context.Background(), uuid.New(), limit)
+		require.ErrorIs(t, err, ErrVideoAnalyticsValidation)
+	}
+	_, err = service.ListViewerVideoStats(context.Background(), uuid.Nil(), 10)
+	require.ErrorIs(t, err, ErrVideoAnalyticsValidation)
+	require.Zero(t, repository.limit)
+}

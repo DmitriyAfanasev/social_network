@@ -5,18 +5,16 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"general-project/analytics/internal/domain"
 )
 
 // VideoAnalyticsRepository читает агрегаты видео из analytics-схемы.
 type VideoAnalyticsRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewVideoAnalyticsRepository создаёт репозиторий аналитики видео.
-func NewVideoAnalyticsRepository(pool *pgxpool.Pool) *VideoAnalyticsRepository {
+func NewVideoAnalyticsRepository(pool dbPool) *VideoAnalyticsRepository {
 	return &VideoAnalyticsRepository{pool: pool}
 }
 

@@ -43,10 +43,14 @@ type fakeFriendshipRepository struct {
 	subscribed    map[string]bool
 	outboxEvent   ports.OutboxEvent
 	requests      map[uuid.UUID]domain.FriendRequest
+	isFriends     map[string]bool
+	friends       []uuid.UUID
+	removedFirst  uuid.UUID
+	removedSecond uuid.UUID
 }
 
-func (f *fakeFriendshipRepository) IsFriend(_ context.Context, _, _ uuid.UUID) (bool, error) {
-	return false, nil
+func (f *fakeFriendshipRepository) IsFriend(_ context.Context, first uuid.UUID, second uuid.UUID) (bool, error) {
+	return f.isFriends[first.String()+":"+second.String()], nil
 }
 
 func (f *fakeFriendshipRepository) IsSubscribed(_ context.Context, subscriberID uuid.UUID, targetID uuid.UUID) (bool, error) {
@@ -54,7 +58,7 @@ func (f *fakeFriendshipRepository) IsSubscribed(_ context.Context, subscriberID 
 }
 
 func (f *fakeFriendshipRepository) ListFriends(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
-	return nil, nil
+	return f.friends, nil
 }
 
 func (f *fakeFriendshipRepository) ListSubscribers(_ context.Context, _ uuid.UUID) ([]uuid.UUID, error) {
@@ -138,7 +142,9 @@ func (f *fakeFriendshipRepository) CreateFriendshipWithOutbox(ctx context.Contex
 	return f.CreateFriendship(ctx, first, second)
 }
 
-func (f *fakeFriendshipRepository) RemoveFriendship(_ context.Context, _, _ uuid.UUID) (bool, error) {
+func (f *fakeFriendshipRepository) RemoveFriendship(_ context.Context, first uuid.UUID, second uuid.UUID) (bool, error) {
+	f.removedFirst = first
+	f.removedSecond = second
 	return true, nil
 }
 

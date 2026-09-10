@@ -13,23 +13,79 @@ tasks:
   test:
     desc: Run all Go tests in the workspace
     cmds:
-      - go -C libs/platform test ./...
-      - go -C services/analytics test ./...
-      - go -C services/admin test ./...
-      - go -C services/call-signaling test ./...
-      - go -C services/content test ./...
-      - go -C services/gateway test ./...
-      - go -C services/identity test ./...
-      - go -C services/media test ./...
-      - go -C services/messaging test ./...
-      - go -C services/profiles test ./...
-      - go -C services/social test ./...
-      - go -C services/video-worker test ./...
+      - bash scripts/run-go-tests.sh
 
   test:integration:identity:
     desc: Run identity PostgreSQL repository integration test
     cmds:
-      - go -C services/identity test ./internal/adapters/postgres -run TestPostgresIdentityRepositories -count=1
+      - bash scripts/identity-integration-check.sh
+
+  test:integration:content:
+    desc: Run content PostgreSQL repository integration test
+    cmds:
+      - bash scripts/content-integration-check.sh
+
+  test:integration:social:
+    desc: Run social PostgreSQL repository integration test
+    cmds:
+      - bash scripts/social-integration-check.sh
+
+  test:integration:media:
+    desc: Run media PostgreSQL repository integration test
+    cmds:
+      - bash scripts/media-integration-check.sh
+
+  test:integration:messaging:
+    desc: Run messaging PostgreSQL repository integration test
+    cmds:
+      - bash scripts/messaging-integration-check.sh
+
+  test:integration:analytics:
+    desc: Run analytics PostgreSQL repository integration test
+    cmds:
+      - bash scripts/analytics-integration-check.sh
+
+  test:e2e:auth:
+    desc: Run the critical authentication E2E lifecycle against the Compose stack
+    cmds:
+      - bash scripts/e2e-auth-check.sh
+
+  test:e2e:
+    desc: Run all critical E2E scenarios against one clean Compose stack
+    cmds:
+      - E2E_TEST_SUITE=all bash scripts/e2e-auth-check.sh
+
+  test:e2e:messaging:
+    desc: Run the direct conversation and message lifecycle E2E scenario
+    cmds:
+      - E2E_TEST_REGEX=TestMessagingLifecycle bash scripts/e2e-auth-check.sh
+
+  test:e2e:content:
+    desc: Run the media, post, feed, like, and comment E2E scenario
+    cmds:
+      - E2E_TEST_REGEX=TestContentLifecycle bash scripts/e2e-auth-check.sh
+
+  test:e2e:social:
+    desc: Run the friend request, acceptance, and privacy E2E scenario
+    cmds:
+      - E2E_TEST_REGEX=TestSocialFriendRequestAndPrivacy bash scripts/e2e-auth-check.sh
+
+  test:e2e:calls:
+    desc: Run the WebSocket call signaling lifecycle E2E scenario
+    cmds:
+      - E2E_TEST_REGEX=TestCallSignalingLifecycle bash scripts/e2e-auth-check.sh
+
+  test:e2e:gateway:
+    desc: Run the gateway routing, auth, and error envelope E2E checks
+    cmds:
+      - E2E_TEST_REGEX=TestGatewayRoutingAndErrorEnvelope bash scripts/e2e-auth-check.sh
+
+  bench:
+    desc: Run allocation-aware benchmarks for hot pure operations
+    cmds:
+      - go -C services/messaging test ./internal/domain -run '^$' -bench . -benchmem -count=1
+      - go -C services/social test ./internal/domain -run '^$' -bench . -benchmem -count=1
+      - go -C services/video-worker test ./internal/worker -run '^$' -bench . -benchmem -count=1
 
   vet:
     desc: Run go vet in the workspace

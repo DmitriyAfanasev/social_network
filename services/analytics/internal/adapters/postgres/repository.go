@@ -9,7 +9,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/analytics/internal/domain"
 	"general-project/analytics/internal/ports"
@@ -17,11 +16,11 @@ import (
 
 // OutboxRepository реализует работу с очередью исходящих событий.
 type OutboxRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewOutboxRepository создаёт адаптер outbox для PostgreSQL.
-func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
+func NewOutboxRepository(pool dbPool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 
@@ -97,11 +96,11 @@ func (r *OutboxRepository) MarkFailed(ctx context.Context, eventID uuid.UUID, ne
 
 // ProcessedEventRepository обеспечивает хранение состояния consumer-а.
 type ProcessedEventRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewProcessedEventRepository создаёт адаптер идемпотентности.
-func NewProcessedEventRepository(pool *pgxpool.Pool) *ProcessedEventRepository {
+func NewProcessedEventRepository(pool dbPool) *ProcessedEventRepository {
 	return &ProcessedEventRepository{pool: pool}
 }
 
@@ -158,11 +157,11 @@ func (r *ProcessedEventRepository) MarkFailed(ctx context.Context, eventID uuid.
 
 // EventRecordHandler сохраняет успешно принятые события в analytics read model.
 type EventRecordHandler struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewEventRecordHandler создаёт идемпотентный обработчик журнала событий.
-func NewEventRecordHandler(pool *pgxpool.Pool) *EventRecordHandler {
+func NewEventRecordHandler(pool dbPool) *EventRecordHandler {
 	return &EventRecordHandler{pool: pool}
 }
 

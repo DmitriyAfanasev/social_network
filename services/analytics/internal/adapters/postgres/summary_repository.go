@@ -4,18 +4,16 @@ package postgres
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"general-project/analytics/internal/domain"
 )
 
 // SummaryRepository читает агрегаты из журнала analytics-событий.
 type SummaryRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewSummaryRepository создаёт адаптер analytics summary.
-func NewSummaryRepository(pool *pgxpool.Pool) *SummaryRepository {
+func NewSummaryRepository(pool dbPool) *SummaryRepository {
 	return &SummaryRepository{pool: pool}
 }
 

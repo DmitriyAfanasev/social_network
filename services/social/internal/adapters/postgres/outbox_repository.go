@@ -6,18 +6,16 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"general-project/social/internal/ports"
 )
 
 // OutboxRepository реализует публикацию social-событий после commit.
 type OutboxRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewOutboxRepository создаёт адаптер social outbox.
-func NewOutboxRepository(pool *pgxpool.Pool) *OutboxRepository {
+func NewOutboxRepository(pool dbPool) *OutboxRepository {
 	return &OutboxRepository{pool: pool}
 }
 

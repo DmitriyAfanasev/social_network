@@ -8,7 +8,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/messaging/internal/domain"
 	"general-project/messaging/internal/ports"
@@ -16,11 +15,11 @@ import (
 
 // Repository реализует операции диалогов и сообщений через pgx.
 type Repository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewRepository создаёт PostgreSQL-репозиторий messaging-сервиса.
-func NewRepository(pool *pgxpool.Pool) *Repository {
+func NewRepository(pool dbPool) *Repository {
 	return &Repository{pool: pool}
 }
 
@@ -84,24 +83,34 @@ func (r *Repository) ListConversations(ctx context.Context, userID uuid.UUID, ar
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	conversations := make([]domain.Conversation, 0)
+	type conversationWithCutoff struct {
+		conversation domain.Conversation
+		clearedAt    *time.Time
+	}
+	items := make([]conversationWithCutoff, 0)
 	for rows.Next() {
 		var conversation domain.Conversation
 		var clearedAt *time.Time
 		if err := rows.Scan(&conversation.ID, &conversation.DirectKey, &conversation.CreatedAt, &conversation.UpdatedAt, &conversation.Archived, &conversation.Pinned, &conversation.Muted, &clearedAt, &conversation.ParticipantIDs); err != nil {
+			rows.Close()
 			return nil, err
 		}
-		lastMessage, err := r.lastMessage(ctx, conversation.ID, clearedAt)
+		items = append(items, conversationWithCutoff{conversation: conversation, clearedAt: clearedAt})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
+	conversations := make([]domain.Conversation, 0, len(items))
+	for _, item := range items {
+		lastMessage, err := r.lastMessage(ctx, item.conversation.ID, item.clearedAt)
 		if err != nil {
 			return nil, err
 		}
-		conversation.LastMessage = lastMessage
-		conversations = append(conversations, conversation)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+		item.conversation.LastMessage = lastMessage
+		conversations = append(conversations, item.conversation)
 	}
 	return conversations, nil
 }

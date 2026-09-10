@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/content/internal/domain"
 	"general-project/content/internal/ports"
@@ -16,11 +15,11 @@ import (
 
 // PostRepository реализует операции текстовых постов через pgx.
 type PostRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewPostRepository создаёт PostgreSQL-адаптер текстовых постов.
-func NewPostRepository(pool *pgxpool.Pool) *PostRepository {
+func NewPostRepository(pool dbPool) *PostRepository {
 	return &PostRepository{pool: pool}
 }
 

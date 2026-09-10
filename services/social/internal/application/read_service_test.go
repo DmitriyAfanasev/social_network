@@ -21,10 +21,14 @@ type graphFriendshipRepository struct {
 }
 
 type fakeProfilePolicy struct {
-	friendsVisibility string
+	friendsVisibility   string
+	friendRequestPolicy string
 }
 
 func (f fakeProfilePolicy) GetFriendRequestPolicy(_ context.Context, _ uuid.UUID) (string, error) {
+	if f.friendRequestPolicy != "" {
+		return f.friendRequestPolicy, nil
+	}
 	return "everyone", nil
 }
 

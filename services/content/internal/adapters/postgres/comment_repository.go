@@ -6,7 +6,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/content/internal/domain"
 	"general-project/content/internal/ports"
@@ -14,11 +13,11 @@ import (
 
 // CommentRepository реализует операции комментариев через pgx.
 type CommentRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewCommentRepository создаёт PostgreSQL-адаптер комментариев.
-func NewCommentRepository(pool *pgxpool.Pool) *CommentRepository {
+func NewCommentRepository(pool dbPool) *CommentRepository {
 	return &CommentRepository{pool: pool}
 }
 

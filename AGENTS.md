@@ -138,3 +138,24 @@ transport → application → domain
 - Do not weaken or delete tests just to make a migration pass. Since API
   compatibility is explicitly out of scope, replace obsolete Python tests with
   Go tests that verify the new contract.
+
+### Test structure and cases
+
+- Every unit and integration test must follow Arrange–Act–Assert (AAA): clearly
+  separate preparation, the operation under test, and assertions. Comments are
+  optional when the structure is already obvious, but the phases must remain
+  easy to identify.
+- Prefer one primary Act and one behavior per test. If a scenario contains
+  several independent behaviors, split it into separate tests instead of
+  chaining unrelated assertions.
+- Use table-driven tests for equivalent input cases; each table row must be an
+  independent case with a descriptive name and its own Act/Assert phase.
+- Cover successful behavior, validation/boundary cases, dependency failures,
+  authorization failures, and idempotency where applicable. Assert both the
+  returned value and the error/status contract.
+- Keep test setup deterministic: use fakes or injected transports, avoid real
+  network listeners and arbitrary sleeps, and do not depend on shared mutable
+  state.
+- Benchmarks must isolate setup from the measured loop, call `ReportAllocs`
+  when allocations matter, and document the operation whose regression is
+  being tracked.

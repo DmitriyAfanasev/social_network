@@ -1,0 +1,28 @@
+services:
+  pg:
+    ports: !override
+      - "127.0.0.1:55440:5432"
+  redis:
+    ports: !override
+      - "127.0.0.1:56379:6379"
+  gateway:
+    ports: !override
+      - "127.0.0.1:58000:8000"
+  identity:
+    ports: !override
+      - "127.0.0.1:58101:8101"
+  minio:
+    ports: !override
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+  kafka:
+    ports: !override
+      - "127.0.0.1:59092:9092"
+  call-signaling:
+    ports: !override
+      - "127.0.0.1:58001:8001"
+  mailpit:
+    container_name: general-project-e2e-mailpit
+    ports: !override
+      - "127.0.0.1:58025:8025"
+      - "127.0.0.1:51025:1025"

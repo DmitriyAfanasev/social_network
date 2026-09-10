@@ -7,7 +7,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/media/internal/domain"
 	"general-project/media/internal/ports"
@@ -15,11 +14,11 @@ import (
 
 // VideoRepository реализует операции видео и renditions через pgx.
 type VideoRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewVideoRepository создаёт PostgreSQL-адаптер видео.
-func NewVideoRepository(pool *pgxpool.Pool) *VideoRepository {
+func NewVideoRepository(pool dbPool) *VideoRepository {
 	return &VideoRepository{pool: pool}
 }
 

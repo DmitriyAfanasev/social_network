@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/media/internal/domain"
 	"general-project/media/internal/ports"
@@ -17,11 +16,11 @@ import (
 
 // MediaRepository реализует операции метаданных медиа через pgx.
 type MediaRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewMediaRepository создаёт PostgreSQL-адаптер метаданных медиа.
-func NewMediaRepository(pool *pgxpool.Pool) *MediaRepository {
+func NewMediaRepository(pool dbPool) *MediaRepository {
 	return &MediaRepository{pool: pool}
 }
 

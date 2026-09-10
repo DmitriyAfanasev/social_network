@@ -5,6 +5,7 @@ go 1.27.0
 require (
 	general-project/libs/platform v0.0.0
 	github.com/jackc/pgx/v5 v5.7.2
+	github.com/pashagolub/pgxmock/v3 v3.2.0
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/stretchr/testify v1.10.0
 )

@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestEnv(t *testing.T) {
@@ -61,5 +63,26 @@ func TestLogLevel(t *testing.T) {
 	}
 	if got := LogLevel("unknown"); got != slog.LevelInfo {
 		t.Fatalf("LogLevel() for unknown value = %s, want INFO", got)
+	}
+}
+
+func TestNumericAndDurationFallbacks(t *testing.T) {
+	tests := []struct {
+		name string
+		got  any
+		want any
+	}{
+		{"positive invalid", PositiveInt("nope", 7), 7},
+		{"positive zero", PositiveInt("0", 7), 7},
+		{"nonnegative valid zero", NonNegativeInt("0", 7), 0},
+		{"nonnegative negative", NonNegativeInt("-1", 7), 7},
+		{"positive duration", PositiveDuration("250ms", time.Second), 250 * time.Millisecond},
+		{"positive duration invalid", PositiveDuration("0s", time.Second), time.Second},
+		{"nonnegative duration zero", NonNegativeDuration("0s", time.Second), time.Duration(0)},
+		{"seconds", SecondsDuration("12", time.Second), 12 * time.Second},
+		{"seconds invalid", SecondsDuration("-1", time.Second), time.Second},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) { require.Equal(t, tt.want, tt.got) })
 	}
 }

@@ -45,4 +45,6 @@ CREATE INDEX profile_avatars_user_created_idx
 DROP TABLE profiles.profile_avatars;
 DROP TABLE profiles.profile_photos;
 DROP TABLE profiles.profile_photo_albums;
-ALTER TABLE profiles.profiles DROP COLUMN avatar_url;
+-- 00004 owns the restored avatar_url column in the current migration chain.
+-- IF EXISTS keeps a full rollback safe after 00004 has removed it.
+ALTER TABLE profiles.profiles DROP COLUMN IF EXISTS avatar_url;

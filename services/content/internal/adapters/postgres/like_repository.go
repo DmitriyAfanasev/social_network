@@ -3,17 +3,15 @@ package postgres
 import (
 	"context"
 	"uuid"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // LikeRepository реализует операции с лайками постов через pgx.
 type LikeRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewLikeRepository создаёт PostgreSQL-адаптер лайков.
-func NewLikeRepository(pool *pgxpool.Pool) *LikeRepository {
+func NewLikeRepository(pool dbPool) *LikeRepository {
 	return &LikeRepository{pool: pool}
 }
 

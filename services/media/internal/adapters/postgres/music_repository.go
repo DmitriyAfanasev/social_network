@@ -6,7 +6,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/media/internal/domain"
 	"general-project/media/internal/ports"
@@ -14,11 +13,11 @@ import (
 
 // MusicRepository реализует операции музыкальных треков через pgx.
 type MusicRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // NewMusicRepository создаёт PostgreSQL-адаптер музыкальных треков.
-func NewMusicRepository(pool *pgxpool.Pool) *MusicRepository {
+func NewMusicRepository(pool dbPool) *MusicRepository {
 	return &MusicRepository{pool: pool}
 }
 

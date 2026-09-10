@@ -9,7 +9,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"general-project/profiles/internal/domain"
 	"general-project/profiles/internal/ports"
@@ -17,13 +16,13 @@ import (
 
 // ProfileRepository реализует операции профиля через pgx.
 type ProfileRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const profileColumns = `user_id, handle, bio, avatar_url, profile_details, profile_privacy, created_at, updated_at`
 
 // NewProfileRepository создаёт PostgreSQL-адаптер профилей.
-func NewProfileRepository(pool *pgxpool.Pool) *ProfileRepository {
+func NewProfileRepository(pool dbPool) *ProfileRepository {
 	return &ProfileRepository{pool: pool}
 }
 
