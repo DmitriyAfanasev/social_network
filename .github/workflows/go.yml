@@ -75,7 +75,7 @@ jobs:
 
   e2e:
     name: Critical E2E scenarios
-    needs: integration
+    needs: unit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
