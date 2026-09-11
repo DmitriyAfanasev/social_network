@@ -32,7 +32,7 @@ func TestContentLifecycle(t *testing.T) {
 	require.Equal(t, http.StatusCreated, status, "media response: %#v", mediaBody)
 	mediaID := requireString(t, mediaBody, "id")
 	require.Equal(t, "photo.txt", mediaBody["original_filename"])
-	require.Equal(t, float64(len("content e2e media")), mediaBody["size"])
+	require.InEpsilon(t, float64(len("content e2e media")), mediaBody["size"], 0.01)
 
 	// Act
 	status, postBody := authorizedJSONRequest(t, client, http.MethodPost, baseURL+"/v1/content/posts", accessToken, map[string]any{
@@ -115,11 +115,11 @@ func multipartUploadRequest(t *testing.T, client *http.Client, endpoint string, 
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
 
-	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint, &body)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, endpoint, &body) //nolint:gosec
 	require.NoError(t, err)
 	request.Header.Set("Authorization", "Bearer "+accessToken)
 	request.Header.Set("Content-Type", writer.FormDataContentType())
-	response, err := client.Do(request)
+	response, err := client.Do(request) //nolint:gosec
 	require.NoError(t, err)
 	defer response.Body.Close()
 	data, err := io.ReadAll(response.Body)

@@ -33,6 +33,7 @@ func TestMessageServiceListMessagesValidatesPaginationAndMapsPage(t *testing.T) 
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			_, _, err := service.ListMessages(context.Background(), userID, conversation.ID, tt.offset, tt.limit)
 
 			require.ErrorIs(t, err, ErrValidation)
@@ -76,6 +77,7 @@ func TestMessageServiceValidatesMessageBodyBoundaries(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			_, _, err := service.SendMessage(context.Background(), userID, conversation.ID, SendMessageInput{Body: tt.body})
 
 			require.ErrorIs(t, err, ErrValidation)

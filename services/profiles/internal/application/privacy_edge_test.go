@@ -74,6 +74,7 @@ func TestProfileServiceSearchValidatesQueryAndLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			_, err := service.SearchByHandle(context.Background(), tt.query, tt.limit)
 
 			require.ErrorIs(t, err, ErrValidation)

@@ -27,6 +27,8 @@ func TestAuthServiceRequestRegistrationConfirmationUsesSafeResponses(t *testing.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tokens := &fakeVerificationTokenStore{}
 			notifications := &fakeNotificationSender{}
 			service := NewAuthService(tt.repository, fakePasswordHasher{}, fakeTokenIssuer{}, &fakeRefreshTokenStore{}, 0, 0, VerificationConfig{Tokens: tokens, Notifications: notifications})

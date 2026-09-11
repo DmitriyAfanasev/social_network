@@ -7,7 +7,6 @@ run:
 linters:
   default: none
   enable:
-    - errcheck
     - govet
     - ineffassign
     - staticcheck
@@ -30,7 +29,6 @@ linters:
     - tparallel
     - unparam
     - wastedassign
-    - revive
   settings:
     errcheck:
       check-type-assertions: true

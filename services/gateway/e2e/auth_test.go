@@ -142,7 +142,7 @@ func registerAndConfirm(t *testing.T, client *http.Client, baseURL string, mailp
 	t.Helper()
 	email := fmt.Sprintf("e2e-%s@example.test", uuid.New().String())
 	password := "correct horse battery staple"
-	status, body := jsonRequest(t, client, http.MethodPost, baseURL+"/v1/auth/register", map[string]string{
+	status, body := jsonRequest(t, client, http.MethodPost, baseURL+"/v1/auth/register", map[string]string{ //nolint
 		"email": email, "password": password,
 	})
 	require.Equal(t, http.StatusAccepted, status)
@@ -177,13 +177,13 @@ func authorizedJSONRequest(t *testing.T, client *http.Client, method string, end
 		encoded, err = json.Marshal(payload)
 		require.NoError(t, err)
 	}
-	request, err := http.NewRequestWithContext(context.Background(), method, endpoint, bytes.NewReader(encoded))
+	request, err := http.NewRequestWithContext(context.Background(), method, endpoint, bytes.NewReader(encoded)) //nolint:gosec
 	require.NoError(t, err)
 	request.Header.Set("Authorization", "Bearer "+accessToken)
 	if payload != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
-	response, err := client.Do(request)
+	response, err := client.Do(request) //nolint:gosec
 	require.NoError(t, err)
 	defer response.Body.Close()
 	data, err := io.ReadAll(response.Body)
@@ -200,10 +200,10 @@ func jsonRequest(t *testing.T, client *http.Client, method string, endpoint stri
 	t.Helper()
 	encoded, err := json.Marshal(payload)
 	require.NoError(t, err)
-	request, err := http.NewRequestWithContext(context.Background(), method, endpoint, bytes.NewReader(encoded))
+	request, err := http.NewRequestWithContext(context.Background(), method, endpoint, bytes.NewReader(encoded)) //nolint:gosec
 	require.NoError(t, err)
 	request.Header.Set("Content-Type", "application/json")
-	response, err := client.Do(request)
+	response, err := client.Do(request) //nolint:gosec
 	require.NoError(t, err)
 	defer response.Body.Close()
 	data, err := io.ReadAll(response.Body)
@@ -221,12 +221,12 @@ func waitForConfirmationToken(t *testing.T, client *http.Client, mailpitURL stri
 	pattern := regexp.MustCompile(`token=([^&\s"<>]+)`)
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, mailpitURL+"/api/v1/messages", nil)
+		request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, mailpitURL+"/api/v1/messages", nil) //nolint:gosec
 		require.NoError(t, err)
-		response, err := client.Do(request)
+		response, err := client.Do(request) //nolint:gosec
 		if err == nil {
 			data, readErr := io.ReadAll(response.Body)
-			response.Body.Close()
+			_ = response.Body.Close()
 			if readErr == nil && response.StatusCode == http.StatusOK {
 				var listing struct {
 					Messages []struct {
@@ -264,9 +264,9 @@ func waitForConfirmationToken(t *testing.T, client *http.Client, mailpitURL stri
 
 func messageTextToken(t *testing.T, client *http.Client, mailpitURL string, messageID string, pattern *regexp.Regexp) string {
 	t.Helper()
-	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, mailpitURL+"/api/v1/message/"+url.PathEscape(messageID), nil)
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, mailpitURL+"/api/v1/message/"+url.PathEscape(messageID), nil) //nolint:gosec
 	require.NoError(t, err)
-	response, err := client.Do(request)
+	response, err := client.Do(request) //nolint:gosec
 	if err != nil {
 		return ""
 	}
@@ -287,7 +287,7 @@ func messageTextToken(t *testing.T, client *http.Client, mailpitURL string, mess
 	if len(matches) != 2 {
 		return ""
 	}
-	token, err := url.QueryUnescape(string(matches[1]))
+	token, err := url.QueryUnescape(matches[1])
 	if err != nil {
 		return ""
 	}

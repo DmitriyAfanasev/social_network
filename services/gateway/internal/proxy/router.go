@@ -115,19 +115,17 @@ func newReverseProxy(item backend, logger *slog.Logger, rewrite func(*http.Reque
 		return nil, errors.New("invalid " + item.name + " upstream URL: scheme and host are required")
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	// NewSingleHostReverseProxy задаёт Director по умолчанию. Для поддержки
-	// Rewrite и безопасной замены пути должен остаться ровно один механизм.
-	proxy.Director = nil
-	proxy.Rewrite = func(request *httputil.ProxyRequest) {
-		request.SetURL(target)
-		if rewrite != nil {
-			rewrite(request.Out)
-		}
-	}
-	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, err error) {
-		logger.ErrorContext(request.Context(), "gateway upstream request failed", "backend", item.name, "error", err)
-		httpx.WriteError(writer, http.StatusBadGateway, "upstream_unavailable", "upstream service unavailable")
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(target)
+			if rewrite != nil {
+				rewrite(r.Out)
+			}
+		},
+		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, err error) {
+			logger.ErrorContext(request.Context(), "gateway upstream request failed", "backend", item.name, "error", err)
+			httpx.WriteError(writer, http.StatusBadGateway, "upstream_unavailable", "upstream service unavailable")
+		},
 	}
 	return proxy, nil
 }
